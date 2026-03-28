@@ -9,8 +9,15 @@
 ## デプロイ構成
 
 - **ホスティング**: Vercel（GitHub mainブランチ連携、pushで自動デプロイ）
+- **本番URL**: https://knowledge-base-seven-swart.vercel.app
 - **ビルド**: なし（静的HTMLのみ）
 - **Output Directory**: `.`（ルート直下）
+
+### GitHub Actions
+
+- **Discord通知** (`.github/workflows/notify-discord.yml`): mainブランチへのpushで `articles/*.html` に変更があった場合、Discord Webhookで記事公開通知を送信
+  - 必要なSecrets: `DISCORD_WEBHOOK_URL` — Discord Webhook URL
+  - 必要なVariables: `SITE_BASE_URL` — サイトのベースURL（未設定時は `https://knowledge-base-seven-swart.vercel.app`）
 
 ## ディレクトリ構成
 

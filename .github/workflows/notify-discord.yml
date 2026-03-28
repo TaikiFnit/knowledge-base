@@ -1,0 +1,74 @@
+name: Notify Discord on New Articles
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'articles/**.html'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # 直前のコミットとの差分を取るために2つ分取得
+
+      - name: Detect new/updated articles and notify Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SITE_BASE_URL: ${{ vars.SITE_BASE_URL }}
+        run: |
+          # デフォルトのベースURL（GitHub Variables で上書き可能）
+          BASE_URL="${SITE_BASE_URL:-https://knowledge-base-seven-swart.vercel.app}"
+
+          # 直前のコミットとの差分から articles/*.html の追加・変更を検出
+          CHANGED_FILES=$(git diff --name-only --diff-filter=AM HEAD~1 HEAD -- 'articles/*.html' || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No new or modified articles found. Skipping notification."
+            exit 0
+          fi
+
+          echo "Changed articles:"
+          echo "$CHANGED_FILES"
+
+          # 各記事についてDiscordへ通知
+          for FILE in $CHANGED_FILES; do
+            FILENAME=$(basename "$FILE")
+            SLUG="${FILENAME%.html}"
+
+            # HTMLの<title>タグから記事タイトルを抽出
+            TITLE=$(grep -oP '(?<=<title>).*?(?=</title>)' "$FILE" | head -1)
+            if [ -z "$TITLE" ]; then
+              TITLE="$SLUG"
+            fi
+
+            ARTICLE_URL="${BASE_URL}/articles/${FILENAME}"
+
+            echo "Notifying: $TITLE -> $ARTICLE_URL"
+
+            # Discord Embed形式で通知
+            PAYLOAD=$(cat <<EOF
+          {
+            "embeds": [{
+              "title": "📝 新しい記事が公開されました",
+              "description": "**${TITLE}**",
+              "url": "${ARTICLE_URL}",
+              "color": 13382189,
+              "footer": {
+                "text": "Knowledge Base"
+              },
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            }]
+          }
+          EOF
+            )
+
+            curl -s -X POST "$DISCORD_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "$PAYLOAD"
+
+            echo "Sent notification for: $TITLE"
+          done
