@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class#new 高速化 — Rubyの根幹をインライン化で革新する</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --accent: #CC342D;
+            --accent-light: #E8554E;
+            --accent-dark: #8B1A15;
+            --accent-glow: rgba(204, 52, 45, 0.3);
+            --bg-deep: #0A0A0F;
+            --bg-card: #12121A;
+            --bg-card-hover: #1A1A25;
+            --bg-code: #0D0D14;
+            --text-primary: #E8E6E3;
+            --text-secondary: #8A8A9A;
+            --text-muted: #55556A;
+            --border: #1E1E2E;
+            --green: #50FA7B;
+            --yellow: #F1FA8C;
+            --cyan: #8BE9FD;
+            --orange: #FFB86C;
+            --purple: #BD93F9;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            line-height: 1.7;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Noise overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' result='noise' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Sticky Navigation */
+        nav.sticky-nav {
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            background: linear-gradient(to bottom, var(--bg-deep), rgba(10, 10, 15, 0.95));
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-back {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-back:hover {
+            color: var(--accent-light);
+        }
+
+        .nav-sections {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .nav-section-link {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-section-link:hover {
+            color: var(--accent);
+        }
+
+        .nav-section-link.active {
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.25rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 4rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%);
+            opacity: 0.5;
+            z-index: -1;
+        }
+
+        .hero-eyebrow {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            letter-spacing: 0.15em;
+            color: var(--accent);
+            background: rgba(204, 52, 45, 0.15);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin: 1rem 0;
+            line-height: 1.2;
+            animation: fadeUp 0.8s ease 0.1s backwards;
+        }
+
+        .hero .subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            margin: 1.5rem 0 2rem;
+            animation: fadeUp 0.8s ease 0.2s backwards;
+        }
+
+        .hero-meta {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+            animation: fadeUp 0.8s ease 0.3s backwards;
+        }
+
+        .meta-item {
+            text-align: center;
+        }
+
+        .meta-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .meta-value {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-top: 0.25rem;
+            font-weight: 600;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.5rem;
+            max-width: 800px;
+            margin: 2rem auto 0;
+            animation: fadeUp 0.8s ease 0.4s backwards;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-hover) 100%);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            margin: 3rem 0;
+            animation: fadeUp 0.6s ease backwards;
+        }
+
+        .section:nth-child(1) { animation-delay: 0s; }
+        .section:nth-child(2) { animation-delay: 0.1s; }
+        .section:nth-child(3) { animation-delay: 0.2s; }
+        .section:nth-child(4) { animation-delay: 0.3s; }
+        .section:nth-child(5) { animation-delay: 0.4s; }
+
+        .section-number {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: rgba(204, 52, 45, 0.15);
+            padding: 0.25rem 0.75rem;
+            border-radius: 3px;
+            margin-bottom: 0.75rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 1rem 0 1.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 1.5rem 0 1rem;
+            color: var(--text-primary);
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        /* Code Blocks */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.2em 0.4em;
+            color: var(--cyan);
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        pre code {
+            background: transparent;
+            border: none;
+            padding: 0;
+            color: var(--cyan);
+        }
+
+        .code-comment {
+            color: var(--text-muted);
+        }
+
+        .code-keyword {
+            color: var(--purple);
+        }
+
+        .code-string {
+            color: var(--green);
+        }
+
+        .code-number {
+            color: var(--orange);
+        }
+
+        /* Alert Boxes */
+        .alert {
+            border-left: 4px solid;
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .alert.tip {
+            border-left-color: var(--green);
+            background: rgba(80, 250, 123, 0.08);
+        }
+
+        .alert.tip strong {
+            color: var(--green);
+        }
+
+        .alert.note {
+            border-left-color: var(--yellow);
+            background: rgba(241, 250, 140, 0.08);
+        }
+
+        .alert.note strong {
+            color: var(--yellow);
+        }
+
+        .alert.warning {
+            border-left-color: var(--orange);
+            background: rgba(255, 184, 108, 0.08);
+        }
+
+        .alert.warning strong {
+            color: var(--orange);
+        }
+
+        .alert strong {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: var(--bg-card-hover);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        tbody tr:hover {
+            background: var(--bg-card-hover);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 1.5rem 0 1.5rem 2rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        /* Links */
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            border-bottom: 1px solid transparent;
+        }
+
+        a:hover {
+            color: var(--accent-light);
+            border-bottom-color: var(--accent-light);
+        }
+
+        /* Diagram Boxes */
+        .diagram {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            color: var(--cyan);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Back to Top Button */
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: var(--accent);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 998;
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .back-to-top:hover {
+            background: var(--accent-light);
+            transform: translateY(-4px);
+        }
+
+        .back-to-top.show {
+            display: flex;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        footer a {
+            color: var(--accent);
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1.1rem;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            nav.sticky-nav {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .nav-sections {
+                width: 100%;
+                justify-content: center;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .back-to-top {
+                width: 45px;
+                height: 45px;
+                font-size: 1.2rem;
+                bottom: 1.5rem;
+                right: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sticky Navigation -->
+    <nav class="sticky-nav">
+        <a href="../index.html" class="nav-back">← トップに戻る</a>
+        <div class="nav-sections">
+            <a href="#section-01" class="nav-section-link" data-section="01">前提知識</a>
+            <a href="#section-02" class="nav-section-link" data-section="02">問題点</a>
+            <a href="#section-03" class="nav-section-link" data-section="03">インラインキャッシュ</a>
+            <a href="#section-04" class="nav-section-link" data-section="04">呼び出し規約</a>
+            <a href="#section-05" class="nav-section-link" data-section="05">解決策</a>
+            <a href="#section-06" class="nav-section-link" data-section="06">ベンチマーク</a>
+            <a href="#section-07" class="nav-section-link" data-section="07">トレードオフ</a>
+            <a href="#section-08" class="nav-section-link" data-section="08">今後の展望</a>
+            <a href="#section-09" class="nav-section-link" data-section="09">まとめ</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-eyebrow">RUBYKAIGI 2025 / セッションノート</div>
+        <h1>Class#new 高速化<br>Rubyの根幹をインライン化で革新する</h1>
+        <p class="subtitle">RubyKaigi 2025 セッションノート — Aaron Patterson (tenderlove) が語るオブジェクト生成の最適化</p>
+
+        <div class="hero-meta">
+            <div class="meta-item">
+                <div class="meta-label">スピーカー</div>
+                <div class="meta-value">Aaron Patterson (@tenderlove)</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">カンファレンス</div>
+                <div class="meta-value">RubyKaigi 2025</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">日時</div>
+                <div class="meta-value">2025年4月17日</div>
+            </div>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-box">
+                <div class="stat-number">6.2x</div>
+                <div class="stat-label">最大高速化倍率<br>（KW引数10個時）</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">opt_new</div>
+                <div class="stat-label">新しいYARV命令</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">Ruby 3.5+</div>
+                <div class="stat-label">正式搭載予定</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Section 01 -->
+        <section class="section" id="section-01">
+            <div class="section-number">01</div>
+            <h2>前提知識 — Rubyのオブジェクト生成</h2>
+
+            <p>Rubyでオブジェクトを生成する際、一見シンプルに見える <code>MyClass.new(args)</code> という呼び出しの背後には、実は複雑なプロセスが隠されています。このセクションでは、そのプロセスを詳しく解説します。</p>
+
+            <h3>オブジェクト生成の2ステップ構造</h3>
+            <p>Rubyでは、<code>MyClass.new(args)</code> は実際には以下の2つのステップから成り立っています：</p>
+            <ul>
+                <li><strong>allocate フェーズ</strong>：メモリ領域を確保し、オブジェクトの骨格を作成</li>
+                <li><strong>initialize フェーズ</strong>：確保されたオブジェクトに初期化処理を実施</li>
+            </ul>
+
+            <p>この2段階のプロセスは、Rubyの柔軟性を支える重要な設計です。ユーザーは <code>allocate</code> をオーバーライドしてカスタムメモリ配置を実装したり、<code>initialize</code> で複雑な初期化ロジックを実装したりできます。</p>
+
+            <h3>CRuby実装の現状</h3>
+            <p>CRubyのClass#newはC言語で実装されており、具体的には <code>rb_class_new_instance</code> という関数が担当しています。このC実装が、今回の最適化の対象となります。</p>
+
+            <h3>Railsエコシステムへの影響</h3>
+            <p>Rails で <code>Model.new</code> するとき、その裏側では想像以上に多数のクラスが <code>new</code> されています：</p>
+            <ul>
+                <li>ActiveRecord::Base のサブクラス</li>
+                <li>Association プロキシオブジェクト</li>
+                <li>Query オブジェクト</li>
+                <li>バリデーション結果オブジェクト</li>
+            </ul>
+
+            <p>このため、Class#new の小さな改善でもシステム全体に波及する可能性があります。わずか数ナノセコンドの改善が、アプリケーション全体のレイテンシーを大きく削減できるのです。</p>
+
+            <div class="alert note">
+                <strong>重要な前提</strong>
+                この最適化の根本的な背景にあるのは、Ruby → C → Ruby という往復の関数呼び出しがボトルネックであることです。言語境界を越えるたびに、引数の変換、型チェック、例外処理などのオーバーヘッドが発生します。
+            </div>
+        </section>
+
+        <!-- Section 02 -->
+        <section class="section" id="section-02">
+            <div class="section-number">02</div>
+            <h2>C実装の問題点</h2>
+
+            <p>CRubyの Class#new 実装がなぜ遅いのか、その具体的な問題点を掘り下げます。</p>
+
+            <h3>実装の流れと各段階のオーバーヘッド</h3>
+            <p>現在の実装における処理フロー：</p>
+            <pre><code><span class="code-comment"># MyClass.new(name: "Ruby", version: 3.5) の内部動作</span>
+
+<span class="code-comment"># 1. Ruby → C: rb_class_new_instance が呼ばれる</span>
+<span class="code-comment"># 2. C内部: rb_obj_alloc でメモリ確保</span>
+<span class="code-comment"># 3. C → Ruby: initialize を呼び出し</span>
+<span class="code-comment">#    KW引数の場合、{name: "Ruby", version: 3.5} のHashが一時生成される</span>
+<span class="code-comment"># 4. Ruby: initialize 実行</span>
+<span class="code-comment"># 5. Ruby → C: 戻り値をCの形式に変換</span>
+<span class="code-comment"># 6. C → Ruby: 結果を返す</span></code></pre>
+
+            <h3>キーワード引数処理の落とし穴</h3>
+            <p>特にキーワード引数の場合、C実装では致命的な問題が生じます。Cには KW引数/splat/デフォルト値の概念がないため、C実装では以下の処理が必須になります：</p>
+
+            <ol>
+                <li>Ruby側のキーワード引数を解析</li>
+                <li>一時的なHashオブジェクトを生成</li>
+                <li>そのHashをC関数に渡す</li>
+                <li>C側でHashを再度解析</li>
+                <li>個別の引数として Ruby 側の <code>initialize</code> に渡す</li>
+            </ol>
+
+            <p>この流れでは、キーワード引数の個数が多いほど、一時的なHashオブジェクトの生成コストが増加します。10個のキーワード引数がある場合、その負担は劇的に増加するわけです。</p>
+
+            <div class="diagram">caller
+  ↓
+Ruby [KW args parser]
+  ↓
+Temp Hash allocation
+  ↓
+C rb_class_new_instance
+  ↓
+C rb_obj_alloc
+  ↓
+C → Ruby vm_call initialize
+  ↓
+Ruby initialize execution
+  ↓
+Return</div>
+
+            <h3>メモリ配置の非効率性</h3>
+            <p><code>rb_class_alloc</code> は直接GCヒープに領域確保を依頼します。この際：</p>
+            <ul>
+                <li>GCロック取得</li>
+                <li>フリーリスト走査</li>
+                <li>メモリ初期化</li>
+                <li>メタデータ設定</li>
+            </ul>
+
+            <p>これらは理想的には最適化できますが、現在の実装ではすべてが同期的に実行されるため、キャッシュミスの可能性も高くなります。</p>
+
+            <div class="alert warning">
+                <strong>パフォーマンスへの影響</strong>
+                現在のC実装は「安全性」と「柔軟性」を最優先に設計されています。そのため、パフォーマンスは二の次になってしまっているのが実情です。
+            </div>
+        </section>
+
+        <!-- Section 03 -->
+        <section class="section" id="section-03">
+            <div class="section-number">03</div>
+            <h2>インラインキャッシュの仕組み</h2>
+
+            <p>Rubyの高速化の鍵を握る技術の一つが「インラインキャッシュ（Inline Cache）」です。これを理解することが、opt_new命令の設計を理解するための基盤になります。</p>
+
+            <h3>メソッド検索とキャッシング</h3>
+            <p>Rubyではメソッドを呼び出す際、以下の処理が発生します：</p>
+
+            <ul>
+                <li>レシーバのクラスを取得</li>
+                <li>メソッドテーブルを検索</li>
+                <li>見つからなければ親クラスへ移動（lineage walk）</li>
+                <li>見つかったら、その参照をキャッシュ</li>
+            </ul>
+
+            <p>特に重要なのが「lineage walk」です。クラス <code>A < B < C</code> という階層構造で、<code>a.baz</code> を呼ぶときに <code>baz</code> メソッドが見つかるまで親クラスへ線形に辿ります。</p>
+
+            <h3>Monomorphic Inline Cache</h3>
+            <p>初回呼び出し時に見つかったメソッドの参照は、「monomorphic inline cache」として各呼び出しサイトにキャッシュされます。これにより、次回以降の呼び出しで検索が不要になります。</p>
+
+            <p>ただし、このキャッシュには落とし穴があります：</p>
+
+            <pre><code><span class="code-comment"># キャッシュ効率が落ちるパターン</span>
+<span class="code-keyword">class</span> A; <span class="code-keyword">end</span>
+<span class="code-keyword">class</span> B; <span class="code-keyword">end</span>
+
+a = A.new
+b = B.new
+
+<span class="code-comment"># 交互に呼び出すと、キャッシュが毎回ミスする</span>
+a.new  <span class="code-comment"># Cache: A</span>
+b.new  <span class="code-comment"># Cache miss → update to B</span>
+a.new  <span class="code-comment"># Cache miss → update to A</span>
+b.new  <span class="code-comment"># Cache miss → update to B</span>
+<span class="code-comment"># 結果：最大40倍遅くなるケースもある！</span></code></pre>
+
+            <h3>Class#new内のinitialize呼び出しの問題</h3>
+            <p>Class#new内で <code>initialize</code> メソッドを呼び出す際、C言語から Ruby のメソッドをコールする必要があります。このとき、単純なインラインキャッシュでは対応できない問題が生じます：</p>
+
+            <ul>
+                <li>Cからインラインキャッシュにアクセスするには <code>gcct_method_search</code> を経由</li>
+                <li>Ruby VMのキャッシュはRubyオブジェクトとして保持されているため、C側からは直接参照できない</li>
+                <li>グローバルテーブルを走査する必要があり、毎回のメソッド検索が発生</li>
+            </ul>
+
+            <div class="alert tip">
+                <strong>YARV命令の利点</strong>
+                もし Class#new を YARV命令として実装できれば、Ruby VM内で直接インラインキャッシュにアクセスでき、C言語経由の余計な処理が不要になります。これが opt_new 命令導入の発想の源です。
+            </div>
+        </section>
+
+        <!-- Section 04 -->
+        <section class="section" id="section-04">
+            <div class="section-number">04</div>
+            <h2>YARV呼び出し規約（Calling Convention）</h2>
+
+            <p>opt_new命令を実装するには、YARVの呼び出し規約を深く理解する必要があります。</p>
+
+            <h3>YARVはスタックベース仮想マシン</h3>
+            <p>YARVは「スタックベース」の仮想マシンです。つまり：</p>
+
+            <pre><code><span class="code-comment"># Ruby: bar(5, 7, 9)</span>
+
+<span class="code-comment"># YARVバイトコード：</span>
+push_int 5
+push_int 7
+push_int 9
+call bar  <span class="code-comment"># スタックから引数をポップして実行</span></code></pre>
+
+            <p>メソッド側では、渡された引数を特定のスタック位置から取得します：</p>
+
+            <pre><code><span class="code-comment"># Ruby: def bar(a, b, c); a + b + c; end</span>
+
+<span class="code-comment"># YARVバイトコード：</span>
+getlocal -3    <span class="code-comment"># a を取得</span>
+getlocal -2    <span class="code-comment"># b を取得</span>
+add
+getlocal -1    <span class="code-comment"># c を取得</span>
+add</code></pre>
+
+            <h3>キーワード引数のオーバーヘッド</h3>
+            <p>キーワード引数は本質的に「順序が不確定」です。<code>bar(c: 9, a: 5, b: 7)</code> のように順序が任意だからです。このため、YARVでも追加のオーバーヘッドが発生します：</p>
+
+            <ul>
+                <li>引数情報テーブル（キー名とデフォルト値を管理）</li>
+                <li>キーの検索・マッピング処理</li>
+                <li>欠落引数への デフォルト値適用</li>
+            </ul>
+
+            <p>ただし、Ruby 3.6以降での最適化が予定されているため、この状況は改善される見込みです。</p>
+
+            <h3>C関数とRuby関数の不整合</h3>
+            <p>C関数は KW/splat/default に対応していません。つまり、C関数を使う場合は：</p>
+
+            <ul>
+                <li>Ruby側でキーワード引数を解析</li>
+                <li>それを C が理解できる形（通常はHash）に変換</li>
+                <li>C実行</li>
+                <li>戻り値を Ruby 形式に変換</li>
+            </ul>
+
+            <p>この変換が毎回発生するため、パフォーマンスが低下するわけです。</p>
+
+            <h3>initialize は private method</h3>
+            <p>重要な設計上の制約として、<code>initialize</code> は private method です。BasicObject には send メソッドがないため、直接呼び出す必要があります。これも opt_new 命令の設計に影響を与えます。</p>
+
+            <div class="alert note">
+                <strong>YARV命令設計の大原則</strong>
+                opt_new 命令は、Ruby VM内で完結する処理として設計されなければなりません。C言語への呼び出しを最小化し、インラインキャッシュを効果的に活用することが鍵です。
+            </div>
+        </section>
+
+        <!-- Section 05 -->
+        <section class="section" id="section-05">
+            <div class="section-number">05</div>
+            <h2>解決策 — opt_new 命令とインライン化</h2>
+
+            <p>これまでの問題を根本的に解決するため、Aaron Patterson と Ruby コアチームが導入した解決策が <code>opt_new</code> YARV命令です。</p>
+
+            <h3>opt_new 命令の基本設計</h3>
+            <p><strong>Feature #21254</strong> と <strong>PR #13080</strong> で提案・実装されたこの命令は、以下の特徴を持ちます：</p>
+
+            <ul>
+                <li>Class#new をYARV命令として直接実装</li>
+                <li>パラメータをスタックに残したまま initialize を直接呼び出し</li>
+                <li>Class#new のスタックフレーム push/pop を省略</li>
+                <li>各呼び出しサイトにインラインキャッシュを配置</li>
+            </ul>
+
+            <h3>「Ruby without Ruby」の発想</h3>
+            <p>opt_new の実装の背景には「Ruby without Ruby」という概念があります。これは：</p>
+
+            <ul>
+                <li>YARVバイトコードをコピーして、そのまま実行</li>
+                <li>言語境界を越えない → C呼び出しなし</li>
+                <li>インラインキャッシュの効果を最大化</li>
+            </ul>
+
+            <p>つまり、Rubyのセマンティクスは保ちながら、C言語の負荷を排除するということです。</p>
+
+            <h3>Primitive.send_delegate! の追加</h3>
+            <p>opt_new 命令が正しく動作するために、以下の Primitive が追加されました：</p>
+
+            <pre><code><span class="code-keyword">class</span> Class
+  <span class="code-keyword">def</span> new(...)
+    <span class="code-comment"># opt_new YARV命令により、以下の処理を直接実行</span>
+    obj = allocate
+    obj.initialize(...)
+    obj
+  <span class="code-keyword">end</span>
+<span class="code-keyword">end</span></code></pre>
+
+            <h3>monkeypatch への対応</h3>
+            <p>Ruby の柔軟性を損なわないよう、allocate がmonkeypatchされている場合には以下の動作を実装しました：</p>
+
+            <ul>
+                <li>オプティミゼーション候補をチェック</li>
+                <li>allocate が上書きされていない場合のみ opt_new を使用</li>
+                <li>上書きされている場合は slow path にフォールバック</li>
+            </ul>
+
+            <p>このため、既存コードの互換性を完全に保ちながら、最適化の恩恵を得られます。</p>
+
+            <div class="diagram">従来的な流れ:
+  caller
+    ↓
+  [Class#new frame] (C実装)
+    ↓
+  [initialize frame] (Ruby)
+    ↓
+  結果返却
+
+opt_new を使った流れ:
+  caller
+    ↓
+  [opt_new + initialize inlined] (YARV)
+    ↓
+  結果返却
+
+フレームが1つ減る！
+関数呼び出しオーバーヘッドが削減される！</div>
+
+            <div class="alert tip">
+                <strong>互換性の担保</strong>
+                opt_new 命令は完全な互換性を保つよう設計されています。allocate や initialize をオーバーライドしているコードは、引き続き正しく動作します。
+            </div>
+        </section>
+
+        <!-- Section 06 -->
+        <section class="section" id="section-06">
+            <div class="section-number">06</div>
+            <h2>ベンチマーク結果</h2>
+
+            <p>opt_new 命令の実装の効果を、複数の環境で測定しました。結果は期待以上のものでした。</p>
+
+            <h3>パフォーマンス改善の詳細</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>シナリオ</th>
+                        <th>改善率<br>（インタプリタ）</th>
+                        <th>改善率<br>（YJIT）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Object.new</code>（位置引数）</td>
+                        <td>1.8x</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>3個のキーワード引数</td>
+                        <td>3.0x</td>
+                        <td>6.5x</td>
+                    </tr>
+                    <tr>
+                        <td>10個のキーワード引数</td>
+                        <td>6.2x+</td>
+                        <td>さらに高速</td>
+                    </tr>
+                    <tr>
+                        <td><code>Hash.new(capacity: 0)</code></td>
+                        <td>1.72x</td>
+                        <td>—</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>改善率が引数数に比例する理由</h3>
+            <p>特に注目すべきは、キーワード引数が増えるほど改善率が大きくなる点です。その理由は：</p>
+
+            <ul>
+                <li><strong>従来の実装</strong>：一時的なHash生成 → Cへの変換 → Ruby側で再度解析</li>
+                <li><strong>opt_new 実装</strong>：YARV内で直接処理 → Hash生成が不要</li>
+            </ul>
+
+            <p>つまり、引数が多いほど Hash 生成のコストが大きくなるため、その削減がより顕著な改善につながるのです。</p>
+
+            <h3>メモリ影響の分析</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>従来実装</th>
+                        <th>opt_new実装</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>allocateオブジェクト数</td>
+                        <td>2個</td>
+                        <td>1個</td>
+                    </tr>
+                    <tr>
+                        <td>命令シーケンスサイズ</td>
+                        <td>ベース</td>
+                        <td>+0.5%</td>
+                    </tr>
+                    <tr>
+                        <td>呼び出しサイトあたりのコード</td>
+                        <td>—</td>
+                        <td>544 → 656 byte</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>重要な点として、メモリ使用量の増加は「呼び出しサイト」あたりであり、コード全体に占める割合はわずか 0.5% です。この小さな増加で得られる大幅なパフォーマンス改善は、明らかに価値があります。</p>
+
+            <div class="alert tip">
+                <strong>YJIT との相乗効果</strong>
+                Ruby 3.5 の YJIT コンパイラと opt_new 命令が組み合わさると、キーワード引数のケースで 6.5 倍の高速化が実現します。これは、YJIT がインラインキャッシュを完全に削除して、単一の型バージョンに特化したコードを生成できるようになるためです。
+            </div>
+
+            <div class="alert note">
+                <strong>Rails への波及効果</strong>
+                Rails のモデル操作では頻繁に new が呼び出されます。キーワード引数による初期化が一般的なため、この 6.5 倍の改善は、Rails アプリケーション全体のレイテンシー削減に大きく貢献するでしょう。
+            </div>
+        </section>
+
+        <!-- Section 07 -->
+        <section class="section" id="section-07">
+            <div class="section-number">07</div>
+            <h2>トレードオフと注意点</h2>
+
+            <p>opt_new 命令の導入には多くのメリットがありますが、いくつかのトレードオフも存在します。</p>
+
+            <h3>Stack Trace の変化</h3>
+            <p>opt_new によってインライン化されるため、スタックトレースから <code>Class#new</code> が消えます。</p>
+
+            <pre><code><span class="code-comment"># 従来の実装</span>
+from app.rb:10:in `new'
+from app.rb:5:in `create_object'
+
+<span class="code-comment"># opt_new 実装</span>
+from app.rb:5:in `create_object'
+<span class="code-comment"># ← Class#new がバックトレースから消える</span></code></pre>
+
+            <p>この変化は：</p>
+
+            <ul>
+                <li><strong>一般的な利用</strong>：影響なし。エラー箇所の特定は十分に可能</li>
+                <li><strong>デバッグ時</strong>：若干の手間が増える可能性</li>
+                <li><strong>メタプログラミング</strong>：Class#new のフレームに依存していた場合は修正が必要</li>
+            </ul>
+
+            <p>Ruby 3.5 への移行時に、既存テストで <code>new</code> をスタック最上位に期待している場合は、テストの修正が必要になる場合があります。</p>
+
+            <h3>メモリ使用量の微増</h3>
+            <p>前述の通り、呼び出しサイトあたりのコードサイズが 544 byte から 656 byte に増加します。ただし：</p>
+
+            <ul>
+                <li>全体への影響：+0.5%（許容範囲内）</li>
+                <li>実メモリ効果：ほぼ無視できるレベル</li>
+                <li>キャッシュ効率の改善で相殺される可能性</li>
+            </ul>
+
+            <div class="alert warning">
+                <strong>Stack Trace への依存性の確認が重要</strong>
+                カスタムのエラー追跡システムやメタプログラミングで Class#new のフレームに明示的に依存している場合は、Ruby 3.5 への移行前に確認が必須です。例えば、「n フレーム目は常に new」というような実装があれば修正が必要になります。
+            </div>
+
+            <h3>デバッグビルドへの影響</h3>
+            <p>デバッグビルドやプロファイリングツールによっては、opt_new 命令が正しく対応されていない可能性があります。Ruby 3.5 のリリースに向けて、主要なデバッグツールの対応が進んでいます。</p>
+        </section>
+
+        <!-- Section 08 -->
+        <section class="section" id="section-08">
+            <div class="section-number">08</div>
+            <h2>Ruby 3.5〜4.0 での展開</h2>
+
+            <p>opt_new 命令の導入は、Ruby の進化ロードマップの中でも重要な位置を占めています。</p>
+
+            <h3>Ruby 3.5 での実装（2025年5月予定）</h3>
+
+            <ul>
+                <li><code>opt_new</code> YARV命令が実験的に導入</li>
+                <li>インタプリタ環境での 1.8x ～ 6.2x の改善</li>
+                <li>ほぼすべてのクラスの new で恩恵</li>
+                <li>互換性：100% を維持</li>
+            </ul>
+
+            <h3>Ruby 4.0 での統合（2025年12月予定）</h3>
+
+            <p>Ruby 4.0 では、さらに積極的な統合が予定されています：</p>
+
+            <ul>
+                <li><strong>YJIT との統合</strong>：単一型のコードを生成し、6.5x 以上の改善を実現</li>
+                <li><strong>ZJIT との統合</strong>：Rust ベースの新しい JIT コンパイラとも統合</li>
+                <li><strong>公式声明</strong>："Class#new is faster in all cases, but especially when passing keyword arguments"</li>
+            </ul>
+
+            <h3>今後の拡張可能性</h3>
+
+            <p>opt_new 命令の成功により、他の類似の最適化も視野に入ってきています：</p>
+
+            <ul>
+                <li><code>attr_reader</code>/<code>attr_writer</code> のインライン化</li>
+                <li>他のメタプログラミング関連の最適化</li>
+                <li>GC プレッシャーの削減</li>
+            </ul>
+
+            <div class="alert note">
+                <strong>長期的な戦略</strong>
+                Ruby コアチームの戦略は明確です：「遅くて柔軟」から「速くて柔軟」へ。opt_new はその第一歩に過ぎず、今後も同様の最適化が続いていくでしょう。
+            </div>
+        </section>
+
+        <!-- Section 09 -->
+        <section class="section" id="section-09">
+            <div class="section-number">09</div>
+            <h2>まとめと考察</h2>
+
+            <p>RubyKaigi 2025 で発表された Class#new の最適化は、Ruby の設計哲学そのものへの深い理解を示す革新的なセッションでした。</p>
+
+            <h3>逆説的な結論</h3>
+            <p>最も興味深いのは、このセッションが示した逆説的な結論です：</p>
+
+            <blockquote style="font-style: italic; color: var(--text-secondary); margin: 1.5rem 0; padding-left: 1.5rem; border-left: 3px solid var(--accent);">
+                「C言語で実装した方が速い」という常識は、言語境界の負荷を考慮していない。同じセマンティクスであれば、Ruby（YARV）で実装した方が速いこともある。
+            </blockquote>
+
+            <p>この洞察は、Ruby が単なるスクリプト言語から、パフォーマンスも兼ね備えたシステムプログラミング言語へと進化していることを示しています。</p>
+
+            <h3>技術的な教訓</h3>
+
+            <ul>
+                <li><strong>言語境界のコスト</strong>：最適化を考える際、言語間の呼び出しオーバーヘッドは常に念頭に置くべき</li>
+                <li><strong>インラインキャッシュの力</strong>：YARV VM 内のキャッシングメカニズムはきわめて強力</li>
+                <li><strong>互換性の大切さ</strong>：Ruby の柔軟性（monkeypatch など）を損なわずに最適化する工夫</li>
+            </ul>
+
+            <h3>Railsエコシステムへの期待</h3>
+
+            <p>Rails コミュニティにとって、この最適化は特に大きな意味を持ちます：</p>
+
+            <ul>
+                <li>モデルインスタンス生成時の 6.2x 高速化</li>
+                <li>関連オブジェクト（association proxy など）の生成の高速化</li>
+                <li>システム全体のレイテンシー削減</li>
+            </ul>
+
+            <p>Ruby on Rails のようなフレームワークこそが、言語レベルの最適化により大きな恩恵を受けるのです。</p>
+
+            <h3>参考資料</h3>
+
+            <ul>
+                <li><a href="https://rubykaigi.org/2025/presentations/tenderlove.html" target="_blank" rel="noopener noreferrer">RubyKaigi 2025 - Class#new 高速化セッション</a></li>
+                <li><a href="https://speakerdeck.com/tenderlove/rubykaigi-2025-class-new-a-new-approach" target="_blank" rel="noopener noreferrer">Slides - RubyKaigi 2025 Class#new: A New Approach</a></li>
+                <li><a href="https://github.com/ruby/ruby/pull/13080" target="_blank" rel="noopener noreferrer">GitHub PR #13080 - opt_new implementation</a></li>
+                <li><a href="https://bugs.ruby-lang.org/issues/21254" target="_blank" rel="noopener noreferrer">Feature #21254 - opt_new YARV instruction</a></li>
+                <li><a href="https://railsatscale.com/2025-05-21-fast-allocations-in-ruby-3-5/" target="_blank" rel="noopener noreferrer">Rails at Scale - Fast Allocations in Ruby 3.5</a></li>
+            </ul>
+
+            <div class="alert tip">
+                <strong>次のステップ</strong>
+                Ruby 3.5 がリリースされたら、実際のアプリケーションで opt_new の効果を測定してみることをお勧めします。特に、大量のモデルインスタンスを生成するバッチ処理では、顕著な改善が期待できます。
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>このセッションノートは RubyKaigi 2025 (2025年4月17日) の Aaron Patterson によるセッションを基に作成されました。</p>
+        <p>記事最終更新日：2025年4月17日</p>
+        <p><a href="../index.html">知識ベース トップへ</a></p>
+    </footer>
+
+    <!-- Back to Top Button -->
+    <button class="back-to-top" id="backToTop">↑</button>
+
+    <script>
+        // Back to Top functionality
+        const backToTopBtn = document.getElementById('backToTop');
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTopBtn.classList.add('show');
+            } else {
+                backToTopBtn.classList.remove('show');
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Active section tracking in sticky nav
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.section');
+            const navLinks = document.querySelectorAll('.nav-section-link');
+
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (window.scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
