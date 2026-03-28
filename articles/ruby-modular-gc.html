@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modular GC — Rubyのガベージコレクションをプラグイン化する</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #CC342D;
+            --accent-light: #E8554E;
+            --accent-dark: #8B1A15;
+            --bg-deep: #0A0A0F;
+            --bg-card: #12121A;
+            --bg-code: #0D0D14;
+            --text-primary: #E8E6E3;
+            --text-secondary: #8A8A9A;
+            --text-muted: #55556A;
+            --border: #1E1E2E;
+            --green: #50FA7B;
+            --yellow: #F1FA8C;
+            --cyan: #8BE9FD;
+            --orange: #FFB86C;
+            --purple: #BD93F9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Noise overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' seed='1'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        main {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 40px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            animation: fadeUp 0.8s ease-out;
+        }
+
+        .hero-eyebrow {
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-meta {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .hero-meta-item {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .stat-box {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Sticky Navigation */
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            background-color: rgba(10, 10, 15, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .sticky-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .sticky-nav a:hover {
+            color: var(--accent);
+        }
+
+        .sticky-nav-home {
+            color: var(--accent);
+            font-weight: 600;
+            margin-right: 16px;
+            border-right: 1px solid var(--border);
+            padding-right: 16px;
+        }
+
+        /* Content Layout */
+        .content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        .section {
+            margin-bottom: 60px;
+            animation: fadeUp 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        .section:nth-child(1) { animation-delay: 0.1s; }
+        .section:nth-child(2) { animation-delay: 0.2s; }
+        .section:nth-child(3) { animation-delay: 0.3s; }
+        .section:nth-child(4) { animation-delay: 0.4s; }
+        .section:nth-child(5) { animation-delay: 0.5s; }
+        .section:nth-child(6) { animation-delay: 0.6s; }
+        .section:nth-child(7) { animation-delay: 0.7s; }
+        .section:nth-child(8) { animation-delay: 0.8s; }
+        .section:nth-child(9) { animation-delay: 0.9s; }
+
+        .section-number {
+            display: inline-block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+        }
+
+        .section-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 28px;
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        ul, ol {
+            margin-left: 24px;
+            margin-bottom: 16px;
+        }
+
+        li {
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        strong {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        code {
+            color: var(--cyan);
+        }
+
+        pre code {
+            color: var(--text-primary);
+        }
+
+        /* Alert Boxes */
+        .alert {
+            border-left: 4px solid;
+            padding: 20px;
+            margin-bottom: 24px;
+            border-radius: 6px;
+            background-color: var(--bg-card);
+        }
+
+        .alert-green {
+            border-left-color: var(--green);
+            background-color: rgba(80, 250, 123, 0.08);
+        }
+
+        .alert-green strong {
+            color: var(--green);
+        }
+
+        .alert-orange {
+            border-left-color: var(--orange);
+            background-color: rgba(255, 184, 108, 0.08);
+        }
+
+        .alert-orange strong {
+            color: var(--orange);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background-color: rgba(204, 52, 45, 0.15);
+            border-bottom: 2px solid var(--border);
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: rgba(204, 52, 45, 0.05);
+        }
+
+        /* References */
+        .references {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 40px;
+        }
+
+        .references h3 {
+            font-size: 1.3rem;
+            margin-bottom: 16px;
+            color: var(--accent-light);
+        }
+
+        .references ul {
+            margin-left: 0;
+        }
+
+        .references li {
+            margin-bottom: 12px;
+        }
+
+        .references a {
+            color: var(--cyan);
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .references a:hover {
+            color: var(--accent-light);
+        }
+
+        /* Back to Top Button */
+        .back-to-top {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            width: 50px;
+            height: 50px;
+            background-color: var(--accent);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+            transition: all 0.3s;
+            font-size: 1.5rem;
+        }
+
+        .back-to-top:hover {
+            background-color: var(--accent-light);
+            transform: translateY(-4px);
+        }
+
+        .back-to-top.show {
+            display: flex;
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 60px 24px;
+            }
+
+            .hero-title {
+                font-size: 2.2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .sticky-nav {
+                flex-wrap: wrap;
+                padding: 12px 20px;
+                gap: 16px;
+            }
+
+            .content {
+                padding: 40px 24px;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .back-to-top {
+                bottom: 20px;
+                right: 20px;
+                width: 45px;
+                height: 45px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-eyebrow">RUBYKAIGI 2025 / セッションノート</div>
+            <h1 class="hero-title">Modular GC</h1>
+            <p class="hero-subtitle">Rubyのガベージコレクションをプラグイン化する — MMTkとモジュラーGC APIによるメモリ管理の革新</p>
+            <div class="hero-meta">
+                <div class="hero-meta-item"><strong>スピーカー:</strong> Peter Zhu (@peterzhu2118) — Ruby Core Committer, Shopify</div>
+                <div class="hero-meta-item"><strong>開催日:</strong> 2025年4月18日</div>
+            </div>
+            <div class="hero-stats">
+                <div class="stat-box">
+                    <div class="stat-value">MMTk</div>
+                    <div class="stat-label">Rust製GCフレームワーク</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">Ruby 3.4+</div>
+                    <div class="stat-label">Experimental搭載</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">6+</div>
+                    <div class="stat-label">GCアルゴリズム</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sticky Navigation -->
+        <nav class="sticky-nav">
+            <a href="../index.html" class="sticky-nav-home">← トップに戻る</a>
+            <a href="#section-01">前提知識</a>
+            <a href="#section-02">現行GC</a>
+            <a href="#section-03">他のアルゴリズム</a>
+            <a href="#section-04">現行の限界</a>
+            <a href="#section-05">Modular API</a>
+            <a href="#section-06">MMTk</a>
+            <a href="#section-07">現況と制約</a>
+            <a href="#section-08">今後の展望</a>
+            <a href="#section-09">まとめ</a>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Section 01 -->
+            <section class="section" id="section-01">
+                <div class="section-number">01</div>
+                <h2 class="section-title">前提知識 — GCとは何か</h2>
+                <p>ガベージコレクション（GC）はプログラムが使用しなくなったメモリを自動的に回収するメカニズムです。Rubyのようなマネージド言語では、GCはランタイムの中核を成す機能です。</p>
+                <p>GCプロセスは大きく<strong>3つのフェーズ</strong>に分けられます：</p>
+                <ul>
+                    <li><strong>Object Allocation</strong> — 新しいオブジェクトをメモリに割り当てる</li>
+                    <li><strong>Liveliness判定</strong> — どのオブジェクトがまだ「生きている」（使用可能）かを判定</li>
+                    <li><strong>Reclaim（回収）</strong> — 不要なオブジェクトをメモリから解放</li>
+                </ul>
+                <p>Liveliness判定の起点は<strong>Root object</strong>です。プログラムのスタック、グローバル変数、その他の参照可能なオブジェクトから始まって、参照グラフを辿っていき、到達不可能なオブジェクトを特定します。</p>
+                <p><strong>なぜGCが必要か？</strong> 手動メモリ管理（C/C++など）では、開発者が明示的に<code>free()</code>や<code>delete</code>を呼び出す必要があります。これは以下のようなバグの温床となります：</p>
+                <ul>
+                    <li>解放忘れ（メモリリーク）</li>
+                    <li>二重解放（ダブルフリーエラー）</li>
+                    <li>使用後解放（Use-After-Free）</li>
+                </ul>
+                <p>Rubyはすべてがオブジェクトのため、GCなしには運用できません。メモリ安全性の確保と開発の効率性がGCの必須要件となっているのです。</p>
+            </section>
+
+            <!-- Section 02 -->
+            <section class="section" id="section-02">
+                <div class="section-number">02</div>
+                <h2 class="section-title">Ruby の現行GC — Mark-Sweep-Compact</h2>
+
+                <h3 class="section-subtitle">Free List Allocator</h3>
+                <p>Ruby の標準的なメモリ割り当て方式は<strong>Free List Allocator</strong>です。これは、解放されたメモリスロットを連結リストとして管理し、新規割り当て時に再利用するシステムです。</p>
+                <p>Rubyのオブジェクトは<code>RVALUE</code>構造体として表現され、基本的には<strong>40バイト</strong>の大きさを持ちます：</p>
+                <ul>
+                    <li>8バイト — flags（オブジェクトのメタ情報）</li>
+                    <li>8バイト — klass（クラスポインタ）</li>
+                    <li>24バイト — データ領域</li>
+                </ul>
+                <p><strong>Variable Width Allocation (VWA)</strong>は Ruby 3.2で導入された最適化です。従来はすべてのオブジェクトが40バイト割り当てられていましたが、VWAでは<strong>40B / 80B / 160B / 320B</strong>というスロットサイズプールが導入されました。例えば、文字列は従来の23バイト制限から<strong>615バイト</strong>まで直接埋め込めるようになり、外部メモリ割り当てのコストが削減されています。</p>
+
+                <h3 class="section-subtitle">Mark-Sweep-Compact フェーズ</h3>
+                <p>Ruby の Mark-Sweep-Compact GCは以下の3つのステップで構成されます：</p>
+                <ol>
+                    <li><strong>Mark Phase</strong> — Rootから参照グラフを深さ優先で辿り、到達可能なすべてのオブジェクトにマークを付与します。この過程で、参照先のオブジェクトが見つかると、再帰的にそれらもマークされます。</li>
+                    <li><strong>Sweep Phase</strong> — ヒープ全体をスキャンし、マークされなかったオブジェクト（到達不可能と判定されたもの）のメモリを解放し、Free Listに登録します。</li>
+                    <li><strong>Compact Phase</strong> — メモリ断片化を解消するために、カーソルを左右から走査してfreeスロットとオブジェクトを交換します。移動したオブジェクトには<code>T_MOVED</code>というセンチネルを配置し、参照を新しい位置に更新します。</li>
+                </ol>
+                <p>詳細な実装解説は Peter Zhu の個人ブログ「<strong>blog.peterzhu.ca/notes-on-ruby-gc</strong>」で公開されており、Ruby GC理解の参考資料となっています。</p>
+            </section>
+
+            <!-- Section 03 -->
+            <section class="section" id="section-03">
+                <div class="section-number">03</div>
+                <h2 class="section-title">他のGCアルゴリズム — トレードオフの世界</h2>
+                <p>Ruby 標準GC以外にも、様々なGCアルゴリズムが存在し、それぞれ異なるトレードオフを持っています：</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>アルゴリズム</th>
+                            <th>仕組み</th>
+                            <th>メリット</th>
+                            <th>デメリット</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Reference Counting</strong></td>
+                            <td>参照追加/削除のたびにカウント更新</td>
+                            <td>インクリメンタル、局所的コスト</td>
+                            <td>循環参照に弱い、トラッキング負荷</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Semispace Copying</strong></td>
+                            <td>2つの空間を用意、生存オブジェクトをコピー</td>
+                            <td>コンパクション自動、シンプル</td>
+                            <td>メモリ2倍必要、移動コスト</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Immix</strong></td>
+                            <td>ブロック→ライン階層、バンプポインタ割り当て</td>
+                            <td>メモリ効率とスループットのバランス</td>
+                            <td>実装が複雑、研究段階</td>
+                        </tr>
+                        <tr>
+                            <td><strong>LXR</strong></td>
+                            <td>Reference Counting + Immixのハイブリッド</td>
+                            <td>低レイテンシ、高スループット</td>
+                            <td>最新研究、検証中</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>重要な指摘として、<strong>Ruby自体はGCに最適化された設計ではない</strong>という点があります。C拡張機能との互換性や、既存のGCアルゴリズムへの依存性から、Reference Countingのような方式は不向きとされています。また、<strong>「One size fits all」のGCは存在しない</strong — つまり、すべてのワークロードに完璧に対応するGCはなく、ワークロード特性に応じた選択肢が必要になるのです。だからこそ、Modular化が重要なのです。</p>
+            </section>
+
+            <!-- Section 04 -->
+            <section class="section" id="section-04">
+                <div class="section-number">04</div>
+                <h2 class="section-title">現行GCの限界</h2>
+
+                <h3 class="section-subtitle">Parallelism（並列化）の課題</h3>
+                <p>Ruby の現行GCはシングルスレッドに設計されています。Mark フェーズではオブジェクトの変更を防ぐ必要があり、Sweep フェーズでは Free List 構造への排他的アクセスが必須です。これらの制約により、複数スレッドでの並列GCは困難です。</p>
+                <p>Ractor（Ruby 3.1以降）の登場で並列処理の需要が高まっています。しかし共有オブジェクトのレースコンディション問題が生じ、並列GC実装が複雑化しています。</p>
+
+                <h3 class="section-subtitle">Dynamic Object Sizes の管理</h3>
+                <p>現在のRubyは基本的に40バイトのRVALUEを確保し、超過分を<code>malloc</code>で別途割り当てています。VWAで改善されましたが、ImmixやLXRなどの他のGCアルゴリズムはより柔軟なサイズ管理を持っています。</p>
+                <p>スロットサイズが動的な場合の最適化は他の言語実装にはありますが、Rubyには専用の実装がありません。これは異なるGCアルゴリズムを実装する際の障壁になります。</p>
+            </section>
+
+            <!-- Section 05 -->
+            <section class="section" id="section-05">
+                <div class="section-number">05</div>
+                <h2 class="section-title">Modular GC API — アーキテクチャの分離</h2>
+                <p>Ruby Issue #20470で提案された<strong>Modular GC API</strong>は、Ruby内核のGC実装を独立したモジュールとして扱うアーキテクチャです。</p>
+
+                <h3 class="section-subtitle">設計のポイント</h3>
+                <p>従来の統合的な<code>gc.c</code>から機能を分離：</p>
+                <ul>
+                    <li><code>gc.c</code> — 統合層（Ruby VMとの接点）</li>
+                    <li><code>gc/default/default.c</code> — デフォルトGC実装</li>
+                    <li><code>gc_impl.h</code> — パブリックAPI定義</li>
+                </ul>
+                <p>GC実装は共有ライブラリ（<code>.so</code>ファイル）として独立してビルドされ、実行時に<code>dlopen</code>でロードされます。</p>
+
+                <h3 class="section-subtitle">ビルドと実行</h3>
+                <pre><code># Modular GC対応でビルド
+./configure --with-modular-gc
+make modular-gc MODULAR_GC=mmtk
+
+# 実行時にGCライブラリを指定
+RUBY_GC_LIBRARY=mmtk ruby script.rb
+RUBY_GC_LIBRARY=/path/to/custom_gc.so ruby script.rb</code></pre>
+
+                <p>デフォルトGCも<code>libgc_default.so</code>として独立ビルド可能です。GC実装はパブリックAPIのみを使用するため、<strong>Ruby内部への直接依存を排除</strong>できます。これにより、異なるGCアルゴリズムの試験的統合やカスタムGC開発が容易になります。</p>
+            </section>
+
+            <!-- Section 06 -->
+            <section class="section" id="section-06">
+                <div class="section-number">06</div>
+                <h2 class="section-title">MMTk — 次世代GCフレームワーク</h2>
+
+                <h3 class="section-subtitle">MMTkとは</h3>
+                <p><strong>Memory Management Toolkit (MMTk)</strong>は、VM非依存のGCフレームワークです。Rustで実装された<code>mmtk-core</code>として提供され、V8（JavaScript）、JVM、OpenJDK等の複数のVMで採用されています。</p>
+                <p>開発は<strong>ANU（オーストラリア国立大学）</strong>の Steve Blackburn 研究室が主導しており、学術的な最新GC研究を実装面で実現しています。Ruby統合は<strong>ruby/mmtk</strong>リポジトリで進行中です。</p>
+
+                <h3 class="section-subtitle">アーキテクチャ</h3>
+                <p>Ruby ← C Binding ← Rust Binding ← MMTk core という階層構造により、RubyとMMTkの間を疎結合に保っています。</p>
+
+                <h3 class="section-subtitle">利用可能なGCプラン</h3>
+                <ul>
+                    <li><strong>NoGC</strong> — GCしない（テスト用）</li>
+                    <li><strong>MarkSweep</strong> — Ruby標準GCに類似</li>
+                    <li><strong>Immix</strong> — ブロック/ライン階層ベースの効率的GC</li>
+                    <li><strong>StickyImmix</strong> — 世代別Immix（新しい世代を重点的に）</li>
+                </ul>
+                <p><strong>LXR</strong>もOpenJDKで実績を持っており、PLDI 2022で発表された研究によると、ShenandoahやZGCより低レイテンシ、G1より高スループットを実現しています。</p>
+
+                <div class="alert alert-green">
+                    <p><strong>利点：</strong> MMTkを活用することで、研究者はRubyの内部実装を深く理解しなくても、新しいGCアルゴリズムをRuby上で直接実験できるようになります。学術的GC研究と本番実装のギャップが大幅に縮小されるのです。</p>
+                </div>
+            </section>
+
+            <!-- Section 07 -->
+            <section class="section" id="section-07">
+                <div class="section-number">07</div>
+                <h2 class="section-title">現在の状況と制約</h2>
+
+                <h3 class="section-subtitle">Ruby 3.4での搭載</h3>
+                <p>Ruby 3.4（2024年12月リリース）には、Modular GC APIとMMTk統合が<strong>experimental機能として搭載</strong>されました。この実装により、開発者はRubyの選択肢を広げることができます。</p>
+
+                <h3 class="section-subtitle">現在の制限事項</h3>
+                <ul>
+                    <li>⚠️ <strong>パフォーマンス</strong> — デフォルトGCより大幅に劣る。本番環境での使用は非推奨</li>
+                    <li><strong>並列化</strong> — GCは現在シングルスレッド。マルチスレッド環境での最適化は未実装</li>
+                    <li><strong>アルゴリズムサポート</strong> — MMTkではMarkSweep、Immix程度の基本実装のみ</li>
+                    <li><strong>互換性</strong> — C拡張機能との完全な互換性がまだ確認されていない場合がある</li>
+                </ul>
+
+                <h3 class="section-subtitle">今後の改善課題</h3>
+                <ul>
+                    <li>並列マーキングと並列スイープの実装</li>
+                    <li>Ractor対応の並列GC</li>
+                    <li>より高度なアルゴリズム（LXR等）のサポート</li>
+                    <li>パフォーマンスのデフォルトGCとのパリティ達成</li>
+                </ul>
+
+                <div class="alert alert-orange">
+                    <p><strong>⚠️ 注意：</strong> Modular GCは現在experimentalです。本番環境では必ずデフォルトGCを使用してください。テスト環境での評価と フィードバック提供が、この機能の成熟化に貢献します。</p>
+                </div>
+            </section>
+
+            <!-- Section 08 -->
+            <section class="section" id="section-08">
+                <div class="section-number">08</div>
+                <h2 class="section-title">今後の展望</h2>
+
+                <p>Modular GCエコシステムは、まだ初期段階ですが、複数の展望があります：</p>
+
+                <ul>
+                    <li><strong>並列GCの実現</strong> — Ractor対応と連携し、マルチスレッド環境での真の並列GCを実現</li>
+                    <li><strong>MMTk GCプランの拡充</strong> — LXR、Z Garbage Collector相当など、最新アルゴリズムのサポート</li>
+                    <li><strong>パフォーマンス最適化</strong> — デフォルトGCとのパリティ達成に向けた精度向上</li>
+                    <li><strong>カスタムGCエコシステム</strong> — 企業やコミュニティが独自のGC実装を提供し、特定ワークロード（高レイテンシ要件、メモリ制限環境等）に最適化</li>
+                    <li><strong>実装ガイドの整備</strong> — <code>ruby/gc/README.md</code>にGC開発者向けの詳細ガイドを拡充し、参入障壁を低減</li>
+                </ul>
+
+                <p>これらが実現すれば、Ruby は単なる「デフォルトGC搭載言語」から「GC選択可能な言語」へと進化します。</p>
+            </section>
+
+            <!-- Section 09 -->
+            <section class="section" id="section-09">
+                <div class="section-number">09</div>
+                <h2 class="section-title">まとめ</h2>
+
+                <p><strong>Modular GC</strong>は、Rubyのメモリ管理アーキテクチャに根本的な転換をもたらします。</p>
+
+                <ul>
+                    <li><strong>GCアルゴリズムの選択肢</strong> — ワークロードに応じた最適なGC選択が可能に</li>
+                    <li><strong>研究と本番の融合</strong> — MMTkを通じて、学術的GC研究をRuby実装へ直接適用</li>
+                    <li><strong>カスタムGC開発</strong> — 企業や開発者が独自ニーズに応じたGC実装を容易に構築可能</li>
+                    <li><strong>言語としての成熟化</strong> — メモリ管理の自由度向上により、Ruby の適用範囲が拡大</li>
+                </ul>
+
+                <p>現在 experimental ですが、このModular GCの推進により、Ruby はメモリ管理の分野で大きな前進を遂げるでしょう。</p>
+
+                <!-- References -->
+                <div class="references">
+                    <h3>参考資料・外部リンク</h3>
+                    <ul>
+                        <li><a href="https://rubykaigi.org/2025/presentations/peterzhu2118.html" target="_blank">RubyKaigi 2025: Modular GC — プレゼンテーションページ</a></li>
+                        <li><a href="https://blog.peterzhu.ca/assets/rubykaigi_2025_slides.pdf" target="_blank">セッションスライド PDF — Peter Zhu</a></li>
+                        <li><a href="https://blog.peterzhu.ca/notes-on-ruby-gc/" target="_blank">Ruby GC詳細解説 — Peter Zhu Blog</a></li>
+                        <li><a href="https://bugs.ruby-lang.org/issues/20470" target="_blank">Ruby Feature #20470 — Modular GC API提案</a></li>
+                        <li><a href="https://github.com/mmtk/mmtk-ruby" target="_blank">MMTk Ruby — GitHubリポジトリ</a></li>
+                        <li><a href="https://railsatscale.com/2025-01-08-new-for-ruby-3-4-modular-garbage-collectors-and-mmtk/" target="_blank">Rails at Scale: Ruby 3.4 Modular GC紹介</a></li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Back to Top Button -->
+    <button class="back-to-top" aria-label="トップに戻る">↑</button>
+
+    <script>
+        // Back to Top Button
+        const backToTopButton = document.querySelector('.back-to-top');
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTopButton.classList.add('show');
+            } else {
+                backToTopButton.classList.remove('show');
+            }
+        });
+
+        backToTopButton.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
