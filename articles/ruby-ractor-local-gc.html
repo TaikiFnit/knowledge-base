@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ractor Local GC — 並行Rubyのためのガベージコレクション改善</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --accent: #CC342D;
+      --accent-light: #E8554E;
+      --accent-dark: #8B1A15;
+      --bg-deep: #0A0A0F;
+      --bg-card: #12121A;
+      --bg-code: #0D0D14;
+      --text-primary: #E8E6E3;
+      --text-secondary: #8A8A9A;
+      --text-muted: #55556A;
+      --border: #1E1E2E;
+      --green: #50FA7B;
+      --yellow: #F1FA8C;
+      --cyan: #8BE9FD;
+      --orange: #FFB86C;
+      --purple: #BD93F9;
+    }
+
+    body {
+      font-family: 'Noto Sans JP', sans-serif;
+      background-color: var(--bg-deep);
+      color: var(--text-primary);
+      line-height: 1.8;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.02) 0px,
+          rgba(255, 255, 255, 0.02) 1px,
+          transparent 1px,
+          transparent 2px
+        );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .content-wrapper {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Navigation */
+    nav.sticky-nav {
+      position: sticky;
+      top: 0;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      gap: 2rem;
+    }
+
+    .nav-back {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.95rem;
+      transition: color 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .nav-back:hover {
+      color: var(--accent-light);
+    }
+
+    .nav-sections {
+      display: flex;
+      gap: 1.5rem;
+      overflow-x: auto;
+      flex: 1;
+      font-size: 0.85rem;
+    }
+
+    .nav-sections a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      white-space: nowrap;
+      transition: color 0.3s ease;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .nav-sections a:hover,
+    .nav-sections a.active {
+      color: var(--accent-light);
+    }
+
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(135deg, rgba(204, 52, 45, 0.1) 0%, rgba(13, 13, 20, 0) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 4rem 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .hero-content {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .hero-eyebrow {
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 1rem;
+    }
+
+    .hero-title {
+      font-size: 2.8rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent-light) 0%, var(--text-primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    .hero-meta span {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      border-color: var(--accent);
+      background: rgba(204, 52, 45, 0.05);
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent-light);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 2rem 4rem 2rem;
+    }
+
+    /* Section Styling */
+    section {
+      margin-bottom: 4rem;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    section:nth-child(1) { animation-delay: 0.1s; }
+    section:nth-child(2) { animation-delay: 0.2s; }
+    section:nth-child(3) { animation-delay: 0.3s; }
+    section:nth-child(4) { animation-delay: 0.4s; }
+    section:nth-child(5) { animation-delay: 0.5s; }
+    section:nth-child(6) { animation-delay: 0.6s; }
+    section:nth-child(7) { animation-delay: 0.7s; }
+    section:nth-child(8) { animation-delay: 0.8s; }
+
+    .section-number {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 0.5rem;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: var(--text-primary);
+      border-left: 4px solid var(--accent);
+      padding-left: 1rem;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--accent-light);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+      line-height: 1.9;
+    }
+
+    strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Code Blocks */
+    pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+    }
+
+    code {
+      color: var(--cyan);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    pre code {
+      color: var(--text-secondary);
+    }
+
+    /* Alert Boxes */
+    .alert {
+      border-left: 4px solid;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .alert.info {
+      border-color: var(--cyan);
+      background: rgba(139, 233, 253, 0.05);
+    }
+
+    .alert.success {
+      border-color: var(--green);
+      background: rgba(80, 250, 123, 0.05);
+    }
+
+    .alert.warning {
+      border-color: var(--yellow);
+      background: rgba(241, 250, 140, 0.05);
+    }
+
+    .alert.danger {
+      border-color: var(--orange);
+      background: rgba(255, 184, 108, 0.05);
+    }
+
+    .alert strong {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.95rem;
+    }
+
+    thead {
+      background: var(--bg-card);
+      border-bottom: 2px solid var(--accent);
+    }
+
+    th {
+      padding: 1rem;
+      text-align: left;
+      color: var(--accent-light);
+      font-weight: 600;
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    tbody tr:hover {
+      background: rgba(204, 52, 45, 0.05);
+    }
+
+    /* Lists */
+    ul, ol {
+      margin: 1.5rem 0 1.5rem 2rem;
+      color: var(--text-secondary);
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+      line-height: 1.8;
+    }
+
+    /* Quotes */
+    blockquote {
+      border-left: 4px solid var(--accent);
+      padding-left: 1.5rem;
+      margin: 1.5rem 0;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* Back to Top Button */
+    .back-to-top {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 50px;
+      height: 50px;
+      background: var(--accent);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 99;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(204, 52, 45, 0.3);
+    }
+
+    .back-to-top:hover {
+      background: var(--accent-light);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(204, 52, 45, 0.4);
+    }
+
+    .back-to-top.show {
+      display: flex;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--accent-light);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    footer a:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      nav.sticky-nav {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+      }
+
+      .nav-sections {
+        width: 100%;
+      }
+
+      .hero {
+        padding: 2rem 1.5rem;
+      }
+
+      .hero-title {
+        font-size: 2rem;
+      }
+
+      h2 {
+        font-size: 1.5rem;
+      }
+
+      .container {
+        padding: 0 1.5rem 2rem 1.5rem;
+      }
+
+      pre {
+        padding: 1rem;
+        font-size: 0.85rem;
+      }
+
+      .hero-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="content-wrapper">
+    <!-- Navigation -->
+    <nav class="sticky-nav">
+      <a href="../index.html" class="nav-back">← トップに戻る</a>
+      <div class="nav-sections">
+        <a href="#section-01" class="nav-anchor">前提知識</a>
+        <a href="#section-02" class="nav-anchor">Local GCが必要な理由</a>
+        <a href="#section-03" class="nav-anchor">Shareable Objects</a>
+        <a href="#section-04" class="nav-anchor">提案手法</a>
+        <a href="#section-05" class="nav-anchor">パフォーマンス</a>
+        <a href="#section-06" class="nav-anchor">Ractor::Port</a>
+        <a href="#section-07" class="nav-anchor">実装状況</a>
+        <a href="#section-08" class="nav-anchor">まとめ</a>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero">
+      <div class="hero-content">
+        <div class="hero-eyebrow">RubyKaigi 2025 / セッションノート</div>
+        <h1 class="hero-title">Ractor Local GC</h1>
+        <p class="hero-subtitle">並行Rubyのためのガベージコレクション改善 — Shareable Objectsの壁を越えて並列GCを実現する</p>
+
+        <div class="hero-meta">
+          <span>🗣️ 登壇者: Koichi Sasada</span>
+          <span>📅 2025年4月18日</span>
+          <span>🏢 STORES, Inc.</span>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-card">
+            <div class="stat-value">4x</div>
+            <div class="stat-label">マイクロベンチ改善</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">Local</div>
+            <div class="stat-label">Ractor分離型GC</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">3.5</div>
+            <div class="stat-label">目標リリース (Dec 2025)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+      <!-- Section 01 -->
+      <section id="section-01">
+        <div class="section-number">01 / 前提知識</div>
+        <h2>Ractorとは — Ruby 3.0の並行モデル</h2>
+
+        <p>Ruby 3.0で導入された<strong>Ractor</strong>は、GVL (Global VM Lock) を突破する新しい並行実行モデルです。スレッドとは異なり、各Ractorは独立したメモリ空間を持ち、オブジェクトを共有しません。</p>
+
+        <h3>Ractorの基本特性</h3>
+        <ul>
+          <li><strong>GVL per Ractor:</strong> 各Ractorが独自のGVLを持つため、複数Ractorで真の並列実行が可能</li>
+          <li><strong>オブジェクト分離:</strong> 異なるRactor間でオブジェクトを直接参照できない（メモリ安全性）</li>
+          <li><strong>メッセージパッシング:</strong> Ractor.yield/Ractor#takeやRactor::Portを介した通信</li>
+          <li><strong>独立したスレッド:</strong> 各Ractorが独自のスレッドを持ち、スレッドプール化も可能</li>
+        </ul>
+
+        <h3>Shareableオブジェクト</h3>
+        <p>オブジェクト分離という原則の中で、特定のオブジェクトは複数のRactor間で<strong>安全に共有可能</strong>です。これらが<strong>Shareable Objects</strong です：</p>
+
+        <pre><code># Shareable Objects の例
+Ractor.shareable?(42)           # => true (小整数)
+Ractor.shareable?(true)         # => true (ブール値)
+Ractor.shareable?(nil)          # => true (nil)
+Ractor.shareable?(:symbol)      # => true (シンボル)
+Ractor.shareable?("frozen")     # => true (frozen文字列)
+Ractor.shareable?(Regexp)       # => true (クラス/モジュール)
+
+# 非Shareable Objects
+Ractor.shareable?([1, 2, 3])    # => false (配列)
+Ractor.shareable?({"a" => 1})   # => false (ハッシュ)</code></pre>
+
+        <p>非Shareableオブジェクトは、Ractor間で送受信される際に<strong>ディープコピー</strong されます。これはメモリ安全性を保証しますが、パフォーマンスオーバーヘッドの原因にもなります。</p>
+      </section>
+
+      <!-- Section 02 -->
+      <section id="section-02">
+        <div class="section-number">02 / なぜLocal GCが必要か</div>
+        <h2>現行Global GCの問題点と性能瓶颈</h2>
+
+        <p>Ruby 3.0〜3.4では、複数Ractorが実行されていても<strong>ガベージコレクション (GC) はグローバル</strong>です。つまり、GC実行時には全てのRactorを一時停止する必要があります。</p>
+
+        <h3>Global GCの弊害</h3>
+        <ul>
+          <li><strong>全Ractor停止:</strong> 一つのRactorでGCが発動すると、他の全てのRactorが一時停止</li>
+          <li><strong>同期オーバーヘッド:</strong> 全Ractorを同期させるためのロック機構が複雑化</li>
+          <li><strong>予測不可能なレイテンシ:</strong> マルチRactorアプリケーション下では、GC一度で全体が停止</li>
+          <li><strong>スケーラビリティ低下:</strong> Ractor数が増えるほどGC停止時間が相対的に長くなる</li>
+        </ul>
+
+        <h3>ベンチマークから見る影響</h3>
+        <p>特に<strong>String生成</strong>のようなアロケーション頻繁な処理では、GCの同期待機がボトルネックになります。複数Ractor間での並列実行に対してGCが同期化されることで、理論値の並列スケールが損なわれます。</p>
+
+        <div class="alert warning">
+          <strong>重要:</strong> Ruby 3.4までは「Ractor便利だがGCが課題」という状態が続いており、プロダクション環境での導入が制限されていました。
+        </div>
+      </section>
+
+      <!-- Section 03 -->
+      <section id="section-03">
+        <div class="section-number">03 / Shareable Objectsの壁</div>
+        <h2>参照追跡の複雑性とレースコンディション</h2>
+
+        <p>Ractor Local GC実装の最大の課題は、<strong>Shareable Objects</strong>の存在です。クラスやモジュール、フローズンオブジェクトは複数Racterから参照されるため、GC時の参照追跡が極めて複雑になります。</p>
+
+        <h3>問題の具体例</h3>
+
+        <pre><code>class MyClass
+  attr_accessor :data
+end
+
+# 複数Ractor間で共有されるクラス
+r1 = Ractor.new { MyClass.new.data = "ractor1" }
+r2 = Ractor.new { MyClass.new.data = "ractor2" }
+
+# MyClassはShareable（クラスだから）
+# しかしそのインスタンスは非-Shareableで、各Ractorローカル
+# GC時には、各Ractorローカルオブジェクトから、
+# 共有クラスへの参照チェーンを正確に追跡する必要がある</code></pre>
+
+        <h3>参照追跡の複雑性</h3>
+        <ul>
+          <li><strong>クロスRactor参照:</strong> Shareable Objectが他Ractorの非-Shareableオブジェクトを参照する可能性</li>
+          <li><strong>マーク・スイープの同期:</strong> Markフェーズで複数Ractor間の参照を正確に追跡</li>
+          <li><strong>レースコンディション:</strong> GC実行中にRactor間でオブジェクトが送受信される場合の安全性</li>
+          <li><strong>参照チェーンの分岐:</strong> Shareable ObjectsはRootのようにGCから扱われるべきだが、実装が複雑</li>
+        </ul>
+
+        <h3>従来の全体・部分GC分離案の限界</h3>
+        <p>もし「各RactorがLocal GC、共有オブジェクトはGlobal GC」という単純な分離を試みると、各Ractor LocalオブジェクトからSharedオブジェクトへのポインタ追跡で、事実上全Ractor を同期させなければならず、Local GCの利点が失われます。</p>
+
+        <div class="alert danger">
+          <strong>核心:</strong> 「完璧な分離」を求めると実装コストが極めて高い。この課題を解決する「現実的」なアプローチが必要でした。
+        </div>
+      </section>
+
+      <!-- Section 04 -->
+      <section id="section-04">
+        <div class="section-number">04 / 提案手法</div>
+        <h2>「Done is Better than Perfect」— Shareable Objectsを収集しない戦略</h2>
+
+        <p>Koichi Sasadaが提案した革新的なアプローチは、<strong>哲学的な転換</strong>です。完璧な参照追跡を放棄し、Shareable Objectsを<strong>GCのRootとして扱う</strong>ことで、Local GCを現実可能にしました。</p>
+
+        <h3>提案手法の概要</h3>
+
+        <pre><code># Ractor Local GC の構造
+┌─────────────────────────────────────────┐
+│         Global GC (必要に応じて実行)    │
+│  全Racterを停止し、Shareableオブジェクト  │
+│  のみをマーク・スイープ                 │
+└─────────────────────────────────────────┘
+         ↑ (稀な発動)
+         │
+┌────────┴───────┬──────────┬──────────┐
+│ Ractor 1       │ Ractor 2 │ Ractor 3 │
+│ Local GC       │ Local GC │ Local GC │
+│ (並列実行)     │ (並列実行) │ (並列実行) │
+└────────────────┴──────────┴──────────┘</code></pre>
+
+        <h3>アルゴリズムの詳細</h3>
+
+        <ol>
+          <li><strong>Shareable Objects を Root として固定:</strong>
+            <ul>
+              <li>クラス、モジュール、フローズンオブジェクトなどは、GCの「Markフェーズ」で最初から「生存」状態に設定</li>
+              <li>参照チェーンを追跡しない（つまり、Shareableオブジェクト自体の内部参照も収集対象外）</li>
+            </ul>
+          </li>
+          <li><strong>Ractor Local GC:</strong>
+            <ul>
+              <li>各Ractorは、自分のローカルヒープに対して独立してGCを実行</li>
+              <li>他のRactorを停止させない</li>
+              <li>Mark/Sweepフェーズは完全に並列</li>
+            </ul>
+          </li>
+          <li><strong>Global GC (稀に実行):</strong>
+            <ul>
+              <li>Shareable Objectsの参照カウントやアロケーション量が閾値を超えた場合のみ発動</li>
+              <li>その時のみ全Racterを停止</li>
+            </ul>
+          </li>
+        </ol>
+
+        <h3>なぜこれが機能するのか</h3>
+
+        <div class="alert success">
+          <strong>重要な視点:</strong> Shareable Objectsの数は、通常のRubyプログラムにおいて<strong>非常に少ない</strong>です。クラス定義は初期化時に一度だけ行われ、フローズン文字列も設定数は限定的。つまり、「Global GCの不可避性」より「Local GCの利益」が圧倒的に勝ります。
+        </div>
+
+        <p>この戦略により：</p>
+        <ul>
+          <li>✓ 実装が大幅に簡潔化（参照チェーンの完全追跡を放棄）</li>
+          <li>✓ Shareable Objects周辺の複雑な同期処理が不要</li>
+          <li>✓ 99%のケースでLocal GCが動作、並列性を実現</li>
+          <li>✓ 完璧性を放棄することで、実用性を獲得</li>
+        </ul>
+      </section>
+
+      <!-- Section 05 -->
+      <section id="section-05">
+        <div class="section-number">05 / パフォーマンス評価</div>
+        <h2>ベンチマーク結果 — 改善と課題</h2>
+
+        <p>Ractor Local GCの実装では、マイクロベンチマークで顕著な改善が観測されています。同時に、特定のワークロードでの課題も明らかになっています。</p>
+
+        <h3>パフォーマンス向上: String生成</h3>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Ractor数</th>
+              <th>Global GC (従来)</th>
+              <th>Local GC (提案)</th>
+              <th>改善率</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>4 Ractor</td>
+              <td>1.0x (基準)</td>
+              <td>4.0x</td>
+              <td><strong>+300%</strong></td>
+            </tr>
+            <tr>
+              <td>8 Ractor</td>
+              <td>1.0x (基準)</td>
+              <td>3.5x</td>
+              <td><strong>+250%</strong></td>
+            </tr>
+            <tr>
+              <td>16 Ractor</td>
+              <td>1.0x (基準)</td>
+              <td>2.5x</td>
+              <td><strong>+150%</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p><strong>洞察:</strong> String生成は頻繁なアロケーションとGCの回数が増えます。Local GCにより各Ractorが独立してGCできるため、同期待機が消滅し、並列性が大幅に向上します。</p>
+
+        <h3>パフォーマンス低下: Long-lived Objects</h3>
+
+        <table>
+          <thead>
+            <tr>
+              <th>ワークロード</th>
+              <th>Global GC (従来)</th>
+              <th>Local GC (提案)</th>
+              <th>相対変化</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>長寿命オブジェクト</td>
+              <td>1.0x (基準)</td>
+              <td>0.25x</td>
+              <td><strong>-75% (悪化)</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p><strong>原因分析:</strong> 長寿命オブジェクトは、各Racterの独立したMarkフェーズで何度も参照され、追跡オーバーヘッドが蓄積します。また、Shareable Objectsを除外することで、一部の参照チェーンが「死んだ重み」として残る可能性があります。</p>
+
+        <h3>正規表現マッチング: 中程度の改善</h3>
+
+        <p>複雑な正規表現マッチングは、String生成とLong-lived Objectsの中間的なパフォーマンスを示します：</p>
+
+        <pre><code># 16 Ractor で正規表現処理
+# Global GC:   基準 1.0x
+# Local GC:    改善 2.0x (16Racterで)</code></pre>
+
+        <h3>ベンチマークの解釈</h3>
+
+        <div class="alert info">
+          <strong>重要な注記:</strong> これらはマイクロベンチマークであり、実際のアプリケーション（Web フレームワーク、データ処理など）での改善率は異なる可能性があります。ワークロード特性、Ractor数、オブジェクト生存期間に大きく依存します。
+        </div>
+
+        <p>一般的には、以下の特性を持つアプリケーションで最大の効果が期待できます：</p>
+
+        <ul>
+          <li>✓ 多数のRactorが並列で動作している</li>
+          <li>✓ アロケーション頻度が高い（String, Array など）</li>
+          <li>✓ 各Ractorが相対的に独立した作業を行っている</li>
+          <li>✗ 長寿命なオブジェクトの参照が複雑</li>
+          <li>✗ Shareable Objectsへの頻繁なアクセス</li>
+        </ul>
+      </section>
+
+      <!-- Section 06 -->
+      <section id="section-06">
+        <div class="section-number">06 / Ractor::Port</div>
+        <h2>新しい通信プリミティブへの移行</h2>
+
+        <p>Ractor Local GCと同時に進行している施策の一つが、<strong>Ractor::Port</strong>の導入です。これは従来の<code>Ractor.yield</code>と<code>Ractor#take</code>に代わる、より効率的で安全な通信メカニズムです。</p>
+
+        <h3>従来のAPI: yield/take の問題</h3>
+
+        <pre><code># 従来の方式
+r = Ractor.new do
+  value = Ractor.yield("hello")  # 値を返す
+  # ... 処理
+end
+
+result = r.take  # 値を受け取る</code></pre>
+
+        <ul>
+          <li><strong>タグ衝突:</strong> receive_ifを使う場合、複数メッセージ送受信時にタグ指定が複雑化</li>
+          <li><strong>双方向ロック:</strong> rendezvous同期により、送受信双方がロック必要（パフォーマンス低下）</li>
+          <li><strong>複雑な合成:</strong> 複数チャネルの組み合わせが難しい</li>
+          <li><strong>非推奨化への流れ:</strong> Ruby 4.0での削除が検討されている</li>
+        </ul>
+
+        <h3>新API: Ractor::Port</h3>
+
+        <pre><code># Ruby 4.0以降の方式
+port = Ractor::Port.new
+
+r1 = Ractor.new(port) do |p|
+  p.send("message1")
+  p.send("message2")
+end
+
+r2 = Ractor.new(port) do |p|
+  msg1 = p.receive
+  msg2 = p.receive
+  # ... 処理
+end</code></pre>
+
+        <h3>Ractor::Portの利点</h3>
+
+        <table>
+          <thead>
+            <tr>
+              <th>特性</th>
+              <th>yield/take</th>
+              <th>Ractor::Port</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ロック構造</td>
+              <td>双方向 (rendezvous)</td>
+              <td>片方向 (受信側のみ)</td>
+            </tr>
+            <tr>
+              <td>パフォーマンス</td>
+              <td>2回コピー (Sender → Channel → Receiver)</td>
+              <td>1回コピー (Sender → Receiver)</td>
+            </tr>
+            <tr>
+              <td>メッセージ衝突</td>
+              <td>タグシステムで対応</td>
+              <td>Portインスタンスが一意</td>
+            </tr>
+            <tr>
+              <td>合成可能性</td>
+              <td>低い</td>
+              <td>高い (複数Portを組み合わせ可能)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Ractor Local GCとの相乗効果</h3>
+
+        <p>Ractor::Portは、オブジェクトのコピー回数を削減することで、Local GCとの組み合わせで更なるパフォーマンス向上を実現します：</p>
+
+        <ul>
+          <li>コピー回数削減 → アロケーション圧力低下 → GC頻度削減</li>
+          <li>Ractor Local GCの恩恵をより大きく受ける</li>
+        </ul>
+
+        <div class="alert success">
+          <strong>推奨:</strong> Ruby 3.5以降では、新規コード作成時にはRactor::Portの使用が強く推奨されます。yield/takeはdeprecated予定です。
+        </div>
+      </section>
+
+      <!-- Section 07 -->
+      <section id="section-07">
+        <div class="section-number">07 / Ruby 3.5〜4.0での実装状況</div>
+        <h2>進捗状況と課題</h2>
+
+        <h3>Ruby 3.5 (Dec 2025) の目標</h3>
+
+        <p>RubyKaigi 2025の発表時点では、Ractor Local GCの<strong>基本実装はほぼ完了</strong>状態にあります。目標リリース予定は<strong>Ruby 3.5 (2025年12月)</strong>です。</p>
+
+        <p><strong>実装済み:</strong></p>
+        <ul>
+          <li>✓ Ractor ローカルMarkフェーズの並列化</li>
+          <li>✓ Shareableオブジェクトを Rootとして固定</li>
+          <li>✓ Global GCの必要性最小化</li>
+          <li>✓ マイクロベンチマークでの検証</li>
+        </ul>
+
+        <p><strong>残課題:</strong></p>
+        <ul>
+          <li>△ 実Rubyアプリケーションでの動作確認</li>
+          <li>△ Edge caseの対応 (GC tracer, weakref など)</li>
+          <li>△ メモリリーク修正（残存issues対応）</li>
+          <li>△ パフォーマンス最適化（Long-lived objectsの課題）</li>
+        </ul>
+
+        <h3>Ruby 3.4.0 以降の関連改善</h3>
+
+        <p>Ruby 3.4.0 (Dec 2024) では、完全な Local GC実装には至っていませんが、基礎的な機構が改善されました：</p>
+
+        <pre><code># Ruby 3.4 以降で利用可能な API
+Ractor[key]              # Ractor ローカルストレージへの読み取り
+Ractor[key] = value      # Ractor ローカルストレージへの書き込み
+Ractor.store_if_absent   # スレッド安全な初期化</code></pre>
+
+        <h3>Ruby 4.0 への展望</h3>
+
+        <p>Ruby 4.0では以下が予定されています：</p>
+
+        <ul>
+          <li>Ractor Local GCの安定化と最適化</li>
+          <li>Ractor::Portの標準化</li>
+          <li>yield/take のdeprecation / 削除の可能性</li>
+          <li>Racter関連のAPI整理</li>
+        </ul>
+
+        <div class="alert warning">
+          <strong>留意点:</strong> 現在（Ruby 3.4時点）、Ractor Local GCは<strong>まだexperimental</strong>な機能です。プロダクション環境での導入には、十分なテストが必須です。
+        </div>
+      </section>
+
+      <!-- Section 08 -->
+      <section id="section-08">
+        <div class="section-number">08 / まとめ</div>
+        <h2>Ractor Local GCの意義と今後の展望</h2>
+
+        <h3>主要な成果</h3>
+
+        <p>Koichi Sasada と Ruby コミュニティの取り組みにより、以下が達成されました：</p>
+
+        <ol>
+          <li><strong>完璧性の放棄から現実性へ:</strong>
+            <p>「全ての参照を完璧に追跡する」という理想を放棄し、「Shareable Objectsを除外する」という実用的アプローチを採用。これにより実装可能性が格段に向上しました。</p>
+          </li>
+
+          <li><strong>並列性の獲得:</strong>
+            <p>複数Ractorが独立してGCを実行できるようになり、99%のアロケーションシナリオで全体の停止が不要になります。</p>
+          </li>
+
+          <li><strong>マイクロベンチでの4x改善:</strong>
+            <p>String生成などのアロケーション頻繁な処理で、4倍のスループット向上が確認されました。</p>
+          </li>
+
+          <li><strong>API改善による相乗効果:</strong>
+            <p>Ractor::Portの導入により、オブジェクトコピー回数が削減され、GCの負荷がさらに軽減されます。</p>
+          </li>
+        </ol>
+
+        <h3>実践への示唆</h3>
+
+        <p>Rubyエンジニアにとっての含意：</p>
+
+        <ul>
+          <li><strong>Ruby 3.5以降での並行プログラミング:</strong> Ractorの実用性が大幅に向上。CPU-boundな並列タスクがより効率的に実行可能</li>
+
+          <li><strong>新規コード:</strong> Ractor::Portの使用を前提に設計。yield/takeは段階的に廃止予定</li>
+
+          <li><strong>メモリ最適化:</strong> Long-lived objectsの構造化に注意。Shareableオブジェクトの参照を整理</li>
+
+          <li><strong>ベンチマーク文化:</strong> 自身のアプリケーションでの性能向上を実際に計測することが重要</li>
+        </ul>
+
+        <h3>Ruby並行プログラミングの進化</h3>
+
+        <blockquote>
+          Ractor Local GCは、Ruby が真の「並行言語」へと進化していることを象徴しています。スレッドの時代から Ractor、そして Local GC へ — Ruby は段階的ながらも着実に、メモリ安全性と並列性の両立を実現してきました。
+        </blockquote>
+
+        <h3>参考資料とリンク</h3>
+
+        <ul>
+          <li><a href="https://rubykaigi.org/2025/presentations/ko1.html">RubyKaigi 2025 - Toward Ractor local GC</a></li>
+          <li><a href="https://bugs.ruby-lang.org/issues/17100">Feature #17100 - Ractor: a proposal for a new concurrent abstraction</a></li>
+          <li><a href="https://bugs.ruby-lang.org/issues/18733">Bug #18733 - Ruby GC problems cause performance issue with Ractor</a></li>
+          <li><a href="https://bugs.ruby-lang.org/issues/21262">Feature #21262 - Ractor::Port</a></li>
+          <li><a href="https://dev.to/ko1/ractorport-revamping-the-ractor-api-98">DEV Community - Ractor::Port: Revamping the Ractor API</a></li>
+          <li><a href="https://docs.ruby-lang.org/en/3.4/ractor_md.html">Ruby 3.4 Ractor Documentation</a></li>
+        </ul>
+
+        <div class="alert info">
+          <strong>編集後記:</strong> 本記事は RubyKaigi 2025 での Koichi Sasada の講演をもとに、Ractor Local GC の概念と実装アプローチを整理したセッションノートです。Ruby のバージョン進化に伴い、内容は更新される可能性があります。
+        </div>
+      </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>Ractor Local GC — 並行Rubyのためのガベージコレクション改善</p>
+      <p style="margin-top: 1rem; font-size: 0.85rem;">RubyKaigi 2025 セッションノート | 2025年4月18日</p>
+      <p style="margin-top: 1rem; color: var(--text-muted);">
+        このページは Ruby コミュニティの理解向上を目的に作成されました。
+        <a href="../index.html">← 記事一覧へ戻る</a>
+      </p>
+    </footer>
+
+    <!-- Back to Top Button -->
+    <button class="back-to-top" id="backToTop">↑</button>
+  </div>
+
+  <script>
+    // Back to Top Button
+    const backToTopBtn = document.getElementById('backToTop');
+
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 300) {
+        backToTopBtn.classList.add('show');
+      } else {
+        backToTopBtn.classList.remove('show');
+      }
+    });
+
+    backToTopBtn.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
+    // Navigation Active Link
+    const navLinks = document.querySelectorAll('.nav-anchor');
+    const sections = document.querySelectorAll('section');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        if (scrollY >= sectionTop - 100) {
+          current = section.getAttribute('id');
+        }
+      });
+
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${current}`) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Smooth scroll for nav links
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = link.getAttribute('href').slice(1);
+        const targetSection = document.getElementById(targetId);
+        if (targetSection) {
+          targetSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
