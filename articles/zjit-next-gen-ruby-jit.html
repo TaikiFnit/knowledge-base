@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZJIT — 次世代Ruby JITコンパイラの設計と展望</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #CC342D;
+            --accent-light: #E8554E;
+            --accent-dark: #8B1A15;
+            --accent-glow: rgba(204, 52, 45, 0.3);
+            --bg-deep: #0A0A0F;
+            --bg-card: #12121A;
+            --bg-code: #0D0D14;
+            --text-primary: #E8E6E3;
+            --text-secondary: #8A8A9A;
+            --text-muted: #55556A;
+            --border: #1E1E2E;
+            --green: #50FA7B;
+            --yellow: #F1FA8C;
+            --cyan: #8BE9FD;
+            --orange: #FFB86C;
+            --purple: #BD93F9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            line-height: 1.6;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' result='noise'/%3C/filter%3E%3Crect width='400' height='400' fill='%23000' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        main {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Sticky Navigation */
+        nav.sticky {
+            position: sticky;
+            top: 0;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            padding: 1rem 2rem;
+        }
+
+        nav.sticky .nav-container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        nav.sticky a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        nav.sticky a:hover {
+            color: var(--accent);
+        }
+
+        nav.sticky .nav-sections {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+        }
+
+        /* Hero Section */
+        section.hero {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 6rem 2rem 4rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-eyebrow {
+            display: inline-block;
+            background: rgba(204, 52, 45, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            animation: fadeUp 0.8s ease-out;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            animation: fadeUp 0.8s ease-out 0.1s backwards;
+        }
+
+        .hero .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            animation: fadeUp 0.8s ease-out 0.2s backwards;
+        }
+
+        .hero-meta {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            animation: fadeUp 0.8s ease-out 0.3s backwards;
+        }
+
+        .hero-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-bottom: 4rem;
+            animation: fadeUp 0.8s ease-out 0.4s backwards;
+        }
+
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .stat-box:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .scroll-hint {
+            animation: fadeUp 0.8s ease-out 0.5s backwards;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 2rem;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Main Content */
+        .content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        section.article-section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 100px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 80px;
+        }
+
+        section.article-section h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        section.article-section p {
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        section.article-section h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        section.article-section ul,
+        section.article-section ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        section.article-section li {
+            margin-bottom: 0.8rem;
+            line-height: 1.8;
+        }
+
+        /* Code Blocks */
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            color: var(--cyan);
+            line-height: 1.6;
+            display: block;
+            white-space: pre;
+        }
+
+        /* Blockquotes */
+        blockquote {
+            border-left: 4px solid var(--accent);
+            padding-left: 1.5rem;
+            margin-left: 0;
+            margin-bottom: 1.5rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Alert Boxes */
+        .alert {
+            border-radius: 6px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid;
+        }
+
+        .alert.tip {
+            background: rgba(80, 250, 123, 0.05);
+            border-left-color: var(--green);
+            color: var(--text-primary);
+        }
+
+        .alert.note {
+            background: rgba(241, 250, 140, 0.05);
+            border-left-color: var(--yellow);
+            color: var(--text-primary);
+        }
+
+        .alert.warning {
+            background: rgba(255, 184, 108, 0.05);
+            border-left-color: var(--orange);
+            color: var(--text-primary);
+        }
+
+        .alert strong {
+            color: var(--text-primary);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        table thead {
+            background: var(--bg-card);
+            border-bottom: 2px solid var(--border);
+        }
+
+        table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        table tbody tr:hover {
+            background: rgba(204, 52, 45, 0.05);
+        }
+
+        /* References Section */
+        .references {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-top: 4rem;
+            margin-bottom: 2rem;
+        }
+
+        .references h3 {
+            margin-top: 0;
+        }
+
+        .references ul {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .references li {
+            margin-bottom: 1rem;
+        }
+
+        .references a {
+            color: var(--accent);
+            text-decoration: none;
+            word-break: break-word;
+        }
+
+        .references a:hover {
+            text-decoration: underline;
+        }
+
+        /* Back to Top Button */
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            z-index: 99;
+            transition: all 0.3s;
+        }
+
+        .back-to-top:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+        }
+
+        .back-to-top.visible {
+            display: flex;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1rem;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .section-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            nav.sticky .nav-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav.sticky .nav-sections {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            section.article-section h2 {
+                font-size: 1.5rem;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            table th,
+            table td {
+                padding: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="../index.html">← トップに戻る</a>
+            <div class="nav-sections">
+                <a href="#section-01">前提知識</a>
+                <a href="#section-02">ZJITアーキテクチャ</a>
+                <a href="#section-03">LBBV からの脱却</a>
+                <a href="#section-04">パフォーマンス</a>
+                <a href="#section-05">冗長除去</a>
+                <a href="#section-06">デプロイ最適化</a>
+                <a href="#section-07">Ruby 4.0</a>
+                <a href="#section-08">ロードマップ</a>
+                <a href="#section-09">まとめ</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-eyebrow">RUBYKAIGI 2025 / SESSION NOTES</div>
+            <h1>ZJIT — 次世代Ruby JITコンパイラの設計と展望</h1>
+            <p class="subtitle">RubyKaigi 2025 セッションノート — SSA-based IRで切り拓くRubyの高速化の未来</p>
+
+            <div class="hero-meta">
+                <div class="hero-meta-item">
+                    <span>📅</span>
+                    <span>2025-04-17</span>
+                </div>
+                <div class="hero-meta-item">
+                    <span>🎤</span>
+                    <span>Maxime Chevalier-Boisvert — Shopify Ruby Infrastructure team</span>
+                </div>
+            </div>
+
+            <div class="hero-stats">
+                <div class="stat-box">
+                    <div class="stat-value">SSA IR</div>
+                    <div class="stat-label">中間表現</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">60%</div>
+                    <div class="stat-label">YJIT比 Fib高速化</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">Ruby 4.0</div>
+                    <div class="stat-label">experimental搭載</div>
+                </div>
+            </div>
+
+            <div class="scroll-hint">スクロールして詳細を確認</div>
+        </section>
+
+        <div class="content">
+            <!-- Section 01: Prerequisites -->
+            <section id="section-01" class="article-section">
+                <div class="section-header">
+                    <span class="section-number">01</span>
+                    <h2>前提知識 — YJITの成功と残された課題</h2>
+                </div>
+
+                <p>YJITはRuby高速化の歴史において、最も大きな成果をもたらしたJITコンパイラです。Ruby 2.7との比較で3倍の実行速度向上を実現し、Rails のベンチマークでも15～20%の向上を記録しています。Shopify、GitHub、その他多数の企業が本番環境でYJITを有効化し、安定した成果を上げています。</p>
+
+                <h3>YJIT の限界</h3>
+                <p>しかし、全てのワークロードが同じ度合いで最適化されたわけではありません。20%の改善が見られるメトリクスもあれば、変わらないメトリクスも存在します。特に以下の場面で課題が浮き彫りになりました：</p>
+
+                <ul>
+                    <li><strong>データベースアクセス：</strong> JITコンパイルでは最適化不可能な外部I/O処理</li>
+                    <li><strong>純粋計算性ワークロード：</strong> 1億回の入れ子ループ反復でNode.jsに10倍の差で負ける現象</li>
+                    <li><strong>メモリ局所性：</strong> キャッシュ効率やメモリレイアウトの改善余地</li>
+                </ul>
+
+                <div class="alert note">
+                    <strong>注目：</strong> YJITのLBBV（Lazy Basic Block Versioning）は基本ブロック単位で最適化されるため、メソッド全体を見渡した最適化が不可能でした。この限界を突破するため、ZJITが開発されたのです。
+                </div>
+
+                <p>実は、簡単な2重ループであっても、なぜ遅いのか。その答えはYJITのアーキテクチャの制約にありました。ブロック単位の最適化では、メソッド全体の最適化チャンスを逃していたのです。</p>
+            </section>
+
+            <!-- Section 02: ZJIT Architecture -->
+            <section id="section-02" class="article-section">
+                <div class="section-header">
+                    <span class="section-number">02</span>
+                    <h2>ZJITのアーキテクチャ — 教科書的JITを目指して</h2>
+                </div>
+
+                <p>ZJIT（ジェイアイティー）の名前は、YJITの次のジェネレーションを意味します。ZはYの次のアルファベットであり、次世代の意志を込めた命名です。ZJITの最大の特徴は、<strong>Method-based JIT</strong として動作することです。</p>
+
+                <h3>Method-based JIT の意味</h3>
+                <p>YJITのLBBVとは異なり、ZJITはメソッド全体をコンパイルの単位として扱います。この設計により、メソッド全体の制御フローを分析し、より効果的な最適化パスを適用することが可能になります。</p>
+
+                <h3>SSA-based IR（Static Single Assignment）</h3>
+                <p>ZJITの核となるのがSSA-based IR です。これは、各変数が**一度だけ代入される**という形式に中間表現を変換します。例えば以下のようなコードは：</p>
+
+                <div class="code-block"><code>x = 1
+x = 2
+y = x + 1</code></div>
+
+                <p>SSA形式では以下のように変数をバージョニングします：</p>
+
+                <div class="code-block"><code>x_1 = 1
+x_2 = 2
+y = x_2 + 1</code></div>
+
+                <p>このアプローチは、LLVM、GCC、HotSpot JVM など、最先端のJITコンパイラで採用されているものです。SSAの利点は、最適化パスが直交的（独立）に設計できることにあります。</p>
+
+                <h3>コンパイルパイプライン</h3>
+
+                <div class="code-block"><code>YARV bytecode
+    ↓
+SSA HIR（High-level IR）
+    ↓
+最適化パス群
+  (CSE, DCE, SCCP等)
+    ↓
+機械語コード生成</code></div>
+
+                <p>このパイプラインにより、各最適化パスが独立して機能し、新しい最適化の追加も容易になります。</p>
+
+                <h3>YJITとZJITの比較</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>項目</th>
+                            <th>YJIT</th>
+                            <th>ZJIT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>コンパイル単位</td>
+                            <td>基本ブロック (LBBV)</td>
+                            <td>メソッド全体</td>
+                        </tr>
+                        <tr>
+                            <td>中間表現</td>
+                            <td>なし（直接機械語）</td>
+                            <td>SSA-based IR</td>
+                        </tr>
+                        <tr>
+                            <td>最適化範囲</td>
+                            <td>ブロック内</td>
+                            <td>メソッド全体</td>
+                        </tr>
+                        <tr>
+                            <td>成熟度</td>
+                            <td>本番環境対応</td>
+                            <td>experimental</td>
+                        </tr>
+                        <tr>
+                            <td>有効化</td>
+                            <td>デフォルト (Ruby 3.2+)</td>
+                            <td>opt-in (--zjit)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Section 03: Why Move Away from LBBV -->
+            <section id="section-03" class="article-section">
+                <div class="section-header">
+                    <span class="section-number">03</span>
+                    <h2>なぜLBBVから離れるのか</h2>
+                </div>
+
+                <p>LBBV（Lazy Basic Block Versioning）は、多くの場面で有効であることが実証されています。実行されるブロックのみをコンパイルし、型情報に基づいて特殊化することで、メモリ効率と高速なコンパイルを両立していました。</p>
+
+                <h3>LBBVの強みと弱み</h3>
+
+                <p><strong>メリット：</strong></p>
+                <ul>
+                    <li>コンパイル時間が短い</li>
+                    <li>メモリ使用量が効率的</li>
+                    <li>実行されるコードパスのみを最適化</li>
+                </ul>
+
+                <p><strong>デメリット：</strong></p>
+                <ul>
+                    <li>ブロックを超えた最適化ができない</li>
+                    <li>中間表現（IR）がないため、高度な最適化パスの適用が難しい</li>
+                    <li>メソッド全体の制御フロー解析が不可能</li>
+                </ul>
+
+                <h3>ZJITがもたらす改善</h3>
+
+                <p>ZJITはメソッド全体を見渡すことで、以下のような最適化が可能になります：</p>
+
+                <ul>
+                    <li><strong>ロード/ストア冗長性除去（Load-Store Optimization）：</strong> 同じフィールドへの複数アクセスを検出し、不要なメモリ操作を削除</li>
+                    <li><strong>インライン化の強化：</strong> メソッド間の呼び出しを分析し、より積極的なインライン化を実施</li>
+                    <li><strong>多段JITコンパイルの基盤：</strong> 将来的にC1→C2相当の段階的コンパイルが可能</li>
+                </ul>
+
+                <div class="alert tip">
+                    <strong>ヒント：</strong> ZJITのIRベースのアプローチにより、コンパイラの保守性と拡張性が飛躍的に向上しました。新しい最適化パスの追加が容易になったため、コミュニティの貢献もしやすくなります。
+                </div>
+            </section>
+
+            <!-- Section 04: Performance Status -->
+            <section id="section-04" class="article-section">
+                <div class="section-header">
+                    <span class="section-number">04</span>
+                    <h2>パフォーマンスの現状</h2>
+                </div>
+
+                <p>ZJITのパフォーマンスは、現在測定可能な段階に達しました。以下はRubyKaigi 2025で発表された数字です。</p>
+
+                <h3>CRuby呼び出しの高速化</h3>
+
+                <p>C言語で書かれたRuby内部のメソッド呼び出し（CRuby calls）は、複雑で遅くなりやすい処理です。従来のYJIT呼び出しでもCRuby比で8～12倍速いのですが、ZJITではjmp命令からcall/ret命令への変更により、CPUの分岐予測機能をより効果的に活用できるようになりました。</p>
+
+                <p>具体例として、あるマイクロベンチマークでの時間変化：</p>
+
+                <div class="code-block"><code>純粋CRuby:  1ms
+YJIT最適化: 0.016ms (62倍高速化)
+ZJIT最適化: 0.01ms   (100倍高速化)</code></div>
+
+                <h3>マイクロベンチマーク結果</h3>
+
+                <p>再帰的なフィボナッチ計算（<code>Fib(40)</code>）を実行したマイクロベンチマークでは、ZJITはYJITより約<strong>60%</strong速く実行されます。インタプリタ比ではなんと<strong>16倍</strong の性能向上です。</p>
+
+                <h3>実アプリケーションでの結果</h3>
+
+                <p>ただし、Rails などの実アプリケーションを計測すると、現段階ではYJITのほうがまだ全体的に速いという結果も出ています。その理由は、ZJITのSSA構築と最適化解析のオーバーヘッドがまだ大きいからです。チームは継続的にコンパイル効率を改善中です。</p>
+
+                <div class="alert warning">
+                    <strong>重要：</strong> 現在のZJITは最適化に注力しており、コンパイル速度の改善は今後の課題です。Ruby 4.1でYJITとの性能パリティ達成を目標としています。
+                </div>
+
+                <h3>型の特殊化</h3>
+
+                <p>Ruby のメソッド呼び出しの80～90%は monomorphic（単一の型のみが渡される）です。ZJITはこの特性を活かし、型情報に基づいた積極的な特殊化を行い、不要な型チェックを削減します。</p>
+            </section>
+
+            <!-- Section 05: Load-Store Optimization -->
+            <section id="section-05" class="article-section">
+                <div class="section-header">
+                    <span class="section-number">05</span>
+                    <h2>冗長ロード・ストア除去の仕組み</h2>
+                </div>
+
+                <p>ZJITの実装で特に注目される機能が、<strong>冗長ロード・ストア除去</strong（Load-Store Optimization）です。</p>
+
+                <h3>オブジェクトフィールドアクセスの最適化</h3>
+
+                <p>Ruby オブジェクトのインスタンス変数にアクセスする際、ZJITは以下のような処理を行います：</p>
+
+                <ul>
+                    <li><code>LoadField</code> 命令：オブジェクトのフィールドをメモリから読み込み</li>
+                    <li><code>StoreField</code> 命令：フィールドに値を書き込み</li>
+                </ul>
+
+                <p>同じフィールドへの連続したロード操作が検出された場合、ZJITは既に持っている値を再利用し、不要なメモリアクセスを排除します。</p>
+
+                <div class="code-block"><code>// オリジナルコード
+class User
+  def process
+    @name = fetch_name()
+    puts @name
+    puts @name
+    puts @name
+  end
+end
+
+// ZJIT最適化後
+// @name は1回のみロード、以後はキャッシュを使用</code></div>
+
+                <h3>GuardType命令とSide-Exit</h3>
+
+                <p>ZJITは実行時に型チェックを行う <code>GuardType</code> 命令を挿入します。型チェックに失敗した場合、処理は自動的にインタプリタにフォールバック（side-exit）します。</p>
+
+                <p>開発者は、以下のコマンドラインオプションでside-exitの発生箇所をトレースできます：</p>
+
+                <div class="code-block"><code>ruby --zjit --zjit-trace-exits-sample-rate=N script.rb</code></div>
+
+                <p>このオプションにより、予期しない型変化やデプロイ後の性能低下原因を特定できます。</p>
+
+                <h3>現在の実装範囲</h3>
+
+                <p>現時点では、冗長除去はブロックローカルな最適化（ブロック内のみ）に限定されています。しかし、ZJITの設計により、今後メソッド全体への拡大が容易に実現可能です。</p>
+
+                <div class="alert tip">
+                    <strong>ベストプラクティス：</strong> インスタンス変数の頻繁なアクセスが性能ボトルネックの場合、ZJITはそれを自動的に最適化します。コード側での特別な工夫は不要です。
+                </div>
+            </section>
+
+            <!-- Section 06: Deployment & Warmup -->
+            <section id="section-06" class="article-section">
+                <div class="section-header">
+                    <span class="section-number">06</span>
+                    <h2>デプロイとウォームアップの最適化</h2>
+                </div>
+
+                <p>Shopify は世界最大級のRuby on Rails 運用企業です。数千台のサーバーで同じコードを実行しており、デプロイとウォームアップに関する課題が尖鋭化しています。</p>
+
+                <h3>現在の課題</h3>
+
+                <ul>
+                    <li><strong>冗長なコンパイル：</strong> 同じコードが数千台のサーバーで繰り返しコンパイルされている</li>
+                    <li><strong>ウォームアップ時間：</strong> デプロイのたびに全サーバーでJITコンパイルの再開始が必要</li>
+                    <li><strong>初期レイテンシ：</strong> デプロイ直後のリクエスト処理が顕著に遅い</li>
+                </ul>
+
+                <h3>Persistent Code Caching の計画</h3>
+
+                <p>ZJITの将来目標は、<strong>コンパイル済みコードの永続化（Persistent Code Caching）</strong です。機械語とメタデータをシリアライズしてディスクに保存し、デプロイ間で再利用します。</p>
+
+                <p>実装の鍵となるのが<strong>ミニリンカー</strong機能です。これにより、保存された機械語内のポインタ参照を、新しいプロセス起動時に正しく解決できるようになります。</p>
+
+                <div class="code-block"><code>// デプロイフロー（将来像）
+
+デプロイ前：
+  Ruby プロセス起動 → JIT コンパイル → コード保存
+
+デプロイ後：
+  Ruby プロセス起動 → キャッシュから読み込み → 即座に実行開始
+
+// 99.99% のコードは変わらないため、キャッシュ再利用率が非常に高い</code></div>
+
+                <h3>ウォームアップコストの削減</h3>
+
+                <p>コンテナベースのデプロイメント環境では、このキャッシング戦略が特に有効です。</p>
+
+                <div class="alert note">
+                    <strong>数字で見る効果：</strong> Shopifyの内部測定では、Persistent Code Cachingの導入により、デプロイ後のレイテンシ改善が平均30～40%期待されています（Python での実装例から推定）。
+                </div>
+
+                <p>開発チームは、既にRust での実装プロトタイプを作成中です。Ruby 4.1 でのマージを目指しています。</p>
+            </section>
+
+            <!-- Section 07: Ruby 4.0 Status -->
+            <section id="section-07" class="article-section">
+                <div class="section-header">
+                    <span class="section-number">07</span>
+                    <h2>Ruby 4.0 でのZJITの状態</h2>
+                </div>
+
+                <p>Ruby 4.0（2025年12月25日リリース予定）には、ZJITが<strong>experimental（実験的）</strong として搭載されます。</p>
+
+                <h3>有効化の方法</h3>
+
+                <p>デフォルトではコンパイルされるものの、有効化されません。ユーザーはいくつかの方法で明示的に有効化できます。</p>
+
+                <p><strong>コマンドラインオプション：</strong></p>
+                <div class="code-block"><code>ruby --zjit script.rb</code></div>
+
+                <p><strong>環境変数：</strong></p>
+                <div class="code-block"><code>export RUBY_ZJIT_ENABLE=1
+ruby script.rb</code></div>
+
+                <p><strong>プログラム内：</strong></p>
+                <div class="code-block"><code>RubyVM::ZJIT.enable
+# 以後のコードはZJITで実行</code></div>
+
+                <h3>ビルド要件</h3>
+
+                <p>ZJITはRustで実装されているため、Rust 1.85.0以上が必要です。Ruby のコンパイル時に自動的に検出されます。</p>
+
+                <h3>詳細なコマンドラインオプション</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>オプション</th>
+                            <th>説明</th>
+                            <th>デフォルト値</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>--zjit</code></td>
+                            <td>ZJIT を有効化</td>
+                            <td>無効</td>
+                        </tr>
+                        <tr>
+                            <td><code>--zjit-call-threshold=num</code></td>
+                            <td>コンパイル開始の呼び出し回数閾値</td>
+                            <td>30</td>
+                        </tr>
+                        <tr>
+                            <td><code>--zjit-stats[=quiet]</code></td>
+                            <td>コンパイル統計を表示（quiet で抑制）</td>
+                            <td>表示</td>
+                        </tr>
+                        <tr>
+                            <td><code>--zjit-trace-exits[=counter]</code></td>
+                            <td>side-exit をトレース（counter でカウント）</td>
+                            <td>無効</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert warning">
+                    <strong>重要：</strong> ZJITは現時点でexperimentalです。本番環境ではYJITの使用を推奨します。ZJITはRuby 4.1でYJITとの性能パリティを目指して開発中です。安定性が確認されるまでは、テスト環境での検証をお勧めします。
+                </div>
+            </section>
+
+            <!-- Section 08: Roadmap -->
+            <section id="section-08" class="article-section">
+                <div class="section-header">
+                    <span class="section-number">08</span>
+                    <h2>今後のロードマップ</h2>
+                </div>
+
+                <h3>Ruby 4.1 — パリティ達成</h3>
+
+                <p>開発チームの最大の目標は、Ruby 4.1（2026年3月リリース予定）でZJITがYJITと同等以上のパフォーマンスを発揮することです。</p>
+
+                <ul>
+                    <li>SSA構築の高速化</li>
+                    <li>最適化パスの並列実行</li>
+                    <li>型推論のより正確な実装</li>
+                </ul>
+
+                <h3>Persistent Code Caching</h3>
+
+                <p>Ruby 4.1～4.2の時間軸で、Persistent Code Caching の実装が予定されています。これにより、大規模デプロイメント環境での効率が飛躍的に向上します。</p>
+
+                <h3>多段コンパイル（Tiered Compilation）</h3>
+
+                <p>将来的には、HotSpot JVMやV8で採用されている多段コンパイルの導入も検討されています。</p>
+
+                <ul>
+                    <li><strong>Tier 1（C1相当）：</strong> 軽量・高速なコンパイル</li>
+                    <li><strong>Tier 2（C2相当）：</strong> 深い分析に基づく最適化</li>
+                </ul>
+
+                <p>これにより、初期のコンパイルオーバーヘッドを最小化しつつ、長時間実行されるメソッドをさらに最適化できます。</p>
+
+                <h3>YJITとの共存期間</h3>
+
+                <p>YJITとZJITの共存は当面継続されます。ユーザーは必要に応じて選択できます。ZJITが完全に成熟し、安定性が確保されたタイミングで、YJITは段階的に非推奨化される予定です。</p>
+
+                <h3>アップストリーム状況</h3>
+
+                <p>ZJITはFeature #21221 として正式にRuby のアップストリームにマージされています。開発は Ruby Development チームとShopify の協力の下、進行中です。</p>
+
+                <div class="alert tip">
+                    <strong>ヒント：</strong> Ruby 4.0 のreleaseから、ZJITの開発速度は加速するでしょう。コミュニティからの早期フィードバックが、最適化の優先順位を決める重要な要素になります。
+                </div>
+            </section>
+
+            <!-- Section 09: Summary -->
+            <section id="section-09" class="article-section">
+                <div class="section-header">
+                    <span class="section-number">09</span>
+                    <h2>まとめ</h2>
+                </div>
+
+                <p>ZJITは、Rubyの高速化の歴史における新しい段階を代表するJITコンパイラです。</p>
+
+                <h3>主な特徴</h3>
+
+                <ul>
+                    <li><strong>教科書的な正しさ：</strong> SSA-based IRは、最先端JITコンパイラの標準的なアプローチ</li>
+                    <li><strong>保守性と拡張性：</strong> IR ベースの設計により、新しい最適化パスの追加が容易</li>
+                    <li><strong>メソッド全体の最適化：</strong> ブロック単位の制約から解放される</li>
+                </ul>
+
+                <h3>採用の判断</h3>
+
+                <p>現時点では以下のような判断が推奨されます：</p>
+
+                <ul>
+                    <li><strong>本番環境：</strong> YJIT（Ruby 3.2以降でデフォルト有効）</li>
+                    <li><strong>テスト・開発環境：</strong> ZJITでの検証が有益</li>
+                    <li><strong>Ruby 4.1 以降：</strong> ZJITの性能パリティ達成後は、移行を検討</li>
+                </ul>
+
+                <h3>期待される効果</h3>
+
+                <p>ZJITが完成することで、Ruby は以下のメリットを享受できます：</p>
+
+                <ul>
+                    <li>計算性能ワークロードでの競争力強化</li>
+                    <li>コンパイル設計の長期的保守性確保</li>
+                    <li>コミュニティ主導の最適化パス開発の促進</li>
+                </ul>
+
+                <div class="alert note">
+                    <strong>最後に：</strong> ZJITは、Ruby が語られてきた「遅い言語」というレッテルを最終的に払拭するための重要なステップです。Shopify、Ruby Core Team、そしてコミュニティ全体の協力により、実装が進行中です。
+                </div>
+
+                <h3>参考資料とリンク</h3>
+
+                <p>本セッションノートは、以下の資料に基づいています。</p>
+            </section>
+
+            <!-- References -->
+            <section class="references">
+                <h3>参考リンク</h3>
+                <ul>
+                    <li><a href="https://rubykaigi.org/2025/presentations/maximecb.html" target="_blank">RubyKaigi 2025 — ZJIT セッション</a></li>
+                    <li><a href="https://bugs.ruby-lang.org/issues/21221" target="_blank">Feature #21221 — ZJIT (Z just-in-time compiler)</a></li>
+                    <li><a href="https://railsatscale.com/2025-12-24-launch-zjit/" target="_blank">Rails at Scale — ZJIT launch</a></li>
+                    <li><a href="https://railsatscale.com/2025-05-14-merge-zjit/" target="_blank">Rails at Scale — ZJIT merged</a></li>
+                    <li><a href="https://railsatscale.com/2026-03-18-how-zjit-removes-redundant-object-loads-and-stores/" target="_blank">Rails at Scale — Load/Store optimization</a></li>
+                    <li><a href="https://docs.ruby-lang.org/en/4.0/jit/zjit_md.html" target="_blank">Ruby 4.0 — ZJIT documentation</a></li>
+                </ul>
+            </section>
+        </div>
+
+        <!-- Back to Top Button -->
+        <button class="back-to-top" id="backToTop">↑</button>
+    </main>
+
+    <script>
+        // Back to Top Button Logic
+        const backToTopButton = document.getElementById('backToTop');
+
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        });
+
+        backToTopButton.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Smooth scroll for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
