@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medallion Architecture — データレイクハウスの設計原則</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #38BDF8;
+            --accent-light: #7DD3FC;
+            --accent-dark: #0284C7;
+            --accent-glow: rgba(56, 189, 248, 0.25);
+            --bg-deep: #060B14;
+            --bg-card: #0D1421;
+            --bg-code: #080E1A;
+            --text-primary: #E8EDF3;
+            --text-secondary: #8A9AB8;
+            --text-muted: #4A5A75;
+            --border: #172035;
+            --green: #34D399;
+            --yellow: #FBBF24;
+            --cyan: #67E8F9;
+            --orange: #FB923C;
+            --purple: #A78BFA;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Grid background pattern */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(90deg, var(--border) 1px, transparent 1px),
+                linear-gradient(0deg, var(--border) 1px, transparent 1px);
+            background-size: 80px 80px;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.3;
+        }
+
+        /* Noise overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' seed='1'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        main {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 40px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            animation: fadeUp 0.8s ease-out;
+        }
+
+        .hero-eyebrow {
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-meta {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .hero-meta-item {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .stat-box {
+            background-color: rgba(13, 20, 33, 0.8);
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: 8px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Sticky Navigation */
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            background-color: rgba(6, 11, 20, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            overflow-x: auto;
+        }
+
+        .sticky-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+            white-space: nowrap;
+        }
+
+        .sticky-nav a:hover {
+            color: var(--accent);
+        }
+
+        .sticky-nav-home {
+            color: var(--accent);
+            font-weight: 600;
+            margin-right: 16px;
+            border-right: 1px solid var(--border);
+            padding-right: 16px;
+        }
+
+        /* Content Layout */
+        .content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        .section {
+            margin-bottom: 80px;
+            animation: fadeUp 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        .section:nth-child(1) { animation-delay: 0.1s; }
+        .section:nth-child(2) { animation-delay: 0.2s; }
+        .section:nth-child(3) { animation-delay: 0.3s; }
+        .section:nth-child(4) { animation-delay: 0.4s; }
+        .section:nth-child(5) { animation-delay: 0.5s; }
+        .section:nth-child(6) { animation-delay: 0.6s; }
+        .section:nth-child(7) { animation-delay: 0.7s; }
+        .section:nth-child(8) { animation-delay: 0.8s; }
+        .section:nth-child(9) { animation-delay: 0.9s; }
+        .section:nth-child(10) { animation-delay: 1.0s; }
+
+        .section-number {
+            display: inline-block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .section-title {
+            font-size: 2.3rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        .section-subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 28px;
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 18px;
+            color: var(--text-primary);
+        }
+
+        ul, ol {
+            margin-left: 24px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 14px;
+            color: var(--text-primary);
+        }
+
+        strong {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        em {
+            color: var(--cyan);
+            font-style: italic;
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        code {
+            color: var(--cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        pre code {
+            color: var(--text-primary);
+        }
+
+        /* Inline code */
+        p code, li code {
+            background-color: rgba(56, 189, 248, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--cyan);
+        }
+
+        /* Alert Boxes */
+        .alert {
+            border-left: 4px solid;
+            padding: 20px;
+            margin-bottom: 24px;
+            border-radius: 6px;
+            background-color: rgba(13, 20, 33, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .alert-green {
+            border-left-color: var(--green);
+            background-color: rgba(52, 211, 153, 0.08);
+        }
+
+        .alert-green strong {
+            color: var(--green);
+        }
+
+        .alert-yellow {
+            border-left-color: var(--yellow);
+            background-color: rgba(251, 191, 36, 0.08);
+        }
+
+        .alert-yellow strong {
+            color: var(--yellow);
+        }
+
+        .alert-orange {
+            border-left-color: var(--orange);
+            background-color: rgba(251, 146, 60, 0.08);
+        }
+
+        .alert-orange strong {
+            color: var(--orange);
+        }
+
+        .alert-cyan {
+            border-left-color: var(--cyan);
+            background-color: rgba(103, 232, 249, 0.08);
+        }
+
+        .alert-cyan strong {
+            color: var(--cyan);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            background-color: rgba(13, 20, 33, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        th {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-bottom: 2px solid var(--border);
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: rgba(56, 189, 248, 0.05);
+        }
+
+        /* References */
+        .references {
+            background-color: rgba(13, 20, 33, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 60px;
+            backdrop-filter: blur(10px);
+        }
+
+        .references h3 {
+            font-size: 1.4rem;
+            margin-bottom: 16px;
+            color: var(--accent-light);
+        }
+
+        .references ul {
+            margin-left: 0;
+        }
+
+        .references li {
+            margin-bottom: 12px;
+        }
+
+        .references a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .references a:hover {
+            color: var(--accent-light);
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .sticky-nav {
+                padding: 12px 20px;
+                gap: 16px;
+            }
+
+            .content {
+                padding: 40px 20px;
+            }
+
+            .hero {
+                padding: 60px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-eyebrow">STUDY NOTES / DATA LAKEHOUSE</div>
+            <h1 class="hero-title">Medallion Architecture</h1>
+            <p class="hero-subtitle">データレイクハウスの設計原則 — Bronze・Silver・Gold の3層アーキテクチャで実現するデータ品質管理</p>
+
+            <div class="hero-meta">
+                <span class="hero-meta-item">初版: 2025-01-15</span>
+                <span class="hero-meta-item">更新: 2026-03-28</span>
+            </div>
+
+            <div class="hero-stats">
+                <div class="stat-box">
+                    <div class="stat-value">3層</div>
+                    <div class="stat-label">Bronze→Silver→Gold</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">Delta</div>
+                    <div class="stat-label">ACIDトランザクション</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">Lakehouse</div>
+                    <div class="stat-label">パラダイム</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sticky Navigation -->
+        <nav class="sticky-nav">
+            <span class="sticky-nav-home">Medallion</span>
+            <a href="#section-01">概要</a>
+            <a href="#section-02">Bronze層</a>
+            <a href="#section-03">Silver層</a>
+            <a href="#section-04">Gold層</a>
+            <a href="#section-05">Delta Lake</a>
+            <a href="#section-06">実装パターン</a>
+            <a href="#section-07">他のアーキテクチャ</a>
+            <a href="#section-08">アンチパターン</a>
+            <a href="#section-09">まとめ</a>
+        </nav>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Section 01: Overview -->
+            <section class="section" id="section-01">
+                <div class="section-number">01</div>
+                <h2 class="section-title">Medallion Architectureとは — 概要と歴史</h2>
+
+                <p><strong>Medallion Architecture</strong>は、2020年にDatabricksが提唱したデータレイクハウスの標準アーキテクチャです。生データから分析可能な形式へと段階的に洗練させる3層構造（Bronze・Silver・Gold）によって、スケーラビリティ、データ品質、ガバナンスの課題を同時に解決します。</p>
+
+                <p>従来のデータウェアハウス（DWH）は高価で柔軟性に欠け、データレイク（Data Lake）は構造化されず「沼」となってしまう傾向がありました。Medallion Architectureは両者の長所を取り入れ、クラウドネイティブなスケーラビリティと OLAP スタイルの分析が共存する新しいパラダイムを実現します。</p>
+
+                <div class="alert alert-green">
+                    <strong>Key Insight:</strong> Medallion Architectureの本質は「段階的な変換と品質向上」です。各層で明確な責任を持つことで、データパイプラインは複雑さを管理しやすくなり、デバッグやメンテナンスが格段に簡単になります。
+                </div>
+
+                <p><strong>歴史的背景：</strong> Databricksが2020年のブログポスト『Medallion Architecture』で発表して以来、クラウドデータベース業界の事実上の標準となりました。Snowflake、BigQuery、Redshift など主流プラットフォームでも同パターンの採用が推奨されるようになり、データエンジニアリングの共通言語として認識されています。</p>
+
+                <h3 class="section-subtitle">Medallion Architecture の基本原理</h3>
+                <ul>
+                    <li><strong>Bronze層：</strong> ソースシステムから のデータを「ありのまま」保存。スキーマはソースに準じ、データ品質チェックはまだ行わない。</li>
+                    <li><strong>Silver層：</strong> Bronze から取り込んだデータを クレンジング・標準化・統合。ビジネスロジック適用前の「きれいな単一ソース」を目指す。</li>
+                    <li><strong>Gold層：</strong> Silver からさらに集約・非正規化し、ビジネスユースケースに最適化したビュー・テーブルを提供。ダッシュボードやML、分析に即座に使える形。</li>
+                </ul>
+
+                <p>この3層モデルにより、各ユースケースに応じた柔軟な設計、透明性のある監査証跡、スケーラブルで保守性の高いパイプラインが実現されます。</p>
+            </section>
+
+            <!-- Section 02: Bronze Layer -->
+            <section class="section" id="section-02">
+                <div class="section-number">02</div>
+                <h2 class="section-title">Bronze層 — 生データの取り込みと保存</h2>
+
+                <p><strong>Bronze層</strong>はすべてのデータの「入口」です。ソースシステム（ERP、CRM、ログシステム、IoT センサ など）から のデータを原則として変更なく保存します。エラーレコードや古いデータも含めて、「捨てない」という原則が重要です。</p>
+
+                <h3 class="section-subtitle">取り込みパターン</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>パターン</th>
+                            <th>説明</th>
+                            <th>用途</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>バッチ</strong></td>
+                            <td>毎日・毎時間など定期的にデータをコピー</td>
+                            <td>売上データ、マスターデータ</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ストリーミング</strong></td>
+                            <td>イベントが発生した瞬間に取り込み（Kafka、Kinesis等）</td>
+                            <td>ログ、トランザクション、リアルタイム分析</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CDC</strong></td>
+                            <td>変更捕捉（Change Data Capture）で差分のみ取得</td>
+                            <td>データベースの増分レプリケーション</td>
+                        </tr>
+                        <tr>
+                            <td><strong>API</strong></td>
+                            <td>REST/GraphQL経由で外部サービスから取得</td>
+                            <td>SaaS統合、第三者データ</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="section-subtitle">Bronze層の特性</h3>
+                <ul>
+                    <li><strong>スキーマ・オン・リード：</strong> 取り込み時点では型チェック・変換を最小限にし、読み込み側でスキーマ解釈を行う柔軟性を保つ。</li>
+                    <li><strong>アペンドオンリー：</strong> 一度書き込んだデータは上書きせず、タイムスタンプ付きで保存。履歴追跡とデバッグが容易。</li>
+                    <li><strong>メタデータ保持：</strong> 取り込み日時、ソースシステム、バージョンなどのメタデータを付与。</li>
+                    <li><strong>大量保存容易性：</strong> ストレージコストが低いため、「もしかして必要かもしれない」データも保存する余裕が生まれる。</li>
+                </ul>
+
+                <h3 class="section-subtitle">Pythonコード例：バッチ取り込み</h3>
+                <pre><code># PySpark を使ったCSVファイル → Bronze の取り込み
+from pyspark.sql import SparkSession
+from datetime import datetime
+
+spark = SparkSession.builder.appName("bronze_ingest").getOrCreate()
+
+# ソースCSVを読み込み
+source_df = spark.read.csv(
+    "/source/sales_data.csv",
+    header=True,
+    inferSchema=True
+)
+
+# メタデータカラムを追加
+from pyspark.sql.functions import lit, current_timestamp
+bronze_df = source_df.withColumn(
+    "ingestion_date", current_timestamp()
+).withColumn(
+    "source_system", lit("SAP_ERP")
+).withColumn(
+    "version", lit("1.0")
+)
+
+# Bronze に書き込み（append mode）
+bronze_df.write.mode("append").format("delta").save(
+    "/lakehouse/bronze/sales"
+)
+
+print(f"Ingested {source_df.count()} records to Bronze")</code></pre>
+
+                <div class="alert alert-yellow">
+                    <strong>Best Practice:</strong> Bronze層はストレージ効率よりも「取得の確実性」を優先します。圧縮はしても、フォーマット変換は最小限に。エラーハンドリングは Silver で行うメンタルモデルを持つことが大切です。
+                </div>
+
+                <h3 class="section-subtitle">CDC（Change Data Capture）の取り込み例</h3>
+                <pre><code># Debezium/Kafka 経由でオンプレデータベースの変更を取り込み
+# CDC フィードから Bronze へ
+cdc_stream = spark.readStream.format("kafka").option(
+    "kafka.bootstrap.servers", "kafka:9092"
+).option(
+    "subscribe", "db_changes"
+).option(
+    "startingOffsets", "earliest"
+).load()
+
+# JSON形式のCDCメッセージをパース
+from pyspark.sql.functions import from_json, col
+parsed = cdc_stream.select(
+    from_json(col("value").cast("string"),
+              "op STRING, table STRING, before MAP<STRING,STRING>, after MAP<STRING,STRING>").alias("cdc")
+).select("cdc.*")
+
+# Bronze に書き込み（streaming write）
+query = parsed.writeStream \
+    .format("delta") \
+    .option("checkpointLocation", "/lakehouse/checkpoints/cdc") \
+    .outputMode("append") \
+    .start("/lakehouse/bronze/customers_cdc")
+
+query.awaitTermination()</code></pre>
+            </section>
+
+            <!-- Section 03: Silver Layer -->
+            <section class="section" id="section-03">
+                <div class="section-number">03</div>
+                <h2 class="section-title">Silver層 — データ品質とクレンジング</h2>
+
+                <p><strong>Silver層</strong>は Bronze の粗データを精製し、組織全体で信頼できる「単一の正解」（SSOT: Single Source of Truth）を実現します。ここが最もエンジニアリング負荷が高い層であり、データ品質の大半はこの層で担保されます。</p>
+
+                <h3 class="section-subtitle">Silver層で実施する主な処理</h3>
+                <ul>
+                    <li><strong>データクレンジング：</strong> NULL値の処理、形式の統一、外字・特殊文字の除去。</li>
+                    <li><strong>重複排除：</strong> データソース側の重複や、取り込みエラーによる重複を検出・削除。</li>
+                    <li><strong>スキーマ標準化：</strong> 複数のソースを統一スキーマにマッピング。日付形式、通貨、単位などの統一。</li>
+                    <li><strong>データ型の厳密化：</strong> スキーマ・オン・リードから スキーマ・オン・ライト へ。型定義を明示。</li>
+                    <li><strong>ビジネスキーの定義：</strong> 自然キー（顧客ID、注文番号など）を明確にし、SCD（Slowly Changing Dimensions）対応を準備。</li>
+                    <li><strong>品質メトリクスの計算：</strong> 記録数、NULL比率、異常値フラグなどを記録。</li>
+                </ul>
+
+                <h3 class="section-subtitle">Silver層の設計パターン</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>パターン</th>
+                            <th>説明</th>
+                            <th>メリット</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>テーブル毎</strong></td>
+                            <td>bronze/customers → silver/customers</td>
+                            <td>シンプル、変更影響が限定的</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ドメイン毎</strong></td>
+                            <td>bronze/sales, bronze/inventory → silver/crm_unified</td>
+                            <td>クロス・ドメイン統合が容易</td>
+                        </tr>
+                        <tr>
+                            <td><strong>階層化</strong></td>
+                            <td>bronze → silver_raw → silver_cleaned → gold</td>
+                            <td>段階的品質向上、中間ステップでのデバッグ容易</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="section-subtitle">SQLコード例：顧客マスターの標準化</h3>
+                <pre><code>-- Bronze 顧客データから Silver へのETL
+CREATE OR REPLACE TABLE silver.customers AS
+SELECT
+    -- ビジネスキー（重複排除に使用）
+    customer_id,
+
+    -- クレンジング済みカラム
+    LOWER(TRIM(first_name)) as first_name,
+    LOWER(TRIM(last_name)) as last_name,
+    CAST(birth_date AS DATE) as birth_date,
+    CASE
+        WHEN email LIKE '%@%.%' THEN LOWER(TRIM(email))
+        ELSE NULL
+    END as email_validated,
+
+    -- 正規化：電話番号をE.164形式へ
+    REGEXP_REPLACE(phone_number, '[^0-9+]', '') as phone_e164,
+
+    -- ステータスの標準化
+    CASE
+        WHEN status IN ('ACTIVE', 'A', 'Y', '1') THEN 'ACTIVE'
+        WHEN status IN ('INACTIVE', 'I', 'N', '0') THEN 'INACTIVE'
+        ELSE 'UNKNOWN'
+    END as status_normalized,
+
+    -- 品質指標
+    CASE
+        WHEN email IS NULL OR phone_number IS NULL THEN TRUE
+        ELSE FALSE
+    END as has_missing_contact,
+
+    -- 監査カラム
+    FROM_UNIXTIME(created_timestamp) as created_at,
+    FROM_UNIXTIME(updated_timestamp) as updated_at,
+    current_timestamp() as silver_processed_at,
+
+    -- ハッシュ：行全体の変更検知用（SCD実装に必要）
+    MD5(CONCAT_WS('|',
+        first_name, last_name, email, phone_number, status
+    )) as row_hash
+
+FROM bronze.customers
+WHERE
+    -- エラーレコードをスキップ（フラグ付けは金）
+    customer_id IS NOT NULL
+    AND created_timestamp > 0
+ORDER BY customer_id, updated_timestamp DESC
+QUALIFY ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY updated_timestamp DESC) = 1;</code></pre>
+
+                <h3 class="section-subtitle">PySpark：SCD Type 2（履歴追跡）の実装</h3>
+                <pre><code>from pyspark.sql.functions import *
+from pyspark.sql.window import Window
+
+# Silver から新しい顧客データを取得
+new_customers = spark.read.table("silver.customers_staging")
+
+# 現在の SCD テーブルを読み込み
+try:
+    current_scd = spark.read.table("silver.customers_scd_type2")
+except:
+    # 初回実行時は空のテーブルを作成
+    current_scd = spark.createDataFrame([], """
+        customer_id STRING,
+        first_name STRING,
+        email_validated STRING,
+        status_normalized STRING,
+        row_hash STRING,
+        valid_from DATE,
+        valid_to DATE,
+        is_current BOOLEAN
+    """)
+
+# 既存レコードと新規データをマージ
+merged = new_customers.join(
+    current_scd.where(col("is_current") == True).select(
+        "customer_id", "row_hash"
+    ),
+    "customer_id",
+    "left_outer"
+)
+
+# ハッシュが異なる = 属性が変わったレコード
+changed = merged.filter(
+    (col("row_hash") != col("row_hash")) | (col("row_hash").isNull())
+)
+
+# 既存の "is_current" レコードを "valid_to" を今日に設定して非活性化
+to_close = current_scd.where(
+    current_scd.customer_id.isin([row.customer_id for row in changed.select("customer_id").collect()])
+    & (col("is_current") == True)
+).withColumn(
+    "valid_to", current_date()
+).withColumn(
+    "is_current", lit(False)
+)
+
+# 新しいレコードを挿入（valid_from = 今日、valid_to = 9999-12-31）
+new_records = changed.select(
+    "customer_id", "first_name", "email_validated", "status_normalized", "row_hash"
+).withColumn(
+    "valid_from", current_date()
+).withColumn(
+    "valid_to", lit("9999-12-31").cast("date")
+).withColumn(
+    "is_current", lit(True)
+)
+
+# 変更のなかったレコードはそのまま
+unchanged = current_scd.join(
+    new_customers.select("customer_id", "row_hash"),
+    ["customer_id", "row_hash"],
+    "inner"
+)
+
+# 3つを union して新しい SCD テーブルを作成
+final_scd = (
+    to_close.union(new_records).union(unchanged)
+)
+
+final_scd.write.mode("overwrite").saveAsTable("silver.customers_scd_type2")</code></pre>
+
+                <div class="alert alert-cyan">
+                    <strong>Deep Dive:</strong> SCD（Slowly Changing Dimensions）はデータウェアハウジングの重要な概念です。Type 1（上書き）は履歴喪失、Type 2（履歴追跡）は行数増加のトレードオフがあります。ビジネス要件に応じて使い分けることが重要です。
+                </div>
+            </section>
+
+            <!-- Section 04: Gold Layer -->
+            <section class="section" id="section-04">
+                <div class="section-number">04</div>
+                <h2 class="section-title">Gold層 — ビジネスに最適化されたデータ</h2>
+
+                <p><strong>Gold層</strong>は分析やMLの「直前」のステージです。ここでのデータは <strong>ユーザーがすぐに使える形</strong> に最適化されています。集約、非正規化、キャッシング など、パフォーマンスとビジネス要件を両立させます。</p>
+
+                <h3 class="section-subtitle">Gold層の責務</h3>
+                <ul>
+                    <li><strong>集約テーブル：</strong> 日次・月次の売上集計、顧客ライフタイムバリュー（LTV）など、計算コストが高い指標を事前計算。</li>
+                    <li><strong>非正規化（Denormalization）：</strong> Silver の正規化された構造を、分析用に非正規化。JOIN の手数を削減。</li>
+                    <li><strong>スター・スキーマ：</strong> 事実テーブル（Fact）と次元テーブル（Dimension）を設計。古典的な BI スタイル。</li>
+                    <li><strong>ビジネスロジック適用：</strong> マージン計算、セグメント分類、異常検知フラグ など、ドメイン知識の具現化。</li>
+                    <li><strong>キャッシング・マテリアライズド・ビュー：</strong> 頻繁にアクセスされるビューを物理テーブルとして保存。</li>
+                </ul>
+
+                <h3 class="section-subtitle">Gold層のパターン</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>パターン</th>
+                            <th>例</th>
+                            <th>特徴</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>集約テーブル</strong></td>
+                            <td>daily_sales, monthly_revenue</td>
+                            <td>時間軸で粒度を落とし、計算量削減</td>
+                        </tr>
+                        <tr>
+                            <td><strong>スター・スキーマ</strong></td>
+                            <td>fact_orders + dim_customers, dim_products</td>
+                            <td>BI ツール統合に最適、JOIN最小化</td>
+                        </tr>
+                        <tr>
+                            <td><strong>キューブ・テーブル</strong></td>
+                            <td>sales_cube（年×月×製品×地域）</td>
+                            <td>多次元分析、OLAP ドリルダウン対応</td>
+                        </tr>
+                        <tr>
+                            <td><strong>特徴テーブル</strong></td>
+                            <td>customer_features（ML学習用）</td>
+                            <td>ML パイプライン向け、時間スライス対応</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="section-subtitle">SQLコード例：売上スター・スキーマ</h3>
+                <pre><code>-- Gold層：売上スター・スキーマ
+-- fact_orders：事実テーブル
+CREATE OR REPLACE TABLE gold.fact_orders AS
+SELECT
+    o.order_id,
+    o.customer_id,
+    o.product_id,
+    o.store_id,
+    CAST(o.order_date AS DATE) as order_date,
+    EXTRACT(YEAR FROM o.order_date) as order_year,
+    EXTRACT(MONTH FROM o.order_date) as order_month,
+    EXTRACT(QUARTER FROM o.order_date) as order_quarter,
+
+    -- 数値指標（ファクト）
+    o.quantity,
+    o.unit_price,
+    ROUND(o.quantity * o.unit_price, 2) as gross_amount,
+
+    -- ビジネスロジック：マージン率計算
+    ROUND(
+        (o.quantity * o.unit_price - o.quantity * p.cost_price) /
+        NULLIF(o.quantity * o.unit_price, 0),
+        4
+    ) as margin_rate,
+
+    -- 割引・キャンペーンフラグ
+    CASE
+        WHEN o.discount_code IS NOT NULL THEN TRUE
+        ELSE FALSE
+    END as has_discount,
+
+    -- パフォーマンス最適化：粒度判定（集計用の粒度フラグ）
+    CASE
+        WHEN DATE_DIFF(CURRENT_DATE, DATE(o.order_date)) <= 30 THEN 'RECENT'
+        WHEN DATE_DIFF(CURRENT_DATE, DATE(o.order_date)) <= 365 THEN 'HISTORICAL'
+        ELSE 'ARCHIVE'
+    END as temporal_bucket
+
+FROM silver.orders o
+LEFT JOIN silver.products p ON o.product_id = p.product_id
+WHERE o.order_id IS NOT NULL;
+
+-- dim_customers：顧客次元テーブル
+CREATE OR REPLACE TABLE gold.dim_customers AS
+SELECT
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.email_validated,
+    c.status_normalized,
+
+    -- セグメント分類
+    CASE
+        WHEN ltv.total_spent > 10000 THEN 'VIP'
+        WHEN ltv.total_spent > 1000 THEN 'PREMIUM'
+        ELSE 'STANDARD'
+    END as customer_segment,
+
+    -- 購買パターン
+    COALESCE(ltv.purchase_count, 0) as lifetime_purchases,
+    COALESCE(ltv.total_spent, 0) as lifetime_value,
+    COALESCE(ltv.avg_order_value, 0) as avg_order_value,
+
+    c.created_at,
+    DATEDIFF(CURRENT_DATE, DATE(c.created_at)) as days_since_signup
+
+FROM silver.customers c
+LEFT JOIN (
+    -- 顧客LTV集計
+    SELECT
+        customer_id,
+        COUNT(DISTINCT order_id) as purchase_count,
+        SUM(quantity * unit_price) as total_spent,
+        AVG(quantity * unit_price) as avg_order_value
+    FROM silver.orders
+    WHERE order_date < CURRENT_DATE
+    GROUP BY customer_id
+) ltv ON c.customer_id = ltv.customer_id;
+
+-- dim_products：製品次元テーブル
+CREATE OR REPLACE TABLE gold.dim_products AS
+SELECT
+    product_id,
+    product_name,
+    category,
+    UPPER(status) as status,
+    cost_price,
+    ROUND(cost_price * 1.3, 2) as standard_margin_price,
+
+    -- 製品カテゴリの上位分類
+    CASE
+        WHEN category IN ('Electronics', 'Computers') THEN 'Tech'
+        WHEN category IN ('Clothing', 'Accessories') THEN 'Fashion'
+        ELSE 'Other'
+    END as super_category
+FROM silver.products
+WHERE status NOT IN ('DISCONTINUED', 'INACTIVE');</code></pre>
+
+                <h3 class="section-subtitle">Gold層：日次集約テーブル</h3>
+                <pre><code>-- 日次売上集約（高速ダッシュボード用）
+CREATE OR REPLACE TABLE gold.daily_sales_summary AS
+SELECT
+    order_date,
+    EXTRACT(YEAR FROM order_date) as year,
+    EXTRACT(MONTH FROM order_date) as month,
+    EXTRACT(WEEK FROM order_date) as week,
+    DAYNAME(order_date) as day_of_week,
+
+    -- ディメンション別集約
+    customer_segment,
+    super_category,
+
+    -- 指標
+    COUNT(DISTINCT order_id) as total_orders,
+    COUNT(DISTINCT customer_id) as unique_customers,
+    ROUND(SUM(gross_amount), 2) as total_revenue,
+    ROUND(SUM(gross_amount * margin_rate), 2) as total_margin,
+    ROUND(AVG(gross_amount), 2) as avg_order_value,
+    ROUND(AVG(margin_rate), 4) as avg_margin_rate,
+    SUM(quantity) as total_quantity,
+
+    -- Year-over-year 計算用のハッシュ
+    CURRENT_TIMESTAMP as aggregated_at
+
+FROM gold.fact_orders f
+LEFT JOIN gold.dim_customers c ON f.customer_id = c.customer_id
+LEFT JOIN gold.dim_products p ON f.product_id = p.product_id
+WHERE order_date >= DATE_SUB(CURRENT_DATE, INTERVAL 24 MONTHS)
+GROUP BY
+    order_date,
+    EXTRACT(YEAR FROM order_date),
+    EXTRACT(MONTH FROM order_date),
+    EXTRACT(WEEK FROM order_date),
+    DAYNAME(order_date),
+    customer_segment,
+    super_category;</code></pre>
+
+                <div class="alert alert-green">
+                    <strong>Design Principle:</strong> Gold層のテーブルは「何度でも読み込まれる前提」で設計します。書き込み頻度は低く（通常1日1回の更新）、読み取りは高速に。SSD キャッシング、インデックス、パーティション戦略の最適化が重要です。
+                </div>
+            </section>
+
+            <!-- Section 05: Delta Lake Integration -->
+            <section class="section" id="section-05">
+                <div class="section-number">05</div>
+                <h2 class="section-title">Delta Lakeとの統合 — ACID, Time Travel, Schema Evolution</h2>
+
+                <p><strong>Delta Lake</strong>は Apache Spark 上のオープンソース・ストレージフォーマットで、Medallion Architecture を実装する際の「最適なパートナー」です。ACID トランザクション、データのバージョン管理、スキーマ進化に対応し、データウェアハウスレベルの信頼性をデータレイク上で実現します。</p>
+
+                <h3 class="section-subtitle">Delta Lakeの核となる3つの機能</h3>
+                <ul>
+                    <li><strong>ACIDトランザクション：</strong> 複数の書き込みが同時実行されても整合性が保証される。部分的な失敗からの復帰も安全。</li>
+                    <li><strong>Time Travel（タイムトラベル）：</strong> テーブルのスナップショットを過去のバージョンに遡って読み出し。監査やロールバック対応。</li>
+                    <li><strong>Schema Evolution：</strong> スキーマ定義を柔軟に追加・変更。ダウンストリームの破損なし。</li>
+                </ul>
+
+                <h3 class="section-subtitle">Delta Lake の ACID トランザクション</h3>
+                <pre><code># Delta Lake による ACID 書き込みの例
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
+
+spark = SparkSession.builder \
+    .appName("delta_acid_demo") \
+    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+    .getOrCreate()
+
+# 同時実行の安全性を確保した書き込み
+orders_df = spark.read.csv("/data/orders.csv", header=True)
+
+# Delta フォーマットで書き込み（ACID保証）
+orders_df.write \
+    .format("delta") \
+    .mode("overwrite") \
+    .partitionBy("order_date") \
+    .option("overwriteSchema", "true") \
+    .save("/lakehouse/gold/orders")
+
+# テーブル化（メタストア登録）
+spark.sql("""
+    CREATE TABLE IF NOT EXISTS gold.orders
+    USING DELTA
+    LOCATION '/lakehouse/gold/orders'
+""")
+
+# 別のプロセスが同時にアップデートしても安全
+spark.sql("""
+    UPDATE gold.orders
+    SET status = 'COMPLETED'
+    WHERE order_id IN (123, 456, 789)
+        AND status = 'PENDING'
+""")
+
+print("ACID transaction completed safely")</code></pre>
+
+                <h3 class="section-subtitle">Time Travel：過去バージョンへのアクセス</h3>
+                <pre><code>-- 過去30日のスナップショットを確認
+SELECT * FROM gold.orders VERSION AS OF 0;  -- version 0
+SELECT * FROM gold.orders VERSION AS OF 10; -- version 10
+
+-- タイムスタンプベースでのアクセス（3日前のスナップショット）
+SELECT COUNT(*) FROM gold.orders TIMESTAMP AS OF '2026-03-25 12:00:00';
+
+-- 10分前のデータの状態をチェック（誤削除の復旧など）
+SELECT * FROM gold.orders TIMESTAMP AS OF CURRENT_TIMESTAMP - INTERVAL '10 MINUTES'
+WHERE customer_id = 'CUST_001';
+
+-- Delta テーブルの履歴を確認
+DESCRIBE HISTORY gold.orders;
+-- 出力例：
+-- |version|timestamp             |userId|userName|operation  |operationParameters|
+-- |10     |2026-03-28 15:30:25...|...   |...     |UPDATE     |{...}              |
+-- |9      |2026-03-28 14:00:10...|...   |...     |MERGE      |{...}              |
+-- |8      |2026-03-27 20:15:45...|...   |...     |WRITE      |{...}              |</code></pre>
+
+                <h3 class="section-subtitle">Schema Evolution：スキーマの進化</h3>
+                <pre><code># PySpark でのスキーマ進化を柔軟に対応
+new_orders_df = spark.read.csv("/data/orders_v2.csv", header=True)
+
+# 新しいカラムが追加されても自動対応
+new_orders_df.write \
+    .format("delta") \
+    .mode("append") \
+    .option("mergeSchema", "true")  # スキーママージを有効化
+    .save("/lakehouse/gold/orders")
+
+# SQL での ALTER TABLE
+spark.sql("""
+    ALTER TABLE gold.orders
+    ADD COLUMN new_feature STRING COMMENT 'New feature added'
+""")
+
+-- 既存データの新カラムは NULL で埋まる
+-- パフォーマンス影響なし（メタデータのみの変更）</code></pre>
+
+                <h3 class="section-subtitle">Delta Lake × Medallion：MERGE INTOパターン</h3>
+                <pre><code>-- Silver層の重複排除・更新処理（MERGE INTO パターン）
+MERGE INTO silver.customers target
+USING (
+    -- Bronze から新しいデータを持ってくる
+    SELECT
+        customer_id,
+        first_name,
+        email,
+        status,
+        MD5(CONCAT_WS('|', first_name, email, status)) as row_hash,
+        CURRENT_TIMESTAMP as updated_at
+    FROM bronze.customers_new
+) source
+ON target.customer_id = source.customer_id
+WHEN MATCHED AND target.row_hash != source.row_hash THEN
+    -- 属性変更時は更新
+    UPDATE SET
+        first_name = source.first_name,
+        email = source.email,
+        status = source.status,
+        row_hash = source.row_hash,
+        updated_at = source.updated_at
+WHEN NOT MATCHED THEN
+    -- 新規顧客は挿入
+    INSERT (
+        customer_id, first_name, email, status, row_hash, updated_at
+    ) VALUES (
+        source.customer_id, source.first_name, source.email,
+        source.status, source.row_hash, source.updated_at
+    );</code></pre>
+
+                <div class="alert alert-orange">
+                    <strong>Caution:</strong> Delta Lake の MERGE INTO は便利ですが、大規模テーブル（10億行以上）では シャッフル コストが高くなります。ファイル削除・重書き戦略の最適化が必須です。
+                </div>
+
+                <h3 class="section-subtitle">Delta Lake のメタデータ最適化</h3>
+                <pre><code>-- テーブルの小ファイル統合（OPTIMIZE）
+OPTIMIZE gold.daily_sales_summary
+ZORDER BY order_date, customer_segment;
+
+-- テーブルの統計情報を更新
+ANALYZE TABLE gold.fact_orders COMPUTE STATISTICS;
+
+-- 古いバージョン（snapshot）を削除してストレージ最適化
+VACUUM gold.orders RETAIN 30 DAYS;  -- 30日以上前のバージョンを削除
+
+-- テーブル情報の詳細確認
+DESCRIBE DETAIL gold.orders;
+-- numFiles: ファイル数
+-- sizeInBytes: 合計サイズ
+-- numRecords: 行数
+-- minFileModificationTime: 最古ファイルのタイムスタンプ</code></pre>
+            </section>
+
+            <!-- Section 06: Implementation Patterns -->
+            <section class="section" id="section-06">
+                <div class="section-number">06</div>
+                <h2 class="section-title">実装パターン — パイプライン設計の実践</h2>
+
+                <p>Medallion Architecture を本番環境で実装する際の、実践的なパターンとベストプラクティスを紹介します。</p>
+
+                <h3 class="section-subtitle">パターン1：日次バッチETLパイプライン</h3>
+                <p>毎晩定時にすべてのソースを更新するシンプルなパターン。中堅企業向け。</p>
+                <pre><code># Airflow DAG での実装例
+from airflow import DAG
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+from datetime import datetime, timedelta
+
+default_args = {
+    'owner': 'data_team',
+    'retries': 2,
+    'retry_delay': timedelta(minutes=5),
+}
+
+with DAG(
+    'medallion_daily_etl',
+    default_args=default_args,
+    schedule_interval='0 2 * * *',  # 毎日2時
+    start_date=datetime(2026, 1, 1),
+    catchup=False,
+) as dag:
+
+    # Bronze: ソースから直接取り込み
+    ingest_customers = BashOperator(
+        task_id='ingest_customers_to_bronze',
+        bash_command="""
+            spark-submit \
+            --class com.company.DataIngest \
+            --master yarn \
+            /jars/data-pipeline.jar \
+            --mode=INGEST_CUSTOMERS \
+            --date={{ ds }}
+        """
+    )
+
+    ingest_orders = BashOperator(
+        task_id='ingest_orders_to_bronze',
+        bash_command="""
+            spark-submit \
+            --class com.company.DataIngest \
+            --master yarn \
+            /jars/data-pipeline.jar \
+            --mode=INGEST_ORDERS \
+            --date={{ ds }}
+        """
+    )
+
+    # Silver: クレンジング・標準化
+    clean_customers = BashOperator(
+        task_id='clean_customers_to_silver',
+        bash_command="""
+            spark-submit \
+            --class com.company.DataTransform \
+            /jars/data-pipeline.jar \
+            --source=bronze.customers \
+            --target=silver.customers \
+            --date={{ ds }}
+        """
+    )
+
+    clean_orders = BashOperator(
+        task_id='clean_orders_to_silver',
+        bash_command="""
+            spark-submit \
+            --class com.company.DataTransform \
+            /jars/data-pipeline.jar \
+            --source=bronze.orders \
+            --target=silver.orders \
+            --date={{ ds }}
+        """
+    )
+
+    # Gold: 集約・最適化
+    build_fact_tables = BashOperator(
+        task_id='build_gold_fact_tables',
+        bash_command="""
+            spark-submit \
+            --class com.company.DataAggregation \
+            /jars/data-pipeline.jar \
+            --target=gold.fact_orders \
+            --date={{ ds }}
+        """
+    )
+
+    # パイプラインの依存関係
+    [ingest_customers, ingest_orders] >> [clean_customers, clean_orders] >> build_fact_tables</code></pre>
+
+                <h3 class="section-subtitle">パターン2：ハイブリッドバッチ＆ストリーミング</h3>
+                <p>マスターデータはバッチ、イベントはストリーミングで並行処理。大規模リアルタイム企業向け。</p>
+                <pre><code># Spark Structured Streaming での実装
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
+
+spark = SparkSession.builder \
+    .appName("hybrid_medallion") \
+    .config("spark.sql.streaming.checkpointLocation", "/checkpoints") \
+    .getOrCreate()
+
+# ========== Streaming: Bronze → Silver →Gold ==========
+# Kafka から イベント取り込み（Bronze）
+event_stream = spark.readStream \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", "kafka:9092") \
+    .option("subscribe", "order_events") \
+    .option("startingOffsets", "latest") \
+    .load() \
+    .select(from_json(col("value").cast("string"),
+                     "order_id STRING, customer_id STRING, amount DOUBLE").alias("data")) \
+    .select("data.*")
+
+# Bronze へ書き込み（ストリーミング）
+query_bronze = event_stream \
+    .withColumn("ingestion_ts", current_timestamp()) \
+    .writeStream \
+    .format("delta") \
+    .option("checkpointLocation", "/checkpoints/bronze_events") \
+    .outputMode("append") \
+    .start("/lakehouse/bronze/order_events")
+
+# Silver への クレンジング（ストリーミング）
+silver_stream = spark.readStream.format("delta").load("/lakehouse/bronze/order_events") \
+    .withColumn("order_amount_validated",
+                when(col("amount") > 0, col("amount")).otherwise(null())) \
+    .select("order_id", "customer_id", "order_amount_validated", "ingestion_ts")
+
+query_silver = silver_stream \
+    .writeStream \
+    .format("delta") \
+    .option("checkpointLocation", "/checkpoints/silver_events") \
+    .outputMode("append") \
+    .start("/lakehouse/silver/order_events")
+
+# Gold への集約（ウィンドウド集計）
+gold_stream = spark.readStream.format("delta").load("/lakehouse/silver/order_events") \
+    .withWatermark("ingestion_ts", "10 minutes") \
+    .groupBy(
+        window(col("ingestion_ts"), "5 minutes"),
+        col("customer_id")
+    ).agg(
+        count("order_id").alias("order_count"),
+        sum("order_amount_validated").alias("total_amount"),
+        avg("order_amount_validated").alias("avg_amount")
+    )
+
+query_gold = gold_stream \
+    .select(
+        col("window.start").alias("window_start"),
+        col("window.end").alias("window_end"),
+        col("customer_id"),
+        col("order_count"),
+        col("total_amount"),
+        col("avg_amount")
+    ) \
+    .writeStream \
+    .format("delta") \
+    .option("checkpointLocation", "/checkpoints/gold_aggregates") \
+    .outputMode("update") \
+    .start("/lakehouse/gold/order_aggregates")
+
+# ========== Batch: マスターデータの並行処理 ==========
+# 毎朝、顧客マスターをバッチで更新（Silver）
+customers_batch = spark.read.parquet("/source/customers_master.parquet") \
+    .withColumn("updated_at", current_timestamp())
+
+customers_batch.write.mode("overwrite").format("delta") \
+    .option("overwriteSchema", "true") \
+    .save("/lakehouse/silver/customers")
+
+# クエリ実行
+query_bronze.awaitTermination()
+query_silver.awaitTermination()
+query_gold.awaitTermination()</code></pre>
+
+                <h3 class="section-subtitle">パターン3：Unity Catalog 統合 / ガバナンス層</h3>
+                <pre><code>-- Databricks Unity Catalog による Medallion 層の管理
+-- 3つのカタログ = 3つの層
+
+CREATE CATALOG IF NOT EXISTS bronze_prod;
+CREATE CATALOG IF NOT EXISTS silver_prod;
+CREATE CATALOG IF NOT EXISTS gold_prod;
+
+-- Bronze スキーマ（全員読み取り専用）
+CREATE SCHEMA IF NOT EXISTS bronze_prod.raw_data;
+GRANT SELECT ON SCHEMA bronze_prod.raw_data TO `analysts@company.com`;
+
+-- Silver スキーマ（データチームのみ読み書き）
+CREATE SCHEMA IF NOT EXISTS silver_prod.cleaned_data;
+GRANT SELECT ON SCHEMA silver_prod.cleaned_data TO `analysts@company.com`;
+GRANT SELECT, MODIFY ON SCHEMA silver_prod.cleaned_data TO `data_engineers@company.com`;
+
+-- Gold スキーマ（全員読み取り）
+CREATE SCHEMA IF NOT EXISTS gold_prod.analytics;
+GRANT SELECT ON SCHEMA gold_prod.analytics TO `*`;  -- 全員
+
+-- テーブルレベルのデータマスキング（PII保護）
+ALTER TABLE silver_prod.cleaned_data.customers
+SET TBLPROPERTIES ('delta.columnMapping.mode' = 'name');
+
+-- 列レベルのアクセス制御
+GRANT SELECT(customer_id, created_at) ON TABLE silver_prod.cleaned_data.customers
+TO `analysts@company.com`;
+
+-- PII列はマスク
+GRANT SELECT(
+    customer_id,
+    created_at,
+    MASK(first_name) as first_name,
+    MASK(email) as email
+) ON TABLE silver_prod.cleaned_data.customers
+TO `external_analysts@company.com`;</code></pre>
+            </section>
+
+            <!-- Section 07: Comparison with Other Architectures -->
+            <section class="section" id="section-07">
+                <div class="section-number">07</div>
+                <h2 class="section-title">他のアーキテクチャとの比較 — Data Vault, Kimball, Lambda</h2>
+
+                <h3 class="section-subtitle">Medallion vs Data Vault</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>特性</th>
+                            <th>Medallion</th>
+                            <th>Data Vault</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>層数</strong></td>
+                            <td>3層（Bronze/Silver/Gold）</td>
+                            <td>3層以上（RAW/VAULT/Mart）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>スキーマ設計</strong></td>
+                            <td>シンプル、段階的に正規化</td>
+                            <td>複雑（Hub-Link-Satellite）、厳密な正規化</td>
+                        </tr>
+                        <tr>
+                            <td><strong>学習曲線</strong></td>
+                            <td>低い、実装が早い</td>
+                            <td>高い、専門知識が必須</td>
+                        </tr>
+                        <tr>
+                            <td><strong>スケーラビリティ</strong></td>
+                            <td>優秀（クラウドデータレイク向け）</td>
+                            <td>優秀（大規模企業向け）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>監査・追跡</strong></td>
+                            <td>あり（各層でタイムスタンプ）</td>
+                            <td>強力（元々監査・コンプライアンス向け）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>推奨される規模</strong></td>
+                            <td>中堅～大規模、スタートアップ向け</td>
+                            <td>大規模企業、金融・保険向け</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="section-subtitle">Medallion vs Kimball Dimensional Modeling</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>特性</th>
+                            <th>Medallion</th>
+                            <th>Kimball</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>焦点</strong></td>
+                            <td>データの段階的品質向上</td>
+                            <td>BI/分析を最優先</td>
+                        </tr>
+                        <tr>
+                            <td><strong>スキーマ</strong></td>
+                            <td>各層で柔軟（Star→Snowflakeも可）</td>
+                            <td>Star Schema（Fact + Dimensions）に限定</td>
+                        </tr>
+                        <tr>
+                            <td><strong>導入コスト</strong></td>
+                            <td>中程度（Bronze→Gold の構成）</td>
+                            <td>高い（スターモデルの明確な定義が必須）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>柔軟性</strong></td>
+                            <td>高い、未見のユースケースに適応可</td>
+                            <td>中程度、Mart が増えると複雑化</td>
+                        </tr>
+                        <tr>
+                            <td><strong>実装ツール</strong></td>
+                            <td>Databricks, Spark, Duckなど</td>
+                            <td>Snowflake, BigQuery, RedshiftなどDWH</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-cyan">
+                    <strong>Pro Tip:</strong> Medallion と Kimball は相互補完的です。Bronze→Silver でデータを清潔にしておき、Gold 層で Kimball の Star Schema を実装する「Medallion + Kimball ハイブリッド」が多くの組織で最適です。
+                </div>
+
+                <h3 class="section-subtitle">Medallion vs Lambda/Kappa アーキテクチャ</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>特性</th>
+                            <th>Medallion</th>
+                            <th>Lambda</th>
+                            <th>Kappa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>パイプライン</strong></td>
+                            <td>段階的変換（3層）</td>
+                            <td>バッチ + ストリーム並行</td>
+                            <td>ストリームのみ</td>
+                        </tr>
+                        <tr>
+                            <td><strong>レイテンシ</strong></td>
+                            <td>中程度（層ごとのクロンジョブ）</td>
+                            <td>低い（ストリーム側）</td>
+                            <td>低い（全てストリーム）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>複雑性</strong></td>
+                            <td>中程度（3層の管理）</td>
+                            <td>高い（2つの経路を同期）</td>
+                            <td>中程度（ストリーム処理のみ）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>使用例</strong></td>
+                            <td>一般的なDEプロジェクト</td>
+                            <td>高精度 + リアルタイム併用（株価など）</td>
+                            <td>IoT、ログストリーム</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p><strong>推奨事項：</strong> 大多数の組織は Medallion + ハイブリッドバッチ&ストリーミング で充分です。Lambda はメンテナンス負荷が高く、Kappa は障害時の復旧が難しいため、よほどのユースケースでなければ避けるべきです。</p>
+            </section>
+
+            <!-- Section 08: Anti-patterns and Pitfalls -->
+            <section class="section" id="section-08">
+                <div class="section-number">08</div>
+                <h2 class="section-title">アンチパターンと注意点</h2>
+
+                <h3 class="section-subtitle">アンチパターン1：層を多すぎる/少なすぎる設計</h3>
+                <div class="alert alert-orange">
+                    <strong>❌ 反例：</strong> Bronze → Silver1 → Silver2 → Silver3 → Gold1 → Gold2 → Gold3 （7層！）
+                </div>
+                <p>各層に「なぜ必要か」の明確な責務がないと、デバッグが地獄になります。</p>
+                <div class="alert alert-green">
+                    <strong>✅ 推奨：</strong> 原則 3層。どうしても必要なら中間層を加えるが、MAX 5層。各層は「読み手」「責務」「責任者」を明確に定義。
+                </div>
+
+                <h3 class="section-subtitle">アンチパターン2：Bronze で既にクレンジングしてしまう</h3>
+                <div class="alert alert-orange">
+                    <strong>❌ 反例：</strong> Bronze 取り込み時点で NULL 削除、型変換、ビジネスロジック適用
+                </div>
+                <p>そうすると、元データへ遡ることができず、デバッグが困難。</p>
+                <div class="alert alert-green">
+                    <strong>✅ 推奨：</strong> Bronze はメタデータ（タイムスタンプ、ソース）のみ追加。全ての変換は Silver で。
+                </div>
+
+                <h3 class="section-subtitle">アンチパターン3：Delta Lake なしでこれを実装</h3>
+                <div class="alert alert-orange">
+                    <strong>❌ 反例：</strong> CSV / Parquet でメダリオンを実装。ACID 保証なし。
+                </div>
+                <p>並行書き込みでデータ破損、重複排除失敗のリスク高い。</p>
+                <div class="alert alert-green">
+                    <strong>✅ 推奨：</strong> Databricks、Snowflake、BigQuery など Delta Lake / Iceberg 対応の環境を使う。ACID が基本。
+                </div>
+
+                <h3 class="section-subtitle">アンチパターン4：Gold 層で無限に JOIN</h3>
+                <div class="alert alert-orange">
+                    <strong>❌ 反例：</strong> fact_orders ← customers ← addresses ← countries ← regions （5段階 JOIN）
+                </div>
+                <p>クエリが遅い。デバッグ困難。</p>
+                <div class="alert alert-green">
+                    <strong>✅ 推奨：</strong> 必要な次元テーブルは Gold で予め非正規化。（customer 情報を orders に直接保持）
+                </div>
+
+                <h3 class="section-subtitle">アンチパターン5：スキーマ版管理がない</h3>
+                <div class="alert alert-orange">
+                    <strong>❌ 反例：</strong> テーブルの構造が勝手に変わり、ダウンストリームが突然エラー
+                </div>
+                <p>破断的な変更に気づかない。</p>
+                <div class="alert alert-green">
+                    <strong>✅ 推奨：</strong> スキーマを git で管理。dbt contracts で型チェック。Delta の DESCRIBE を定期確認。
+                </div>
+
+                <h3 class="section-subtitle">アンチパターン6：ドキュメント/メタデータがない</h3>
+                <div class="alert alert-orange">
+                    <strong>❌ 反例：</strong> テーブル名「t1, t2, t3」。カラム「col_a, col_b」。誰も使い方が分からない。
+                </div>
+                <p>分析者がレイアウト作成費やされる。</p>
+                <div class="alert alert-green">
+                    <strong>✅ 推奨：</strong> データカタログ（Databricks Data Lineage、Collibra など）を使用。テーブル/カラムに説明を付与。
+                </div>
+
+                <h3 class="section-subtitle">アンチパターン7：小さなデータセットでオーバーエンジニア</h3>
+                <div class="alert alert-orange">
+                    <strong>❌ 反例：</strong> 日々 100 行しかないデータを、Medallion + Delta + Iceberg + Unity Catalog で管理
+                </div>
+                <p>過度な複雑さ。メンテナンスコストが見合わない。</p>
+                <div class="alert alert-green">
+                    <strong>✅ 推奨：</strong> 小さいうちは SQLite や Postgres で OK。スケールしてから Medallion へ移行。段階的な成長を許容。
+                </div>
+
+                <h3 class="section-subtitle">アンチパターン8：監視・アラートがない</h3>
+                <div class="alert alert-orange">
+                    <strong>❌ 反例：</strong> パイプラインが 1 週間サイレント失敗。誰も気づかない。古いデータが使われ続ける。
+                </div>
+                <p>ビジネスインパクト甚大。</p>
+                <div class="alert alert-green">
+                    <strong>✅ 推奨：</strong> 各層の "freshness"（更新日時）、 "completeness"（欠落率）、 "accuracy"（整合性）を自動監視。Soda、Monte Carlo Data など。
+                </div>
+            </section>
+
+            <!-- Section 09: Conclusion -->
+            <section class="section" id="section-09">
+                <div class="section-number">09</div>
+                <h2 class="section-title">まとめ — 10年腐らない設計原則</h2>
+
+                <p>Medallion Architecture は単なる「層構造」ではなく、<strong>「データの段階的品質向上とビジネス価値化のメンタルモデル」</strong>です。</p>
+
+                <h3 class="section-subtitle">Medallion を選ぶべき理由</h3>
+                <ul>
+                    <li><strong>シンプルで理解しやすい：</strong> DWH のように複雑でなく、Data Lake のように無統制でもない。中庸が美徳。</li>
+                    <li><strong>スケーラビリティ：</strong> クラウドストレージの安さを活かし、大規模化に強い。</li>
+                    <li><strong>段階的な品質管理：</strong> 各層で責務が明確。デバッグ・保守が容易。</li>
+                    <li><strong>監査・ガバナンス：</strong> Delta Lake の Time Travel と Unity Catalog で、コンプライアンス要件に対応。</li>
+                    <li><strong>柔軟な進化：</strong> データ要件の変化に対して、各層を個別に改善できる。</li>
+                </ul>
+
+                <h3 class="section-subtitle">実装への第一歩</h3>
+                <ol>
+                    <li><strong>Bronze の構築：</strong> 全てのソースを「ありのまま」取り込む パイプラインを作る。1～2 ヶ月。</li>
+                    <li><strong>Silver の整備：</strong> ビジネスキー・品質ルール定義。重複排除・クレンジング。2～3 ヶ月。</li>
+                    <li><strong>Gold の構築：</strong> 分析チームと共に、集約テーブル・スター・スキーマを定義。1～2 ヶ月。</li>
+                    <li><strong>ガバナンス体制：</strong> Data Catalog、SLA 定義、監視・アラート。1 ヶ月。</li>
+                </ol>
+
+                <p><strong>総投資：</strong> 最初の 6～9 ヶ月で基盤完成。その後は改善・拡張。</p>
+
+                <h3 class="section-subtitle">10年腐らない設計の要諦</h3>
+                <div class="alert alert-green">
+                    <strong>1. 各層に「なぜ存在するか」の責務を持たせる</strong>
+                    <br> Bronze = ソースのコピー。Silver = 品質向上。Gold = ビジネス最適化。
+                </div>
+
+                <div class="alert alert-cyan">
+                    <strong>2. メタデータ・ドキュメントを第一級市民にする</strong>
+                    <br> テーブル・カラムの説明なしに、数ヶ月後には存在意義を忘れている。
+                </div>
+
+                <div class="alert alert-yellow">
+                    <strong>3. 段階的な改善を前提に設計する</strong>
+                    <br> 最初は 100% 完璧でなくても OK。反復的に高度化していく柔軟性を持たせる。
+                </div>
+
+                <div class="alert alert-orange">
+                    <strong>4. ACID と Time Travel を当たり前のものにする</strong>
+                    <br> Delta Lake / Iceberg などで、「障害復旧は簡単」という安心感が生まれる。
+                </div>
+
+                <p style="margin-top: 32px;"><strong>Medallion Architecture は、データエンジニアが「データ資産」を確実に構築・管理するための、20年先も通用する基本原則です。</strong></p>
+
+                <p style="margin-top: 24px; font-size: 0.95rem; color: var(--text-secondary);">最終更新: 2026-03-28 | レビュー対象: データエンジニア、データアーキテクト、分析者</p>
+            </section>
+        </div>
+
+        <!-- References -->
+        <div class="content" style="padding-top: 20px;">
+            <section class="references">
+                <h3>参考資料・関連リンク</h3>
+                <ul>
+                    <li><strong>Databricks Medallion Architecture:</strong> Databricks の公式ブログ（2020）で初出。レイクハウスアーキテクチャの標準</li>
+                    <li><strong>Delta Lake:</strong> Apache Foundation のオープンソースストレージレイヤー。ACID トランザクション、Time Travel、Schema Evolution に対応</li>
+                    <li><strong>Unity Catalog:</strong> Databricks が提供するデータガバナンス・メタデータ管理プラットフォーム。Data Lakehouse の中核機能</li>
+                    <li><strong>Data Vault 2.0 (Dan Linstedt):</strong> より厳密なデータモデリング。大規模エンタープライズ向け</li>
+                    <li><strong>The Kimball Group (Ralph Kimball):</strong> 次元モデリング・Star Schema の第一人者。分析DWH設計の古典</li>
+                    <li><strong>Soda Data Quality:</strong> データ品質監視・テスティングのオープンソースツール</li>
+                    <li><strong>dbt (data build tool):</strong> SQL ベースの ETL 変換ツール。Medallion Architecture の実装に最適</li>
+                    <li><strong>Apache Iceberg:</strong> Delta Lake 同様のオープンテーブルフォーマット。Big Tech 各社が採用</li>
+                </ul>
+            </section>
+        </div>
+    </main>
+</body>
+</html>

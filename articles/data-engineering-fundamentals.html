@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>データエンジニアリングの基礎 — What・Why・Whenで考える設計原則</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #38BDF8;
+            --bg-deep: #060B14;
+            --bg-secondary: #0F1420;
+            --bg-tertiary: #1A2236;
+            --text-primary: #E8EAED;
+            --text-secondary: #B0B5BD;
+            --border: #2A3548;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background: linear-gradient(135deg, var(--bg-deep) 0%, #0D1219 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(56, 189, 248, 0.02) 0%, transparent 50%);
+        }
+
+        /* Header & Navigation */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(6, 11, 20, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        /* Hero Section */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent) 0%, #0EA5E9 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(26, 34, 54, 0.6);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(26, 34, 54, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 60px;
+        }
+
+        h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 2rem 0 1rem 0;
+            color: var(--accent);
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: opacity 0.3s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin: 1.5rem 0 1.5rem 2rem;
+        }
+
+        li {
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            margin: 2rem 0;
+            border-collapse: collapse;
+            background: rgba(15, 20, 32, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(56, 189, 248, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(56, 189, 248, 0.05);
+        }
+
+        /* Alert Boxes */
+        .alert {
+            padding: 1.5rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 4px;
+            background: rgba(26, 34, 54, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-info {
+            border-left-color: var(--accent);
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        .alert-success {
+            border-left-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .alert-warning {
+            border-left-color: var(--warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .alert-info .alert-title {
+            color: var(--accent);
+        }
+
+        .alert-success .alert-title {
+            color: var(--success);
+        }
+
+        .alert-warning .alert-title {
+            color: var(--warning);
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: rgba(6, 11, 20, 0.8);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(15, 20, 32, 0.8);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            background: rgba(15, 20, 32, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(56, 189, 248, 0.1);
+        }
+
+        .card h4 {
+            color: var(--accent);
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+            }
+
+            section {
+                padding: 2rem 1.5rem;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            th, td {
+                padding: 0.75rem;
+            }
+        }
+
+        /* Utility */
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-4 {
+            margin-top: 2rem;
+        }
+
+        .highlight {
+            color: var(--accent);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">DE Fundamentals</div>
+            <ul class="nav-links">
+                <li><a href="#architecture">アーキテクチャ</a></li>
+                <li><a href="#lifecycle">ライフサイクル</a></li>
+                <li><a href="#undercurrents">横断的関心事</a></li>
+                <li><a href="#quality">データ品質</a></li>
+                <li><a href="#governance">ガバナンス</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="eyebrow">学習ノート / O'REILLY</div>
+        <h1>データエンジニアリングの基礎</h1>
+        <p class="subtitle">What・Why・Whenで考える設計原則</p>
+        <p class="subtitle text-secondary">O'Reilly『Fundamentals of Data Engineering』学習ノート — アーキテクチャとツールを混同しないために</p>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">5</div>
+                <div class="stat-label">ライフサイクルステージ</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">What/Why</div>
+                <div class="stat-label">ツールではなく設計</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">6</div>
+                <div class="stat-label">横断的関心事</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2025-02-15</p>
+    </section>
+
+    <main>
+        <!-- Section 01: Architecture vs Tools -->
+        <section id="architecture">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <h2>アーキテクチャとツールを混同しない</h2>
+            </div>
+
+            <p>データエンジニアリングの最も重要な洞察は、<span class="highlight">アーキテクチャは戦略的、ツールは戦術的</span>という区別にあります。これが10年腐らない原理原則を生み出します。</p>
+
+            <h3>What・Why・When vs How</h3>
+            <p>設計のドキュメンテーションと意思決定は「何をするのか（What）」「なぜそうするのか（Why）」「いつまでに（When）」に集中すべきです。「どうやるか（How）」はツール選定で決まり、時間とともに変わります。</p>
+
+            <div class="alert alert-info">
+                <div class="alert-title">重要：アーキテクチャ設計の層別</div>
+                <p>
+                    <strong>戦略層（アーキテクチャ）：</strong> 要件定義、データフロー設計、品質基準、ガバナンスモデル<br>
+                    <strong>戦術層（ツール選定）：</strong> Spark vs Flink、DWH vs Lakehouse、クラウドプロバイダー
+                </p>
+            </div>
+
+            <h3>ツール選定が失敗する理由</h3>
+            <p>多くのチームが「今流行っているツール」から始めてしまいます。しかし、その時点で「何が必要か」「なぜ必要か」を定義していなければ、後々ツール乗り換えコストが膨大になります。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>間違った進め方</h4>
+                    <p>1. Spark を選ぶ<br>2. インフラを構築<br>3. 「でも要件が...」<br>→ 莫大な乗り換えコスト</p>
+                </div>
+                <div class="card">
+                    <h4>正しい進め方</h4>
+                    <p>1. 要件を定義（何、なぜ、いつ）<br>2. アーキテクチャ設計<br>3. ツール選定<br>→ 10年耐える設計</p>
+                </div>
+            </div>
+
+            <h3>Reversibility（可逆性）の重要性</h3>
+            <p>Jeff Bezos が述べた「可逆的な決定」の概念は、データエンジニアリングでも同じです。本当に必要な設計（What/Why/When）は不可逆的ですが、ツール選定は可逆的であるべき。</p>
+
+            <p><strong>ツール乗り換えを容易にする設計：</strong></p>
+            <ul>
+                <li>データフローは抽象化層で定義</li>
+                <li>ツール依存の実装は独立させる</li>
+                <li>標準フォーマット（Parquet、CSV）を使用</li>
+                <li>API層とビジネスロジックを分離</li>
+            </ul>
+
+            <h3>チーム規模とテクノロジー選択</h3>
+            <p>データエンジニアリングで最も見落とされる要素は、<span class="highlight">チーム規模に応じたテクノロジースタック</span>です。同じ要件でも、チームのサイズと専門性で適切なツールは変わります。</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>チーム規模</th>
+                        <th>特性</th>
+                        <th>推奨アプローチ</th>
+                        <th>ツール例</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1-3人</td>
+                        <td>複雑なOpsは避けたい<br>スピード重視</td>
+                        <td>マネージドサービス優先<br>Serverlessアーキテクチャ</td>
+                        <td>Snowflake, BigQuery<br>Lambda Functions</td>
+                    </tr>
+                    <tr>
+                        <td>4-10人</td>
+                        <td>一定の専門性あり<br>カスタマイズ要求増加</td>
+                        <td>ハイブリッドアプローチ<br>マネージド + オープンソース</td>
+                        <td>Databricks, Cloud Data Fusion<br>Airflow</td>
+                    </tr>
+                    <tr>
+                        <td>11-30人</td>
+                        <td>専門化が進む<br>複雑な要件対応可能</td>
+                        <td>自社構築を検討<br>ただしコア部分のみ</td>
+                        <td>Spark, Flink, Kafka<br>自製オーケストレーション</td>
+                    </tr>
+                    <tr>
+                        <td>30人+</td>
+                        <td>Platform Engineering可能<br>全スタック制御</td>
+                        <td>自社プラットフォーム構築<br>OSS活用</td>
+                        <td>完全カスタムスタック</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Hadoop vs Data Warehouse：歴史的教訓</h3>
+            <p>2010年代、多くの企業が Hadoop に投資しました。しかし、実際には：</p>
+
+            <div class="alert alert-warning">
+                <div class="alert-title">Hadoop の失敗要因</div>
+                <ul>
+                    <li><strong>運用負荷：</strong> クラスタ管理に膨大なエンジニアが必要</li>
+                    <li><strong>複雑性：</strong> MapReduce、HDFS、ZooKeeper... エコシステムが過度に複雑</li>
+                    <li><strong>小規模チームには不適：</strong> 専門化したチーム（Hadoop管理者）が必須に</li>
+                    <li><strong>代替技術：</strong> DWH や Spark が出現、Hadoop の利点が薄れた</li>
+                </ul>
+            </div>
+
+            <p>この教訓から学ぶべきは：</p>
+            <ul>
+                <li>小〜中規模チームは、運用負荷が低いマネージドサービスを選ぶべき</li>
+                <li>「大規模分散処理が必要」という仮説を、実データで検証してから Hadoop 級の投資をする</li>
+                <li>技術負債を後で払う計画が本当に実現できるか疑問を持つ</li>
+            </ul>
+        </section>
+
+        <!-- Section 02: Data Engineering Lifecycle -->
+        <section id="lifecycle">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <h2>データエンジニアリングライフサイクル</h2>
+            </div>
+
+            <p>すべてのデータシステムは、5つの基本的なステージを経ます。これらは業界や技術スタックを問わず、普遍的です。</p>
+
+            <h3>5つのステージ</h3>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>1. Generation</h4>
+                    <p><strong>データソースの特定と理解</strong></p>
+                    <p>どこからデータが来るのか。アプリケーション、IoT、API、ユーザー行動 —— どのような形式で、どのペースで、どの品質で生成されるのか。</p>
+                </div>
+                <div class="card">
+                    <h4>2. Storage</h4>
+                    <p><strong>データを安全に保存</strong></p>
+                    <p>生データ（Raw）と処理済みデータ（Processed）の両方を効率的に保存。後続のすべてのステージがストレージに依存。</p>
+                </div>
+                <div class="card">
+                    <h4>3. Ingestion</h4>
+                    <p><strong>データの取り込み</strong></p>
+                    <p>ソースシステムから中央のストレージへ。バッチ、ストリーミング、API、ファイル転送 —— ユースケースに応じた方式を選択。</p>
+                </div>
+                <div class="card">
+                    <h4>4. Transformation</h4>
+                    <p><strong>データの加工と品質向上</strong></p>
+                    <p>生データを分析・ビジネスロジックに基づいた形に変換。クリーニング、集約、エンリッチメント、統合。</p>
+                </div>
+                <div class="card">
+                    <h4>5. Serving</h4>
+                    <p><strong>ユーザーへの提供</strong></p>
+                    <p>アナリスト、データサイエンティスト、ビジネスユーザー、アプリケーション。要件に応じた形でデータを提供。</p>
+                </div>
+            </div>
+
+            <h3>ライフサイクルの柔軟性</h3>
+            <p>これら5つのステージは、常に順序通りに進むわけではありません：</p>
+
+            <ul>
+                <li><strong>重複：</strong> Ingestion と Transformation が同時に起こることもある</li>
+                <li><strong>フィードバックループ：</strong> Serving から「このデータ品質では使えない」という要望が Transformation に返ってくる</li>
+                <li><strong>スキップ：</strong> 小規模なケースでは Generation → Serving が直結することもある</li>
+                <li><strong>再利用：</strong> 一度 Storage に入ったデータは複数回 Serving される</li>
+            </ul>
+
+            <h3>Storage がすべての基盤</h3>
+            <p>重要な洞察：<span class="highlight">Storage は単なる1つのステージではなく、ライフサイクル全体の基盤</span>です。データはストレージに複数回格納されます。</p>
+
+            <ul>
+                <li>Raw Data Layer（生データ層）</li>
+                <li>Bronze/Silver/Gold の階層構造</li>
+                <li>Intermediate Storage（Transformation 中）</li>
+                <li>Serving 用フォーマット</li>
+            </ul>
+
+            <h3>Modern Data Stack での実装パターン</h3>
+            <p>2024-2026年のモダンデータスタックでは、ライフサイクルの実装が劇的に変わっています：</p>
+
+            <div class="code-block">
+Generation（ソース）
+    ↓
+Ingestion + Storage（Lakehouse）
+    ↓
+Transformation（dbt, SQL, Python）
+    ↓
+Serving（BI, API, Real-time）
+            </div>
+
+            <p><span class="highlight">Lakehouse</span> （Data Lakehouse）アーキテクチャにより、Storage と Transformation が統合され、複雑性が大幅に削減されました。</p>
+        </section>
+
+        <!-- Section 03: Undercurrents -->
+        <section id="undercurrents">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <h2>6つのUndercurrents（横断的関心事）</h2>
+            </div>
+
+            <p>5つのライフサイクルステージを支える、縦横にあるのが6つの横断的関心事（Undercurrents）です。これらは全段階を貫き、システム全体の品質を左右します。</p>
+
+            <h3>1. Security（セキュリティ）</h3>
+            <p>データセキュリティの本質は：<span class="highlight">必要な人だけが、必要なデータへのアクセスを得られる</span>（Least Privilege）。</p>
+
+            <ul>
+                <li>IAM（Identity & Access Management）：誰が何にアクセスできるか</li>
+                <li>Encryption：転送中（TLS）、保存中（AES-256）</li>
+                <li>監査ログ：誰が、いつ、何のデータにアクセスしたか</li>
+                <li>データ分類：機密度レベルに応じたアクセス制限</li>
+                <li>コンプライアンス：GDPR、CCPA、PCI-DSS など</li>
+            </ul>
+
+            <h3>2. Data Management（データ管理）</h3>
+            <p>データの品質、血統（Lineage）、メタデータの管理。「どのデータがどこから来たのか」を追跡可能にする。</p>
+
+            <ul>
+                <li>Data Catalog：メタデータの一元管理</li>
+                <li>Data Lineage：入力 → 処理 → 出力のトレーサビリティ</li>
+                <li>Metadata Management：技術メタデータ + ビジネスメタデータ</li>
+                <li>データ品質フレームワーク：自動検証と監視</li>
+            </ul>
+
+            <h3>3. DataOps（データ運用）</h3>
+            <p>Agile、DevOps、リーン製造の原則をデータシステムに適用。スピード、品質、信頼性をプロセスと文化で実現。</p>
+
+            <ul>
+                <li>CI/CD for Data：データパイプラインの自動テスト・デプロイ</li>
+                <li>モニタリング＆アラート：異常検知とインシデント対応</li>
+                <li>カナリアデプロイメント：新しいパイプラインの段階的本番化</li>
+                <li>SLA管理：データの可用性、遅延、正確性の保証</li>
+            </ul>
+
+            <h3>4. Data Architecture（データアーキテクチャ）</h3>
+            <p>設計原則の実装。スケーラビリティ、複雑性の管理、技術スタック選定の決断。</p>
+
+            <ul>
+                <li>Lakehouse vs Lambda vs Kappa：アーキテクチャパターン</li>
+                <li>スキーマ管理：進化するスキーマへの対応</li>
+                <li>パーティショニング戦略：クエリ性能とコスト</li>
+                <li>キャパシティプランニング：将来の成長を見据えた設計</li>
+            </ul>
+
+            <h3>5. Orchestration（オーケストレーション）</h3>
+            <p>複数のジョブを効率的に調整・実行するプラットフォーム。高可用性、ジョブ履歴、可視化、アラートを提供。</p>
+
+            <ul>
+                <li>ワークフローDAG定義：依存関係の明示化</li>
+                <li>スケジューリング：定期実行、イベントベース実行</li>
+                <li>リトライロジック：一時的な失敗への対応</li>
+                <li>ジョブモニタリング：実行状況の可視化</li>
+            </ul>
+
+            <h3>6. Software Engineering（ソフトウェアエンジニアリング）</h3>
+            <p>データコードも本来のソフトウェアと同じ品質基準に。テスト、バージョン管理、コードレビュー、ドキュメンテーション。</p>
+
+            <ul>
+                <li>テスト駆動開発（TDD）：Unit Test、Integration Test</li>
+                <li>バージョン管理：Git ワークフロー、Pull Request</li>
+                <li>コードスタイル：Linting、Formatting の自動化</li>
+                <li>ドキュメンテーション：コメント、README、設計ドキュメント</li>
+            </ul>
+
+            <h3>Undercurrents の相互関係</h3>
+            <p>これら6つは独立していません。むしろ密接に相互作用します：</p>
+
+            <div class="alert alert-success">
+                <div class="alert-title">相互作用の例</div>
+                <p><strong>Security + Data Management：</strong> セキュリティポリシーはメタデータで表現・管理される</p>
+                <p><strong>DataOps + Orchestration：</strong> CI/CD パイプラインはワークフローオーケストレータで自動化される</p>
+                <p><strong>Data Architecture + Software Engineering：</strong> 設計は Infrastructure as Code で表現され、Git で管理される</p>
+            </div>
+        </section>
+
+        <!-- Section 04: Team Size & Technology -->
+        <section id="team-size">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <h2>チーム規模とテクノロジ選択</h2>
+            </div>
+
+            <p>データエンジニアリングで最も見落とされる重要な洞察：<span class="highlight">同じビジネス要件でも、チームサイズと専門性で最適なテクノロジスタックは大きく変わる</span>。</p>
+
+            <h3>なぜチーム規模が重要か？</h3>
+
+            <ul>
+                <li><strong>運用負荷：</strong> 小規模チームは Ops 中心の業務に割いて良いリソースがない</li>
+                <li><strong>専門化度：</strong> Hadoop 管理者のような専門職が必要かどうか</li>
+                <li><strong>意思決定速度：</strong> コミュニケーションオーバーヘッドが実装スピードに影響</li>
+                <li><strong>継続性：</strong> 1人の Hadoop 専門家への依存は組織リスク</li>
+            </ul>
+
+            <h3>小規模チーム（1-3人）の戦略</h3>
+
+            <div class="alert alert-info">
+                <div class="alert-title">戦略：マネージドサービス優先</div>
+                <p>このサイズのチームは「優秀なエンジニア」が必要です。Ops に時間を使わせてはいけません。</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>領域</th>
+                        <th>推奨アプローチ</th>
+                        <th>理由</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Data Warehouse</td>
+                        <td>Snowflake, BigQuery</td>
+                        <td>完全マネージド。設定と SQL に専念</td>
+                    </tr>
+                    <tr>
+                        <td>ETL/ELT</td>
+                        <td>dbt, Airbyte, Fivetran</td>
+                        <td>インフラ管理なし。コードに集中</td>
+                    </tr>
+                    <tr>
+                        <td>Orchestration</td>
+                        <td>Cloud Composer, Managed Workflows</td>
+                        <td>Kubernetes クラスタ管理は不要</td>
+                    </tr>
+                    <tr>
+                        <td>BI</td>
+                        <td>Tableau, Looker, Power BI</td>
+                        <td>ホストなし、データ接続のみ</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>中規模チーム（4-10人）の戦略</h3>
+
+            <div class="alert alert-info">
+                <div class="alert-title">戦略：ハイブリッドアプローチ</div>
+                <p>基盤はマネージド、カスタマイズが必要な部分だけ自製。</p>
+            </div>
+
+            <ul>
+                <li><strong>マネージドの活用：</strong> DWH、基本的な ETL、BI ツール</li>
+                <li><strong>オープンソース：</strong> 複雑なビジネスロジック、特殊な処理が必要なら Spark/Flink を検討</li>
+                <li><strong>オーケストレーション：</strong> Airflow をセルフホストまたはマネージド版（Astronomer）</li>
+            </ul>
+
+            <h3>大規模チーム（11-30人）の戦略</h3>
+
+            <div class="alert alert-warning">
+                <div class="alert-title">戦略：選別的な自社構築</div>
+                <p>ここまでくると自社プラットフォーム構築を検討できますが、「すべてを自製」は罠です。</p>
+            </div>
+
+            <p><strong>自製すべき領域：</strong></p>
+            <ul>
+                <li>ビジネス固有の複雑なロジック</li>
+                <li>独自のメタデータ管理が必要な場合</li>
+                <li>リアルタイム処理で特殊な要件がある場合</li>
+            </ul>
+
+            <p><strong>買うべき領域：</strong></p>
+            <ul>
+                <li>DWH（Snowflake, Databricks）</li>
+                <li>基本的な ETL（dbt）</li>
+                <li>監視・アラート（DataDog, Sumo Logic）</li>
+            </ul>
+
+            <h3>Hadoop vs Data Warehouse：意思決定フレームワーク</h3>
+
+            <p>2010年代、多くの企業が Hadoop に投資した歴史を振り返ると：</p>
+
+            <div class="alert alert-warning">
+                <div class="alert-title">Hadoop を選ぶべきではなかった理由</div>
+                <ul>
+                    <li><strong>運用負荷が過度：</strong> クラスタ管理に人月を消費</li>
+                    <li><strong>学習曲線が急：</strong> MapReduce の設計思想を理解する必要がある</li>
+                    <li><strong>小規模チームには不適：</strong> Hadoop 管理者への依存が生じた</li>
+                    <li><strong>スピード面で劣化：</strong> SQL クエリのレスポンスが遅い</li>
+                    <li><strong>代替技術の台頭：</strong> Spark（Hadoop の上ですら動く）の登場でさらに複雑化</li>
+                </ul>
+            </div>
+
+            <h3>今、分散処理が本当に必要か？の判定基準</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>データサイズ</th>
+                        <th>データベース推奨</th>
+                        <th>分散処理候補</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>&lt; 10 GB</td>
+                        <td>PostgreSQL, SQLite</td>
+                        <td>不要</td>
+                    </tr>
+                    <tr>
+                        <td>10 GB - 1 TB</td>
+                        <td>DWH（Snowflake, BigQuery）</td>
+                        <td>不要。クエリ最適化で対応</td>
+                    </tr>
+                    <tr>
+                        <td>1 TB - 100 TB</td>
+                        <td>Lakehouse（Databricks, Delta）</td>
+                        <td>複雑なビジネスロジックの場合のみ</td>
+                    </tr>
+                    <tr>
+                        <td>&gt; 100 TB</td>
+                        <td>Lakehouse + Spark</td>
+                        <td>ほぼ必須。ただしマネージド版</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>最重要な洞察：</strong> ペタバイト規模でないなら、DWH と SQL で多くのケースが解決します。「分散処理が必要」という仮説は、実データと実処理時間で検証してから投資してください。</p>
+
+            <h3>Managed Services vs Self-Hosted：総コスト比較</h3>
+
+            <p>単純な「ツール代」の比較は危険です。真の総コスト（TCO）は：</p>
+
+            <div class="code-block">
+TCO = ツール代 + エンジニアリング時間 + 運用負荷 + 機会費用
+            </div>
+
+            <p><strong>マネージドサービス：</strong></p>
+            <ul>
+                <li>ツール代が高い（年 $50K-500K）</li>
+                <li>エンジニアリング時間が少ない（ビジネス機能に集中）</li>
+                <li>運用負荷が無い（ベンダー責任）</li>
+                <li>アップグレードが自動</li>
+            </ul>
+
+            <p><strong>自社構築（セルフホスト）：</strong></p>
+            <ul>
+                <li>ツール代が安い（オープンソース）</li>
+                <li>エンジニアリング時間が膨大（実装 + デバッグ）</li>
+                <li>運用負荷が高い（パッチ、スケーリング、バックアップ）</li>
+                <li>2-3人の「Ops 専任者」がほぼ必須</li>
+            </ul>
+
+            <p><span class="highlight">現実：小規模チームではマネージドサービスの方が TCO は低い</span>というケースがほとんどです。</p>
+        </section>
+
+        <!-- Section 05: Data Quality -->
+        <section id="quality">
+            <div class="section-header">
+                <div class="section-number">05</div>
+                <h2>データ品質の原則</h2>
+            </div>
+
+            <p>「データ品質」は抽象的に語られることが多いですが、実は6つの具体的な次元で測定できます。</p>
+
+            <h3>6つのデータ品質次元</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>次元</th>
+                        <th>定義</th>
+                        <th>測定方法</th>
+                        <th>例</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Accuracy</strong></td>
+                        <td>データが現実を正確に表現している</td>
+                        <td>ソースシステムとの比較検証</td>
+                        <td>顧客の住所が実際に配送可能か</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Completeness</strong></td>
+                        <td>必要なすべての値が存在する</td>
+                        <td>NULL / 空欄の割合</td>
+                        <td>すべての注文に顧客 ID が存在するか</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Consistency</strong></td>
+                        <td>同じデータが異なるシステム間で一貫している</td>
+                        <td>複数ソース間の差異チェック</td>
+                        <td>CRM と会計システムで顧客名が統一されているか</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Timeliness</strong></td>
+                        <td>データが必要な時に利用可能である</td>
+                        <td>デリバリーラグの測定</td>
+                        <td>リアルタイム分析に必要なデータが1時間以内に利用可能か</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Uniqueness</strong></td>
+                        <td>重複がなく、各レコードが一意である</td>
+                        <td>重複行の検出</td>
+                        <td>同じ顧客のレコードが重複していないか</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Validity</strong></td>
+                        <td>データが定義されたフォーマット・範囲内である</td>
+                        <td>スキーマ検証、範囲チェック</td>
+                        <td>メールアドレスが正しいフォーマットか、売上が負でないか</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>品質フレームワークの実装</h3>
+
+            <p>データ品質を「一度チェック」ではなく、継続的に監視する必要があります。</p>
+
+            <ul>
+                <li><strong>スキーマ検証：</strong> Ingestion 時にデータ型、カラム数を検証</li>
+                <li><strong>統計的監視：</strong> データ分布の異常（Outlier）を検知</li>
+                <li><strong>リファレンス整合性：</strong> 外部キー関係の検証</li>
+                <li><strong>ビジネスロジック検証：</strong> 売上合計、顧客数などの集計値の妥当性</li>
+            </ul>
+
+            <h3>品質の優先順位付け</h3>
+
+            <div class="alert alert-info">
+                <div class="alert-title">重要：すべての品質次元を同じレベルで要求するのは非効率</div>
+                <p>Accuracy が 95% で OK なケースもあれば、99.99% 必須なケースもあります。ビジネス影響度に応じた優先順位付けが重要です。</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ユースケース</th>
+                        <th>優先度</th>
+                        <th>許容される品質レベル</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>金融取引</td>
+                        <td>Accuracy, Consistency, Timeliness</td>
+                        <td>99.99%+</td>
+                    </tr>
+                    <tr>
+                        <td>マーケティング分析</td>
+                        <td>Completeness, Timeliness</td>
+                        <td>95%+</td>
+                    </tr>
+                    <tr>
+                        <td>機械学習訓練</td>
+                        <td>Completeness, Validity</td>
+                        <td>98%+</td>
+                    </tr>
+                    <tr>
+                        <td>ダッシュボード</td>
+                        <td>Timeliness, Consistency</td>
+                        <td>90%+</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>データ品質観測ツール</h3>
+
+            <p>2024-2026年のモダンスタックでは、品質観測ツールが成熟しました：</p>
+
+            <ul>
+                <li><strong>dbt tests：</strong> データウェアハウスのテスト自動化</li>
+                <li><strong>Great Expectations：</strong> データパイプラインの契約（Contract）定義</li>
+                <li><strong>Monte Carlo Data：</strong> 異常検知と根本原因分析</li>
+                <li><strong>Soda：</strong> リアルタイム品質監視</li>
+            </ul>
+        </section>
+
+        <!-- Section 06: Batch vs Streaming -->
+        <section id="batch-streaming">
+            <div class="section-header">
+                <div class="section-number">06</div>
+                <h2>Batch vs Streaming：パラダイムシフト</h2>
+            </div>
+
+            <p>2024年から2026年にかけて、データ処理のパラダイムが大きく変わっています。</p>
+
+            <h3>歴史的背景</h3>
+
+            <p><strong>2010-2020：Batch が主流</strong></p>
+            <ul>
+                <li>MapReduce、Hive、Spark —— すべて Batch 思想</li>
+                <li>リアルタイムは高い技術的負債</li>
+                <li>キャパシティプランニング：深夜バッチ処理の時間枠を確保</li>
+            </ul>
+
+            <p><strong>2021-2023：Streaming が台頭</strong></p>
+            <ul>
+                <li>Kafka、Flink、Spark Streaming の成熟</li>
+                <li>クラウドネイティブインフラの普及</li>
+                <li>「リアルタイムが当たり前」の要求増加</li>
+            </ul>
+
+            <p><strong>2024-2026：統合アーキテクチャへ</strong></p>
+            <ul>
+                <li>Lakehouse アーキテクチャ（Batch + Streaming 統一）</li>
+                <li>Apache Beam：Batch と Streaming を統一プログラミングモデル</li>
+                <li>「最適なのは両者のハイブリッド」が大半のケース</li>
+            </ul>
+
+            <h3>Batch の特性と適用場面</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>特性</th>
+                        <th>詳細</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>遅延（Latency）</strong></td>
+                        <td>数時間から数日。リアルタイム要求には不適</td>
+                    </tr>
+                    <tr>
+                        <td><strong>スループット</strong></td>
+                        <td>非常に高い。ペタバイト規模のデータ処理に強い</td>
+                    </tr>
+                    <tr>
+                        <td><strong>複雑性</strong></td>
+                        <td>相対的に単純。Workflow が明確</td>
+                    </tr>
+                    <tr>
+                        <td><strong>コスト</strong></td>
+                        <td>効率的。リソースの時間単位での利用が可能</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>Batch が適している場面：</strong></p>
+            <ul>
+                <li>日次レポート、定期集計</li>
+                <li>月末決算、四半期分析</li>
+                <li>大量データのクリーニング・統合</li>
+                <li>機械学習の定期モデル更新</li>
+            </ul>
+
+            <h3>Streaming の特性と適用場面</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>特性</th>
+                        <th>詳細</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>遅延（Latency）</strong></td>
+                        <td>ミリ秒から数秒。リアルタイム性が必須なケースに最適</td>
+                    </tr>
+                    <tr>
+                        <td><strong>スループット</strong></td>
+                        <td>高いが Batch ほどではない。秒単位の処理ボリュームが目安</td>
+                    </tr>
+                    <tr>
+                        <td><strong>複雑性</strong></td>
+                        <td>高い。ウィンドウ処理、状態管理などの学習曲線がある</td>
+                    </tr>
+                    <tr>
+                        <td><strong>コスト</strong></td>
+                        <td>24/7 リソース稼働が必要。スケーリングが複雑</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>Streaming が適している場面：</strong></p>
+            <ul>
+                <li>リアルタイムダッシュボード、アラート</li>
+                <li>詐欺検知、異常検知</li>
+                <li>推奨エンジンの即座なアップデート</li>
+                <li>IoT データの継続的な処理</li>
+            </ul>
+
+            <h3>ハイブリッドアプローチ：Kappa から Lambda へ</h3>
+
+            <p><strong>Kappa Architecture：</strong> Streaming で Batch も含める</p>
+            <ul>
+                <li>Kafka ですべてのイベントを保持</li>
+                <li>Streaming で即座に処理</li>
+                <li>必要に応じて Kafka から Replay して再計算</li>
+                <li>シンプルで運用負荷が低い</li>
+            </ul>
+
+            <p><strong>Lambda Architecture（今は避けるべき）：</strong></p>
+            <ul>
+                <li>Batch と Streaming の2つのパイプラインを並行運用</li>
+                <li>複雑性が2倍</li>
+                <li>結果の一貫性が課題</li>
+                <li>2010年代の産物で、今は非推奨</li>
+            </ul>
+
+            <h3>2024年の推奨：Lakehouse + Streaming</h3>
+
+            <p><span class="highlight">モダンデータスタックの最適解は、Lakehouse（Batch）+ ストリーミング処理の組み合わせ</span>です。</p>
+
+            <ul>
+                <li>Lakehouse（Delta Lake、Iceberg）で ACID トランザクション確保</li>
+                <li>SQL でリアルタイムビューを作成（Streaming SQL）</li>
+                <li>複雑な集計は Batch（Spark）で定期実行</li>
+                <li>両者が同じストレージレイヤーを共有（複雑性削減）</li>
+            </ul>
+        </section>
+
+        <!-- Section 07: Build vs Buy -->
+        <section id="build-buy">
+            <div class="section-header">
+                <div class="section-number">07</div>
+                <h2>Build vs Buy：戦略的な選択</h2>
+            </div>
+
+            <p>データスタックを構築する際の最大の決断：「何を買い、何を作るのか」</p>
+
+            <h3>Build vs Buy の現在地（2024-2026）</h3>
+
+            <p>業界全体の圧倒的なトレンドは：<span class="highlight">「Buy First, Build When Necessary」</span></p>
+
+            <div class="alert alert-success">
+                <div class="alert-title">データエンジニア時間の現状</div>
+                <p>データエンジニアの<strong>44%が パイプラインの構築・保守に時間を費やしている</strong>というSurveyがあります。つまり、ビジネス価値を生まない運用業務に人月が消費されている。</p>
+            </div>
+
+            <h3>Build するコスト</h3>
+
+            <p>パイプラインを自社構築する場合のリアル なコスト：</p>
+
+            <ul>
+                <li><strong>初期構築：</strong> 3-6ヶ月のエンジニアリング</li>
+                <li><strong>定期保守：</strong> 専任 1-2 人が継続的に必要</li>
+                <li><strong>アップグレード：</strong> 依存ライブラリの更新対応</li>
+                <li><strong>セキュリティパッチ：</strong> 脆弱性への対応</li>
+                <li><strong>運用スキル：</strong> 専門知識を持つ人への依存</li>
+            </ul>
+
+            <p><strong>現実的な推定：</strong> 年間 $520,000+ の人件費（3人のシニアエンジニア相当）</p>
+
+            <h3>Buy するメリット・デメリット</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>メリット</th>
+                        <th>デメリット</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>即座に本番運用開始</td>
+                        <td>ツール代が高い（年$50K-300K）</td>
+                    </tr>
+                    <tr>
+                        <td>運用負荷がベンダー側</td>
+                        <td>ベンダーロックインの懸念</td>
+                    </tr>
+                    <tr>
+                        <td>セキュリティ・パッチはベンダー負責</td>
+                        <td>カスタマイズの自由度が低い</td>
+                    </tr>
+                    <tr>
+                        <td>スケーリングが自動</td>
+                        <td>パフォーマンス調整に限界</td>
+                    </tr>
+                    <tr>
+                        <td>アップグレードが自動</td>
+                        <td>API 変更への対応が必要な場合</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>意思決定フレームワーク</h3>
+
+            <p><strong>「Buy」を選ぶべき場合：</strong></p>
+            <ul>
+                <li>チームサイズが 10人以下</li>
+                <li>要件が「標準的」（特殊カスタマイズが不要）</li>
+                <li>スピード重視（3ヶ月以内に本番）</li>
+                <li>ベンダーが業界で成熟している（Snowflake, Fivetran）</li>
+            </ul>
+
+            <p><strong>「Build」を選ぶべき場合：</strong></p>
+            <ul>
+                <li>チームサイズが 20人以上で、専門知識が豊富</li>
+                <li>要件が業界固有で特殊なカスタマイズが必須</li>
+                <li>コスト最適化が重要（スケール効果がある場合）</li>
+                <li>競争優位性のあるシステム（例：独自の推奨エンジン）</li>
+            </ul>
+
+            <h3>ハイブリッド戦略：推奨アプローチ</h3>
+
+            <p><strong>「Buy the Foundation, Build the Differentiation」</strong></p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>Buy（基盤）</h4>
+                    <ul>
+                        <li>DWH（Snowflake）</li>
+                        <li>ETL ツール（dbt, Airbyte）</li>
+                        <li>BI ツール（Looker）</li>
+                        <li>Orchestration（Airflow マネージド版）</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Build（差別化）</h4>
+                    <ul>
+                        <li>業界固有の変換ロジック</li>
+                        <li>カスタムメタデータ管理</li>
+                        <li>リアルタイム処理（特殊な場合）</li>
+                        <li>内部ツール・ダッシュボード</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Outsource（実行）</h4>
+                    <ul>
+                        <li>単純な ETL の実装</li>
+                        <li>データ品質チェック</li>
+                        <li>BI レポート開発</li>
+                        <li>ドキュメンテーション</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>TCO：真の総コスト計算</h3>
+
+            <p>「Buy は高い、Build は安い」という思い込みは間違いです。</p>
+
+            <div class="code-block">
+Build の真のコスト：
+  = ツール代（OSS は無料）
+  + エンジニアリング（初期 + 保守）
+  + インフラ運用（クラウドインスタンス）
+  + 人員流動時のリスク
+
+Buy の真のコスト：
+  = ツール代（$100K/年）
+  + 少量の実装（統合作業）
+  + 少量の保守
+            </div>
+
+            <p><span class="highlight">ほとんどのケースで、Buy が TCO は低い</span> —— 特にチームサイズが 20人以下の場合。</p>
+        </section>
+
+        <!-- Section 08: Data Governance -->
+        <section id="governance">
+            <div class="section-header">
+                <div class="section-number">08</div>
+                <h2>データガバナンス：信頼と発見</h2>
+            </div>
+
+            <p>データガバナンスは、セキュリティとアクセシビリティのバランスです。</p>
+
+            <h3>ガバナンスの3つのピラー</h3>
+
+            <h4>1. Discovery（発見可能性）</h4>
+            <p>ユーザーが「このデータはどこにあるのか」「どう使うのか」を簡単に理解できる。</p>
+
+            <ul>
+                <li><strong>Data Catalog：</strong> すべてのデータアセットの一元管理</li>
+                <li><strong>メタデータ：</strong> 技術メタデータ + ビジネスメタデータ</li>
+                <li><strong>Lineage：</strong> 入力 → 処理 → 出力のトレーサビリティ</li>
+                <li><strong>検索性：</strong> キーワード検索、タグベース検索</li>
+            </ul>
+
+            <h4>2. Access Control（アクセス制御）</h4>
+            <p>適切なユーザーが、適切なデータに、適切なレベルでアクセスできる。</p>
+
+            <ul>
+                <li><strong>RBAC（Role-Based Access Control）：</strong> 役割ベースの権限</li>
+                <li><strong>ABAC（Attribute-Based Access Control）：</strong> 属性ベースの動的権限</li>
+                <li><strong>Data Masking：</strong> 機密データの自動マスキング</li>
+                <li><strong>監査ログ：</strong> 誰が何にアクセスしたかの記録</li>
+            </ul>
+
+            <h4>3. Quality Management（品質管理）</h4>
+            <p>データが信頼できる状態で提供される。</p>
+
+            <ul>
+                <li><strong>SLA 定義：</strong> 可用性、正確性、遅延の目標値</li>
+                <li><strong>品質監視：</strong> 継続的な自動チェック</li>
+                <li><strong>インシデント対応：</strong> 問題発見時の迅速な対応</li>
+                <li><strong>改善ループ：</strong> 品質低下の根本原因分析と改善</li>
+            </ul>
+
+            <h3>Data Catalog の構築</h3>
+
+            <p>ガバナンスの中核となる Data Catalog は、「何を」「どのレベルで」管理するか次第です。</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>対象</th>
+                        <th>メタデータ項目</th>
+                        <th>責任者</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>テーブル/データセット</td>
+                        <td>名前、説明、オーナー、更新頻度、SLA</td>
+                        <td>Data Owner</td>
+                    </tr>
+                    <tr>
+                        <td>カラム/フィールド</td>
+                        <td>型、説明、有効値、Lineage</td>
+                        <td>Subject Matter Expert</td>
+                    </tr>
+                    <tr>
+                        <td>ビジネス用語</td>
+                        <td>定義、ステークホルダー、計算ロジック</td>
+                        <td>ビジネスアナリスト</td>
+                    </tr>
+                    <tr>
+                        <td>Lineage</td>
+                        <td>ソース、変換、出力先、依存関係</td>
+                        <td>システム自動生成</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>ガバナンスの実装パターン</h3>
+
+            <p><strong>小規模（スタートアップ段階）：</strong></p>
+            <ul>
+                <li>Wiki や Notion でメタデータ管理</li>
+                <li>手動での Lineage 追跡</li>
+                <li>簡易的なアクセス権限管理</li>
+            </ul>
+
+            <p><strong>中規模（成長段階）：</strong></p>
+            <ul>
+                <li>Data Catalog ツール導入（Alation、Atlan、Collibra）</li>
+                <li>Lineage の自動生成</li>
+                <li>RBAC の整備</li>
+            </ul>
+
+            <p><strong>大規模（組織化段階）：</strong></p>
+            <ul>
+                <li>専任の Data Governance チーム</li>
+                <li>データ品質フレームワークの統一</li>
+                <li>クロスファンクショナルな Data Stewardship プログラム</li>
+            </ul>
+
+            <h3>よくある落とし穴</h3>
+
+            <div class="alert alert-warning">
+                <div class="alert-title">ガバナンスの過度な規制化</div>
+                <p>ガバナンスはしばしば「制限」と理解され、データの利用を妨げることがあります。本来のゴールは「信頼と発見」のバランスです。過度に堅い運用は、Shadow IT（無認可システム）を生みます。</p>
+            </div>
+
+            <p><strong>避けるべきパターン：</strong></p>
+            <ul>
+                <li>すべてのデータアクセスにチケット制度</li>
+                <li>新しいテーブル作成に 2週間の承認プロセス</li>
+                <li>アナリストが自分たちのニーズに対応できないほどの制限</li>
+            </ul>
+
+            <p><strong>目指すべきパターン：</strong></p>
+            <ul>
+                <li>セルフサービスで Data Catalog を検索</li>
+                <li>Roles に基づいた自動アクセス</li>
+                <li>Audit Log で事後的な監視</li>
+            </ul>
+        </section>
+
+        <!-- Section 09: Cost Optimization -->
+        <section id="cost">
+            <div class="section-header">
+                <div class="section-number">09</div>
+                <h2>コスト最適化：見えない支出を見える化</h2>
+            </div>
+
+            <p>データインフラのコストは、見えやすい部分と見えない部分があります。</p>
+
+            <h3>コスト要素の分解</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>コスト要素</th>
+                        <th>説明</th>
+                        <th>削減方法</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Compute（コンピュート）</strong></td>
+                        <td>CPU/GPU 使用料（クラウド）またはハードウェア</td>
+                        <td>クエリ最適化、不要な ジョブの廃止、Serverless の活用</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Storage（ストレージ）</strong></td>
+                        <td>データ保存容量料金</td>
+                        <td>キャッシング、圧縮、古いデータのアーカイブ</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Transfer（転送）</strong></td>
+                        <td>リージョン間、クラウド間のデータ転送</td>
+                        <td>同一リージョン設計、キャッシング</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Licensing（ライセンス）</strong></td>
+                        <td>BI ツール、DWH などの機能別ライセンス</td>
+                        <td>不要なシート削減、オープンソース活用</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Engineering Time（人件費）</strong></td>
+                        <td>最大のコスト。運用、保守に要するエンジニア時間</td>
+                        <td>マネージドサービス、自動化、ツール導入</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>見えやすいコストの最適化</h3>
+
+            <p><strong>DWH クエリコストの削減：</strong></p>
+            <ul>
+                <li>EXPLAIN PLAN でクエリを分析</li>
+                <li>インデックス、パーティショニングの活用</li>
+                <li>キャッシング層の導入</li>
+                <li>不要な列の削除（SELECT * の回避）</li>
+            </ul>
+
+            <p><strong>ストレージコスト削減：</strong></p>
+            <ul>
+                <li>重複排除（Deduplication）</li>
+                <li>圧縮フォーマット（Parquet, ORC）</li>
+                <li>ホットデータ vs コールドデータの分離</li>
+                <li>古いデータのアーカイブまたは削除</li>
+            </ul>
+
+            <h3>見えないコストの最適化</h3>
+
+            <p><strong>エンジニアリング時間：最大のコスト要因</strong></p>
+
+            <ul>
+                <li>マネージドサービスに移行：年 $500K の Hadoop 費用 → 年 $100K の Snowflake + dbt</li>
+                <li>自動化ツール導入：手動テストを dbt tests + CI/CD で自動化</li>
+                <li>知見の共有：Wiki、ドキュメント、チュートリアル で学習曲線を短縮</li>
+            </ul>
+
+            <div class="alert alert-success">
+                <div class="alert-title">真のコスト削減事例</div>
+                <p><strong>Before：</strong> Hadoop クラスタ（年 $1.2M） = インスタンス $300K + エンジニア $900K（3人）</p>
+                <p><strong>After：</strong> Lakehouse（年 $400K） = Databricks $250K + エンジニア $150K（1人）</p>
+                <p><strong>削減率：</strong> 67%（年 $800K の削減）</p>
+            </div>
+
+            <h3>ショーバック（Chargeback）と予算管理</h3>
+
+            <p>組織が大きくなると、各部門のコスト認識が重要になります。</p>
+
+            <ul>
+                <li><strong>ショーバック：</strong> リソース使用量に基づいて部門に料金配分</li>
+                <li><strong>予算管理：</strong> クラウドコスト管理ツール（CloudHealth, Kubecost）</li>
+                <li><strong>アラート：</strong> 予算超過時の自動通知・制御</li>
+            </ul>
+        </section>
+
+        <!-- Section 10: Summary -->
+        <section id="summary">
+            <div class="section-header">
+                <div class="section-number">10</div>
+                <h2>まとめ：10年腐らない原理原則</h2>
+            </div>
+
+            <p>データエンジニアリングの景観は急速に変わっていますが、変わらない原理原則があります。</p>
+
+            <h3>最重要な洞察5つ</h3>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>1. アーキテクチャ ≠ ツール</h4>
+                    <p>What/Why/When は設計段階で。How（ツール）は実装段階で決める。アーキテクチャは10年、ツールは5年のライフサイクルで考える。</p>
+                </div>
+                <div class="card">
+                    <h4>2. チーム規模が最大の制約</h4>
+                    <p>同じビジネス要件でも、チームが3人か30人かで最適なテクノロジスタックは全く異なる。小規模チームはマネージドサービス。複雑性の軽減が最優先。</p>
+                </div>
+                <div class="card">
+                    <h4>3. 運用負荷は大きなコスト</h4>
+                    <p>「ツール代」だけで判断するな。エンジニアリング時間、運用負荷を含めた TCO で意思決定する。多くのケースでマネージドサービスが勝つ。</p>
+                </div>
+                <div class="card">
+                    <h4>4. データ品質は測定可能</h4>
+                    <p>6つの次元（Accuracy, Completeness, Consistency, Timeliness, Uniqueness, Validity）で定量的に管理。ビジネス影響度に応じた優先順位付けが重要。</p>
+                </div>
+                <div class="card">
+                    <h4>5. ガバナンスは制限ではなく信頼</h4>
+                    <p>データへのアクセスを制限するのではなく、発見・信頼・品質のバランスを取る。過度な規制は Shadow IT を生む。</p>
+                </div>
+            </div>
+
+            <h3>2026年のデータエンジニアリング像</h3>
+
+            <ul>
+                <li><strong>テクノロジ：</strong> Lakehouse が基盤。Batch + Streaming の統合。</li>
+                <li><strong>ツール選定：</strong> 「Buy First」から始まる。90%の企業がハイブリッドアプローチ。</li>
+                <li><strong>スキル要件：</strong> エンジニアリングスキル + ビジネス理解。データウェアハウスの専門知識は加点だが、必須ではない。</li>
+                <li><strong>組織：</strong> 小規模で高度に専門化したチーム。データガバナンスはクロスファンクショナル。</li>
+            </ul>
+
+            <h3>最後に：「腐らない原則」3つ</h3>
+
+            <div class="alert alert-info">
+                <div class="alert-title">10年変わらない原理原則</div>
+                <ul>
+                    <li><strong>要件が設計を決める：</strong> 技術ではなく、ビジネス要件から始める</li>
+                    <li><strong>シンプルさに勝る複雑性はない：</strong> 不要な複雑性を避ける。 YAGNI（You Aren't Gonna Need It）</li>
+                    <li><strong>人間が最大のアセット：</strong> 技術より人間。チームの学習速度、専門性、文化が成功を決める</li>
+                </ul>
+            </div>
+
+            <p>データエンジニアリングの世界では、トレンドが次々と現れます。しかし、本質は変わりません。「正しい要件定義」「チームに合った選択」「継続的な改善」。これらができれば、どのツールでも、どのアーキテクチャでも成功します。</p>
+
+            <p style="margin-top: 3rem; font-style: italic; color: var(--text-secondary);">
+                このノートは、O'Reilly『Fundamentals of Data Engineering』と、2024-2026年のデータエンジニアリング業界の最新動向を統合した学習ノートです。
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <p>データエンジニアリングの基礎 — 学習ノート</p>
+        <p>更新日：2025-02-15 | 基づいた書籍：Fundamentals of Data Engineering (O'Reilly) by Joe Reis & Matt Housley</p>
+        <p style="margin-top: 1rem; font-size: 0.85rem;">このドキュメントは教育目的で作成されました。商用利用は自由です。</p>
+    </footer>
+</body>
+</html>
