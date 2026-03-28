@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Engineering Study #28 — データ基盤のCI/CD</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --accent: #10B981;
+  --accent-light: #34D399;
+  --accent-dark: #059669;
+  --accent-glow: rgba(16, 185, 129, 0.25);
+  --bg-deep: #060B14;
+  --bg-card: #0D1421;
+  --bg-card-hover: #141D2C;
+  --bg-code: #080E1A;
+  --text-primary: #E8EDF3;
+  --text-secondary: #8A9AB8;
+  --text-muted: #4A5A75;
+  --border: #172035;
+  --green: #34D399;
+  --yellow: #FBBF24;
+  --cyan: #67E8F9;
+  --orange: #FB923C;
+  --pink: #F472B6;
+  --purple: #A78BFA;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.8;
+  overflow-x: hidden;
+}
+
+/* Noise overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Grid background pattern */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image:
+    linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding: 2rem;
+  text-align: center;
+  z-index: 1;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -10%; left: 50%; transform: translateX(-50%);
+  width: 900px; height: 700px;
+  background: radial-gradient(ellipse, var(--accent-glow) 0%, transparent 68%);
+  opacity: 0.6;
+  animation: pulse 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 200px;
+  background: linear-gradient(to bottom, transparent, var(--bg-deep));
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.7; transform: translateX(-50%) scale(1.08); }
+}
+
+.hero-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.1s;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--accent-light);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 100px;
+  background: rgba(16, 185, 129, 0.05);
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.2s;
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.hero-title {
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  font-weight: 900;
+  line-height: 1.15;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.4s;
+  max-width: 800px;
+}
+
+.hero-title .accent {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light), #6EE7B7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: clamp(0.9rem, 1.8vw, 1.15rem);
+  color: var(--text-secondary);
+  max-width: 580px;
+  margin-top: 1.5rem;
+  font-weight: 300;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.6s;
+  line-height: 1.7;
+}
+
+.hero-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 1rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.65s;
+}
+
+.hero-stat-row {
+  display: flex;
+  gap: 2.5rem;
+  margin-top: 3rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.8s;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hero-stat {
+  text-align: center;
+  padding: 1.2rem 1.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(13, 20, 33, 0.8);
+  backdrop-filter: blur(10px);
+  min-width: 110px;
+  transition: border-color 0.3s, transform 0.3s;
+}
+
+.hero-stat:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  transform: translateY(-2px);
+}
+
+.hero-stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  line-height: 1;
+  margin-bottom: 0.4rem;
+}
+
+.hero-stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+
+.hero-tools {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 2rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.95s;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tool-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: var(--accent);
+  background: rgba(16, 185, 129, 0.06);
+  letter-spacing: 0.05em;
+}
+
+.scroll-hint {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.25em;
+  animation: bob 2.5s ease-in-out infinite;
+  z-index: 1;
+}
+
+.scroll-hint .arrow {
+  width: 1px; height: 32px;
+  background: linear-gradient(to bottom, var(--text-muted), transparent);
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Navigation */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(6, 11, 20, 0.88);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  overflow-x: auto;
+}
+
+.nav-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0;
+  align-items: center;
+}
+
+.nav-home {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 1rem 1rem 1rem 0;
+  white-space: nowrap;
+  border-right: 1px solid var(--border);
+  margin-right: 0.5rem;
+  padding-right: 1rem;
+  transition: color 0.2s;
+}
+
+.nav-home:hover { color: var(--accent); }
+
+.nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 1rem 1rem;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  letter-spacing: 0.01em;
+}
+
+.nav a:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+/* Main content */
+.content {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 2rem 8rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Section */
+.section {
+  margin-top: 5.5rem;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent);
+  letter-spacing: 0.35em;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+}
+
+.section-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  line-height: 1.3;
+}
+
+.section-title .highlight {
+  color: var(--accent-light);
+}
+
+/* Speaker card */
+.speaker-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.2rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  margin-bottom: 2rem;
+  transition: border-color 0.25s, background 0.25s;
+}
+
+.speaker-card:hover {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: var(--bg-card-hover);
+}
+
+.speaker-avatar {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--bg-deep);
+  flex-shrink: 0;
+}
+
+.speaker-info {
+  flex: 1;
+}
+
+.speaker-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.speaker-org {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.speaker-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.speaker-link:hover {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--accent);
+}
+
+.prose {
+  color: var(--text-secondary);
+  font-size: 0.94rem;
+  line-height: 2;
+  margin-bottom: 1.5rem;
+}
+
+.prose strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.prose a {
+  color: var(--accent-light);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(52, 211, 153, 0.3);
+  transition: border-color 0.2s;
+}
+
+.prose a:hover {
+  border-bottom-color: var(--accent-light);
+}
+
+/* Subsection heading */
+.sub-heading {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 2.2rem 0 0.8rem;
+  color: var(--accent-light);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sub-heading::before {
+  content: '';
+  width: 3px; height: 1em;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Blockquote */
+blockquote {
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.07), rgba(16, 185, 129, 0.02));
+  padding: 1.3rem 1.6rem;
+  margin: 1.8rem 0;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.9;
+  position: relative;
+}
+
+blockquote::before {
+  content: '\201C';
+  font-size: 3rem;
+  color: var(--accent);
+  opacity: 0.25;
+  position: absolute;
+  top: -0.3rem;
+  left: 1rem;
+  font-family: Georgia, serif;
+  line-height: 1;
+}
+
+blockquote p { margin: 0; }
+
+/* Alert boxes */
+.alert {
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.07), transparent);
+  padding: 1.2rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.alert.green {
+  border-left-color: var(--green);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.07), transparent);
+}
+
+.alert.yellow {
+  border-left-color: var(--yellow);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.07), transparent);
+}
+
+.alert.orange {
+  border-left-color: var(--orange);
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.07), transparent);
+}
+
+.alert-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.alert .alert-label { color: var(--accent); }
+.alert.green .alert-label { color: var(--green); }
+.alert.yellow .alert-label { color: var(--yellow); }
+.alert.orange .alert-label { color: var(--orange); }
+
+/* Insight list */
+.insight-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1.5rem 0;
+}
+
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.insight-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.insight-icon {
+  color: var(--accent);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+  min-width: 1.2rem;
+}
+
+.insight-item strong {
+  color: var(--text-primary);
+}
+
+/* Scenario grid */
+.scenario-grid {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1.5rem 0;
+}
+
+.scenario-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.3rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.scenario-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.scenario-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+  min-width: 1.5rem;
+}
+
+.scenario-item strong {
+  color: var(--text-primary);
+}
+
+/* Links section */
+.links-grid {
+  display: grid;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  text-decoration: none;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.link-item:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  transform: translateX(3px);
+}
+
+.link-icon {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--accent);
+  min-width: 2rem;
+  opacity: 0.8;
+}
+
+.link-label {
+  flex: 1;
+}
+
+.link-arrow {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+
+.link-item:hover .link-arrow {
+  transform: translateX(3px);
+  color: var(--accent);
+}
+
+/* Next event */
+.next-event {
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(16, 185, 129, 0.02));
+  border-radius: 14px;
+  padding: 1.5rem 2rem;
+  margin: 1.8rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.next-event-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.next-event-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.next-event-text strong {
+  color: var(--text-primary);
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+  margin: 5rem 0;
+}
+
+/* Code inline */
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  background: rgba(16, 185, 129, 0.08);
+  color: var(--accent-light);
+  padding: 0.15em 0.45em;
+  border-radius: 5px;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 3rem 2rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 2;
+  position: relative;
+  z-index: 1;
+}
+
+.footer a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer a:hover { color: var(--accent-light); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Scroll-triggered fade-in */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Section tag */
+.section-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  margin-bottom: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.section-tag.keynote {
+  background: rgba(167, 139, 250, 0.12);
+  color: var(--purple);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.section-tag.talk {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-light);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.section-tag.lt {
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--yellow);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.section-tag.insights {
+  background: rgba(103, 232, 249, 0.1);
+  color: var(--cyan);
+  border: 1px solid rgba(103, 232, 249, 0.25);
+}
+
+.section-tag.qa {
+  background: rgba(244, 114, 182, 0.1);
+  color: var(--pink);
+  border: 1px solid rgba(244, 114, 182, 0.25);
+}
+
+/* Tool card */
+.tool-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 1.3rem;
+  background: var(--bg-card);
+  transition: border-color 0.25s, background 0.25s, transform 0.25s;
+}
+
+.tool-card:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+
+.tool-card-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  margin-bottom: 0.5rem;
+}
+
+.tool-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* Feature grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.8rem 0;
+}
+
+@media (max-width: 600px) {
+  .feature-grid { grid-template-columns: 1fr; }
+}
+
+.feature-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 1.2rem 1.3rem;
+  background: var(--bg-card);
+  transition: border-color 0.25s, background 0.25s, transform 0.25s;
+}
+
+.feature-card:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+
+.feature-card-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+.feature-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.feature-card-desc strong {
+  color: var(--text-primary);
+}
+
+/* Closing quote card */
+.closing-quote {
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(16, 185, 129, 0.01));
+  border-radius: 14px;
+  padding: 1.8rem 2rem;
+  margin: 1.5rem 0;
+}
+
+.closing-quote-speaker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
+}
+
+.closing-quote-text {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.9;
+  font-style: italic;
+}
+
+.closing-quote-text strong {
+  color: var(--text-primary);
+  font-style: normal;
+}
+
+/* Roadmap list */
+.roadmap-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.5rem 0;
+}
+
+.roadmap-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.roadmap-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.roadmap-bullet {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--green);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.roadmap-item strong {
+  color: var(--text-primary);
+}
+
+/* Slide embed */
+.slide-embed {
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 600px) {
+  .hero-stat-row { gap: 0.8rem; }
+  .hero-stat { min-width: 90px; padding: 0.9rem 1rem; }
+  .hero-stat-value { font-size: 1.5rem; }
+  .speaker-card { flex-wrap: wrap; }
+  .next-event { flex-direction: column; align-items: flex-start; gap: 0.8rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-eyebrow">Data Engineering Study</div>
+  <div class="hero-badge">#28 — 2025.02.27 Forkwell × primeNumber</div>
+  <h1 class="hero-title">
+    Data Engineering Study #28<br><span class="accent">データ基盤のCI/CD</span>
+  </h1>
+  <p class="hero-subtitle">
+    Terraformワークフローの自動化から、データ活用を加速させるCI/CD戦略まで——ツールの作り手と使い手が並ぶ稀有な回。実践的な知見が詰まった2時間半。
+  </p>
+  <div class="hero-meta">2025年2月27日（木）開催 / Forkwell × primeNumber 共催</div>
+  <div class="hero-stat-row">
+    <div class="hero-stat">
+      <div class="hero-stat-value">2</div>
+      <div class="hero-stat-label">講演</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">1</div>
+      <div class="hero-stat-label">LT</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">Slido</div>
+      <div class="hero-stat-label">Q&amp;A</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">~2.5h</div>
+      <div class="hero-stat-label">時間</div>
+    </div>
+  </div>
+  <div class="hero-tools">
+    <span class="tool-chip">Terraform</span>
+    <span class="tool-chip">GitHub Actions</span>
+    <span class="tool-chip">tfaction</span>
+    <span class="tool-chip">dbt</span>
+    <span class="tool-chip">Snowflake</span>
+    <span class="tool-chip">TROCCO</span>
+  </div>
+  <div class="scroll-hint">
+    SCROLL
+    <div class="arrow"></div>
+  </div>
+</section>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-home">← トップ</a>
+    <a href="#talk1">講演①</a>
+    <a href="#talk2">講演②</a>
+    <a href="#lt">共催LT</a>
+    <a href="#qa">Q&amp;A・クロージング</a>
+    <a href="#links">リンク</a>
+  </div>
+</nav>
+
+<main class="content">
+
+  <!-- Section 1: Talk 1 -->
+  <section class="section fade-in" id="talk1">
+    <div class="section-number">01 — TALK 01</div>
+    <div class="section-tag talk">講演①</div>
+    <h2 class="section-title">データ基盤のための Terraform Workflow を<br><span class="highlight">tfaction で構築しよう</span></h2>
+
+    <div class="speaker-card">
+      <div class="speaker-avatar">S</div>
+      <div class="speaker-info">
+        <div class="speaker-name">鈴木 俊介 seli07（せりな）氏 (@szkdash)</div>
+        <div class="speaker-org">フリー株式会社 — SRE</div>
+      </div>
+      <a href="https://speakerdeck.com/szksh/tetaji-pan-notameno-terraform-workflow-wo-tfaction-tegou-zhu-siyou" target="_blank" class="speaker-link">Speaker Deck →</a>
+    </div>
+
+    <div class="slide-embed">
+      <iframe class="speakerdeck-iframe" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 315;" frameborder="0" src="https://speakerdeck.com/player/d47ae745916849d48f4e30c451e3f558" title="データ基盤のための Terraform Workflow を tfaction で構築しよう" allowfullscreen="true" data-ratio="1.7777777777777777"></iframe>
+    </div>
+
+    <div class="sub-heading">「社内ではなぜかセリナ」― OSSの開発者が語るキャリアの変遷</div>
+
+    <p class="prose">
+      鈴木氏はフリー株式会社のSREで、本名で活動しつつも社内では「セリナ」というハンドルネームを名乗っているという。直近5年はSREやプラットフォームエンジニアとして活動し、Mercari、Recruit、Quipperなどを経て2024年8月にフリー株式会社へ参画。CLIやGitHub Actionsなど様々なOSSを個人で開発しており、今回紹介する<strong>tfaction</strong>もその一つ。
+    </p>
+
+    <div class="sub-heading">aquaの宣伝 ― 「時間がなくて残念」</div>
+
+    <p class="prose">
+      本題の前に、自作OSSの中で最も人気のある <strong>aqua</strong>（CLIバージョンマネージャー）について「軽く宣伝させてください」と触れた。YAMLでCLIとバージョンを宣言的に管理できるツールで、asdfに似ているがasdfにはない機能を多数持つとのこと。「この場で詳しくお話しできないのは残念」と述べ、あくまで自然な形で自作ツール群のエコシステムを紹介した。
+    </p>
+
+    <div class="sub-heading">スライド事故 ― 全画面モードの罠</div>
+
+    <p class="prose">
+      発表開始直後、鈴木氏のスライドが動いていないトラブルが2回発生。運営の北川氏が「タイトルのスライドのままになってます」と指摘し、別のスタッフが<strong>「Macで全画面にするとそうなるんですよ。左上の赤黄緑のボタンのところが全画面になっていると現象が起きる」</strong>と原因を特定した。リモート登壇での画面共有あるあるが冒頭から展開された。
+    </p>
+
+    <div class="sub-heading">「すべてCIで実行するのがいい」― 明確な立場表明</div>
+
+    <p class="prose">
+      Terraformの実行方法について、ローカル手動実行・一部CI・全部CIの3パターンを挙げた上で、鈴木氏は<strong>「個人的にはすべてをCIで実行するのが良いと思っています」</strong>と明確に立場を表明した。理由として挙げたのは以下の4点:
+    </p>
+
+    <div class="insight-list">
+      <div class="insight-item">
+        <span class="insight-icon">1.</span>
+        <span><strong>自動化による生産性の向上</strong></span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">2.</span>
+        <span><strong>コードレビューとlintの強制</strong> — apply前にレビューを挟める</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">3.</span>
+        <span><strong>ヒューマンエラーの軽減</strong> — 間違ったリビジョンやディレクトリのapplyを防ぐ</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">4.</span>
+        <span><strong>監査対応</strong> — CIのログによる透明性の向上</span>
+      </div>
+    </div>
+
+    <p class="prose">
+      スライドだけでは伝わらないのは、この「全部CI」という主張の裏にある実感だ。鈴木氏は「数人で、たまにしか実行しないなら、シンプルなワークフローでも十分かもしれない」と前提を置いた上で、<strong>「プロダクトや開発組織が成長すると、ワークフローを取り巻く環境が徐々に変化していく」</strong>と述べ、スケールしない運用への危機感を語った。
+    </p>
+
+    <div class="sub-heading">15個の機能を一気に紹介 ― 「網羅性」という思想</div>
+
+    <p class="prose">
+      tfactionの機能として紹介されたのは以下の15個:
+    </p>
+
+    <div class="scenario-grid">
+      <div class="scenario-item">
+        <span class="scenario-num">01</span>
+        <span>Monorepoのサポート</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">02</span>
+        <span>local-path Moduleの依存関係の検出</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">03</span>
+        <span><strong>terraform plan/applyの結果の分かりやすい通知</strong>（tfcmt）</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">04</span>
+        <span><strong>Linterとのインテグレーション</strong>（tflint, trivy, Conftest）</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">05</span>
+        <span><strong>コードの自動修正</strong>（fmt, lock.hcl, terraform-docs, tflint --fix）</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">06</span>
+        <span>Renovateによる自動update</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">07</span>
+        <span>plan fileを用いた安全なapply</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">08</span>
+        <span>apply後に関連PRを更新</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">09</span>
+        <span>apply失敗対応のサポート（Follow up PR自動生成）</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">10</span>
+        <span>新しいRoot Moduleのscaffold</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">11</span>
+        <span>tfmigrateによるState Migration</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">12</span>
+        <span>Root Moduleの削除（destroyオプション）</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">13</span>
+        <span>terraform plan -generate-config-outによるコード生成</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">14</span>
+        <span><strong>Drift Detection</strong>（GitHub Issueで管理）</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">15</span>
+        <span>Module管理</span>
+      </div>
+    </div>
+
+    <p class="prose">
+      スライドで分かるのは各機能の仕組みだが、口頭発表ではニュアンスが加わった。例えばRoot Moduleの削除機能について「これすごい地味なんですけども、結構地味に便利な機能」と述べたり、Drift Detectionについて「めんどくさい機能ではありましたけどね」と実装の大変さを匂わせた。
+    </p>
+
+    <div class="sub-heading">「一番実装が難しかったもの」への迷い</div>
+
+    <p class="prose">
+      質疑で「一番実装が難しかった機能は？」と問われ、鈴木氏は少し考え込んだ後「まあドリフトディテクションなのかな」と答えた。ただし、技術的な難しさよりも言語の問題にも触れ、<strong>「基本tfactionはシェルスクリプトとTypeScriptで実装されているんですけど、自分一番得意なのがGoで、正直TypeScriptってあんまり得意ではないので、結構雰囲気で書いている」</strong>と率直に明かした。OSSの開発者でも得意言語以外では苦労するというリアルな告白だった。
+    </p>
+
+    <div class="sub-heading">「デフォルトで十分便利」― 導入の最初のステップ</div>
+
+    <p class="prose">
+      「まず取り入れるならどこから？」という質問に対し、鈴木氏は「今回紹介した機能の多くはデフォルトで有効になっている。例えばtfcmtでplanの結果を分かりやすく通知するといったものは最初から使える」と回答。
+    </p>
+
+    <blockquote>
+      <p>「デフォルトの設定で使っていただいて、それで十分便利だと思うので、その後興味があれば他の機能を有効にしていくのがいい」 — 鈴木氏</p>
+    </blockquote>
+
+    <p class="prose">
+      15個の機能群に圧倒されがちだが、導入ハードルは実はそれほど高くないことを示した。
+    </p>
+
+    <div class="sub-heading">3年間の開発の歩み</div>
+
+    <p class="prose">
+      tfactionの最初のリリースは2022年1月。発表時点で約3年の開発期間を経ている。司会の北川氏が「15個も機能出てきて、若干プスプスしながら聞いておりました」と正直な感想を述べたのが印象的だった。
+    </p>
+
+    <div class="sub-heading">モノレポ vs 分散 ― 「理想的にはモノレポ」</div>
+
+    <p class="prose">
+      「Terraformのリポジトリはモノレポと分散どちらがいいか？ 分散している環境で使用感がバラバラで苦しんでいる」という切実な質問に、鈴木氏は「理想的にはモノレポがいい」と明確に回答。理由は以下の通り:
+    </p>
+
+    <div class="insight-list">
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span>体験を統一できる</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span>一つのモノレポのCIを改善すれば全体に還元される</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span>リポジトリごとにCIをメンテナンスする手間が省ける</span>
+      </div>
+    </div>
+
+    <p class="prose">
+      ただし「セキュリティ要件が特に高いものは分離したい場合もある。特別な理由がない限りはモノレポにするのがいい」と例外も付け加えた。
+    </p>
+
+    <div class="sub-heading">ゆずたそ氏の問い ― 「既存のワークフローからリプレースするコツは？」</div>
+
+    <p class="prose">
+      ゆずたそ氏から「すでに自分たちで作り込んだワークフローがある場合に導入するコツは？ ROI的な話とか」という実践的な質問が投げかけられた。鈴木氏は<strong>「現状のワークフローに課題感や不満が特にないのであれば、わざわざ苦労してリプレースする必要はない」</strong>と意外にも控えめに回答。
+    </p>
+
+    <p class="prose">
+      その上で「課題感がある時に、自分でコツコツ修正していくか、tfactionでリプレースするかの選択になる。今回紹介した機能が刺さる人は導入する価値があるんじゃないか」と述べた。ゆずたそ氏はこれを「まずPOC的に手元で作ってみて、スクラッチで作るよりtfactionの方が早いと思えたら試してみるという進め方」と整理した。
+    </p>
+
+    <div class="alert">
+      <div class="alert-label">Talk 01 Takeaway</div>
+      tfactionは15の機能を持つが、デフォルト設定で十分便利に使い始められる。既存ワークフローへの課題感がある時こそ、POC的に試してみるのが最善のアプローチ。モノレポとの組み合わせで効果が最大化する。
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 2: Talk 2 -->
+  <section class="section fade-in" id="talk2">
+    <div class="section-number">02 — TALK 02</div>
+    <div class="section-tag talk">講演②</div>
+    <h2 class="section-title">進化を加速させる<br><span class="highlight">データ基盤CI/CDの実践</span></h2>
+
+    <div class="speaker-card">
+      <div class="speaker-avatar">P</div>
+      <div class="speaker-info">
+        <div class="speaker-name">近森 淳平（ペイ）氏 (@pei0804)</div>
+        <div class="speaker-org">CARTA MARKETING FIRM / CARTA HOLDINGS — VP of Data</div>
+      </div>
+      <a href="https://speakerdeck.com/pei0804/accelerating-data-platform-ci-cd" target="_blank" class="speaker-link">Speaker Deck →</a>
+    </div>
+
+    <div class="slide-embed">
+      <iframe class="speakerdeck-iframe" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 315;" frameborder="0" src="https://speakerdeck.com/player/418ac23d2d754620b7b29ec217e555cf" title="進化を加速させるデータ基盤CI/CDの実践" allowfullscreen="true" data-ratio="1.7777777777777777"></iframe>
+    </div>
+
+    <div class="sub-heading">「ペイで名乗ってるんで、逆に本名を知らない人多い」</div>
+
+    <p class="prose">
+      近森氏はインターネットでも実生活でも「ペイ」と名乗っており、「メールで招待されて『ペイ近森』って入ってて。俺本名近森淳平やけど」と笑いを誘った。新卒7年目でVP of Dataとして活躍中。2024年・2025年連続で<strong>Snowflake Data Superheroes</strong>に選出されている。
+    </p>
+
+    <div class="sub-heading">「メンツバキバキにしても普通に失敗する」― データ活用の本質</div>
+
+    <p class="prose">
+      近森氏の発表は冒頭から強烈だった。<strong>「データ活用って基本的に成功確率が非常に低い。うちでもやってるんですけど、メンツバキバキにしても普通に失敗するんですよね」</strong>。この「失敗前提」の思考が講演全体を貫いていた。
+    </p>
+
+    <blockquote>
+      <p>「一ヶ月かけて失敗しましたって報告されるよりは、今日思いついて今日やって失敗する方がいい」 — 近森氏</p>
+    </blockquote>
+
+    <p class="prose">
+      成功確率を上げることはできないという前提のもと、「試す回数を増やすしかない」という結論に至り、そこでCI/CDが効く、という論理展開。
+    </p>
+
+    <div class="sub-heading">コード・データ・コンピューター ― 三位一体の難しさ</div>
+
+    <p class="prose">
+      データ基盤のCI/CDが従来のソフトウェア開発と異なる理由として、<strong>コード・データ・コンピューター</strong>という三つの要素が密に作用し合うことを指摘。ソフトウェア開発経験が豊富でも、データのCI/CDでは別の壁にぶつかるという。近森氏自身も「元々ソフトウェア開発者で、ようやくキャリアの半分以上がデータエンジニアになったが、それ以前はずっとソフトウェアエンジニア」と明かした。
+    </p>
+
+    <p class="prose">
+      この三要素の整理は、参加者がデータ基盤CI/CDの難しさを言語化する上で有用なフレームワークとなっている。
+    </p>
+
+    <div class="sub-heading">「一年間素振りするより一回試合出た方が早い」</div>
+
+    <p class="prose">
+      最も印象的だったフレーズの一つ。CI/CDの構築において「いけるかな？とか考えてる場合じゃない。渡してみたら意外となんとかなったりする。事故は事故でその時考えたらいい」という哲学を語った。
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-card-label">まず試す</div>
+        <div class="feature-card-desc">本番に近い環境で試す。事故が起きたら「なぜ事故ったか」を分析する。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-label">継続的改善</div>
+        <div class="feature-card-desc">「こういうCIを入れたら事故らない」「こういうCDにしたら事故らない」という知見が出てくる。机上の空論では得られない。</div>
+      </div>
+    </div>
+
+    <p class="prose">
+      <strong>「継続的改善がすげえ大事で、最初から完璧にすべてがうまくいくなんてない」</strong>と繰り返し強調した。
+    </p>
+
+    <div class="sub-heading">dbt Slim CI ― コストと品質のトレードオフ</div>
+
+    <p class="prose">
+      実践例として紹介されたのが <strong>dbt Slim CI</strong>。dbtを使ったデータ変換でPRを出す際に、「dbt buildを全部叩いたら大量データに対してコストがめちゃくちゃかかるから無理」という現実がある。
+    </p>
+
+    <p class="prose">
+      そこで近森氏のチームが取ったアプローチ:
+    </p>
+
+    <div class="insight-list">
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span><strong>CIでチェックする範囲を絞る</strong>: 実行可能なSQLか（シンタックスエラーの排除）、テストが最低限通るか</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span><strong>本番相当のデータが必要なテストは別の方法で</strong>: 開発環境に本番データベースをクローンして、そこで検証</span>
+      </div>
+    </div>
+
+    <p class="prose">
+      「本物でやるのとCIでやるのはそもそも目的が違う。CIでは最低限のチェック、本番相当のテストはちゃんと本物のデータでやる」という使い分けの思想が語られた。
+    </p>
+
+    <div class="sub-heading">SQLフォーマッターの導入 ― 「訳の分からん時間が減った」</div>
+
+    <p class="prose">
+      「これまでに構築したCI/CDで一番インパクトがあったものは？」という質問に、近森氏は即座に<strong>SQLフォーマッター</strong>を挙げた。
+    </p>
+
+    <blockquote>
+      <p>「『俺はこうやってSQL書きたいんだ』とかって訳の分からん時間が減った。全部SQLフォーマット入ってるからよろしくってなって」 — 近森氏</p>
+    </blockquote>
+
+    <p class="prose">
+      最初はSQLFluff（リンター）を導入したが、「このリントってどうやって通すんですか？」という問い合わせが多すぎて、全部SQLフォーマッターに切り替えたという。<strong>「考えることがドカンと減って、しかも安い。導入簡単なくせにインパクトめっちゃでかかった」</strong>。
+    </p>
+
+    <div class="sub-heading">「GitHubアクションがやめろって言ったらみんな言うこと聞く」</div>
+
+    <p class="prose">
+      CI/CDの導入において最も実践的だったアドバイスの一つ。<strong>「私が『やめろ』って言うんじゃなくて、GitHubアクションがやめろって言ったらみんな言うこと聞くんですよ」</strong>。つまり、組織のルール遵守を人間ではなくCIに任せるべきという主張。
+    </p>
+
+    <p class="prose">
+      具体例として、dbtのフォルダー分けやレイヤー分けの強制を挙げた。「自由にやらせるとマジですごいことになる」「ないと破綻するやつから入れた方がいい。付加価値のないチェックはさっさと自動化すべき」と明快だった。
+    </p>
+
+    <div class="sub-heading">中央集権からデータメッシュへ ― 移行のリアル</div>
+
+    <p class="prose">
+      「中央集権からデータメッシュに切り替える時、ネガティブな意見が出ると思うが、どう巻き込んだか？」という質問に対する回答は生々しかった。
+    </p>
+
+    <blockquote>
+      <p>「データ基盤チームがボトルネックになる。毎日PRがアホみたいに来る。PR待ち行列こちらですみたいな状態になる」 — 近森氏</p>
+    </blockquote>
+
+    <p class="prose">
+      さらに「事故った時の要因がデータ基盤チームのドメイン知識不足になってくる。事業のデータが入ってくるけど、データ基盤チームからしたら何のデータか分からない」。具体的な規模感として<strong>「100個ぐらいのモデルだったらいいんですけど、500個超えてくるともうわかんない。生えてきたみたいな感じ」</strong>と表現。この「生えてきた」という言葉が、管理の限界を如実に物語っていた。
+    </p>
+
+    <div class="sub-heading">ドキュメント戦略 ― 「フルタイムのデータエンジニアが一人だった時代」</div>
+
+    <p class="prose">
+      近森氏がドキュメントを大量に書いていた背景にも言及。<strong>「フルタイムのデータエンジニアが一人だった時期が1年ちょいあった。全部聞いてたら無理。だからドキュメントに書いてある通りにやれば自己完結するようにしていた」</strong>。一人チーム時代の生存戦略として自然発生的にできた仕組みが、組織拡大後のスケーラビリティにも繋がったという好例。
+    </p>
+
+    <div class="sub-heading">モノレポ推し ― 「分ける方は簡単、一個にするのはめっちゃ大変」</div>
+
+    <p class="prose">
+      「データオーナーとプロダクトごとにリポジトリを分けていますか？」という質問に対し、近森氏は「一切分けていない」と回答。理由を以下のように説明した:
+    </p>
+
+    <div class="insight-list">
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span>分けるとどこで何が起きているか分からなくなる</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span>リポジトリごとにCIの充実度がバラバラになる</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span>マクロなど共通の便利機能を横展開しにくい</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span><strong>「分ける方は簡単。ばらけてるやつを一個にするのはめっちゃ大変」</strong></span>
+      </div>
+    </div>
+
+    <p class="prose">
+      鈴木氏も同様にモノレポを推しており、2つの講演を通じて「データ基盤のCI/CDにおいてモノレポが有利」という共通見解が浮かび上がった。
+    </p>
+
+    <div class="sub-heading">warningエラー ― 「細かすぎる推しのCI」</div>
+
+    <p class="prose">
+      「細かすぎる推しのCIありますか？」という遊び心のある質問に、近森氏は<strong>「dbtでwarnが出てたらエラーにするやつ。warnって基本的に出ていいことない。GitHub Actionで走らせるだけで、warning出てたら止めてくれる」</strong>と回答。さらに「1個ぐらいだったらみんな気づくけど、100個ぐらい出てたらみんな気づかない」と付け加え、アラート疲れの問題も示唆した。
+    </p>
+
+    <div class="sub-heading">「事業をデータエンジニアリングする」― DataOps後の世界</div>
+
+    <p class="prose">
+      「DataOpsが浸透した後にデータエンジニアの仕事は残るか？」という問いに、近森氏は力強く「死ぬほどありますよ」と即答。
+    </p>
+
+    <blockquote>
+      <p>「データ基盤を作るとか運用するとかが仕事だと思ってるなら多分仕事はなくなる。ただ、事業自体をデータエンジニアリングしていくという風に広げたら、いくらでもある」 — 近森氏</p>
+    </blockquote>
+
+    <p class="prose">
+      具体例として「偉い人に今日朝起きて最初何しますって聞くと、巨大なスプレッドシートが出てくる。IMPORTRANGEですらない謎の数値がめっちゃ入ってる。そこにもう仕事がある」と語った。
+    </p>
+
+    <div class="alert green">
+      <div class="alert-label">Talk 02 Takeaway</div>
+      データ基盤CI/CDの最大の敵は「完璧主義」。失敗前提で試す回数を増やし、SQLフォーマッターのような「安くてインパクト大」なCIから始めることが推奨。モノレポ + GitHub Actionsによるルール強制が組織スケールへの鍵。
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 3: LT -->
+  <section class="section fade-in" id="lt">
+    <div class="section-number">03 — LT</div>
+    <div class="section-tag lt">共催LT</div>
+    <h2 class="section-title">TROCCOのTerraform対応が<br><span class="highlight">進んできました</span></h2>
+
+    <div class="speaker-card">
+      <div class="speaker-avatar">T</div>
+      <div class="speaker-info">
+        <div class="speaker-name">鈴木氏</div>
+        <div class="speaker-org">primeNumber — プロダクトマーケティングマネージャー</div>
+      </div>
+    </div>
+
+    <p class="prose">
+      primeNumberの鈴木氏から、TROCCOのTerraform Provider対応の進捗が共有された。
+    </p>
+
+    <div class="sub-heading">TROCCOもtfactionを使っている</div>
+
+    <p class="prose">
+      LT冒頭で<strong>「実はTROCCOのインフラに関してもtfactionを利用しています。韓国・インドといったグローバル展開の中での運用にも活用している」</strong>と明かした。講演①で紹介されたOSSが実際にprimeNumber社内でも使われているという接続は、イベント全体の一体感を生んだ。
+    </p>
+
+    <div class="sub-heading">10%ルールから生まれたTerraform Provider</div>
+
+    <p class="prose">
+      Terraform Provider for TROCCOの誕生経緯も興味深い。エンジニアの中根氏が<strong>「自由に開発を進められる10%ルール」</strong>の中でいきなり作り始めたという。ニーズは明らかだったが正式な開発としては進んでいなかったものが、個人の自発的な取り組みから公開に至った。
+    </p>
+
+    <div class="sub-heading">対応リソースの拡充状況</div>
+
+    <p class="prose">
+      2024年8月のベータ版公開以降、対応リソースを順次拡充:
+    </p>
+
+    <div class="roadmap-list">
+      <div class="roadmap-item">
+        <span class="roadmap-bullet">✓</span>
+        <span><strong>ユーザー、チーム、リソースグループ、ラベル</strong></span>
+      </div>
+      <div class="roadmap-item">
+        <span class="roadmap-bullet">✓</span>
+        <span><strong>接続情報、転送設定</strong>（主要コネクタから優先対応）</span>
+      </div>
+      <div class="roadmap-item">
+        <span class="roadmap-bullet">✓</span>
+        <span><strong>BigQueryデータマート定義</strong></span>
+      </div>
+      <div class="roadmap-item">
+        <span class="roadmap-bullet">✓</span>
+        <span><strong>ワークフロー定義</strong></span>
+      </div>
+      <div class="roadmap-item">
+        <span class="roadmap-bullet">→</span>
+        <span>今後: アカウント設定、通知先、データマート定義の拡充（BigQuery以外）、接続情報・転送元の対象拡大</span>
+      </div>
+    </div>
+
+    <p class="prose">
+      LT登壇者の鈴木氏自身はTerraformの初心者からスタートし、このProvider公開がきっかけでTerraformを学び始めたという。<strong>「8時ぐらいにレクチャーを受けて、10時半ぐらいには記事にして書きました」</strong>というスピード感も印象的だった。
+    </p>
+
+    <div class="alert yellow">
+      <div class="alert-label">LT Takeaway</div>
+      TROCCOのTerraform Providerは10%ルールによるボトムアップ開発から生まれた。TROCCOのインフラ自体がtfactionで管理されており、講演①との実践的な接続が生まれた回となった。
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 4: Q&A & Closing -->
+  <section class="section fade-in" id="qa">
+    <div class="section-number">04 — Q&amp;A &amp; CLOSING</div>
+    <div class="section-tag qa">Q&amp;A・クロージング</div>
+    <h2 class="section-title">クロージングのハイライト</h2>
+
+    <div class="sub-heading">ゆずたそ氏の感想 ― 「思ったよりCI/CDかっていう最初の印象を超えた回」</div>
+
+    <p class="prose">
+      ゆずたそ氏はクロージングで「正直、CI/CDって言われると『普通に組めよ』ってちょっと思いながら聞いてた」と率直に振り返りつつ、<strong>「三つの要素に分けて考えるというのはなるほどと思った。特にデータの特異性、関係者が増えた時に中身の仕様を知らないと品質を担保できなくなるフェーズがあるというのはおっしゃる通り」</strong>と評価した。
+    </p>
+
+    <blockquote>
+      <p>「今日の話はチュートリアルでなんとなく作業してたら出来ましたという段階を超えて、思考の深度を増してくれる回だった」 — ゆずたそ（横山翔大）氏</p>
+    </blockquote>
+
+    <div class="sub-heading">近森氏から鈴木氏へ ― 「OSSに救われている人生」</div>
+
+    <p class="prose">
+      クロージングで近森氏は<strong>「私は鈴木さんのOSSに救われている人生だったんで、ありがとうございますって顔してた」</strong>と感謝を述べた。CI/CDというテーマで、ツールの作り手（鈴木氏）と使い手（近森氏）が並ぶ構図が奇しくも実現し、実践の両面から議論が深まった。
+    </p>
+
+    <div class="closing-quote">
+      <div class="closing-quote-speaker">Near-森 淳平（ペイ）氏 — VP of Data, CARTA HOLDINGS</div>
+      <div class="closing-quote-text">「私は鈴木さんのOSSに救われている人生だったんで、ありがとうございますって顔してた」<br><br>データ基盤のCI/CDというテーマで、ツールの作り手と使い手が並ぶ稀有な構図。28回を重ねたシリーズが生んだ必然的な出会いだった。</div>
+    </div>
+
+    <div class="sub-heading">次回予告</div>
+
+    <p class="prose">
+      次回のData Engineering Studyは4月末、テーマは<strong>「赤いレンガのデータウェアハウス」</strong>（Redshift関連と推測）。
+    </p>
+
+    <div class="next-event">
+      <div class="next-event-badge">NEXT → #29</div>
+      <div class="next-event-text">
+        <strong>4月末開催予定</strong><br>
+        テーマ: 「赤いレンガのデータウェアハウス」（Redshift関連）
+      </div>
+    </div>
+
+    <div class="alert">
+      <div class="alert-label">Event Summary</div>
+      開催28回目、もうちょっとで5年。モデレーターのゆずたそ氏は第一回から皆勤。CI/CDという一見シンプルなテーマが、データ基盤の本質的な難しさ（コード・データ・コンピューターの三要素）と組織スケールの問題を掘り起こした回となった。
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 5: Links -->
+  <section class="section fade-in" id="links">
+    <div class="section-number">05 — RESOURCES</div>
+    <div class="section-tag insights">関連リンク</div>
+    <h2 class="section-title">リソース &amp; <span class="highlight">関連リンク</span></h2>
+
+    <div class="links-grid">
+      <a href="https://forkwell.connpass.com/event/339761/" target="_blank" class="link-item">
+        <span class="link-icon">EVT</span>
+        <span class="link-label">Data Engineering Study #28 connpassイベントページ</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://www.youtube.com/watch?v=Bkhazm0CmFk" target="_blank" class="link-item">
+        <span class="link-icon">▶</span>
+        <span class="link-label">YouTubeアーカイブ</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://github.com/suzuki-shunsuke/tfaction" target="_blank" class="link-item">
+        <span class="link-icon">GH</span>
+        <span class="link-label">tfaction GitHub リポジトリ</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://aquaproj.github.io/" target="_blank" class="link-item">
+        <span class="link-icon">OSS</span>
+        <span class="link-label">aqua 公式サイト（CLIバージョンマネージャー）</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://registry.terraform.io/providers/trocco-io/trocco/latest/docs" target="_blank" class="link-item">
+        <span class="link-icon">TF</span>
+        <span class="link-label">Terraform Provider for TROCCO (Terraform Registry)</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://qiita.com/SoySoySoyB/items/05e4d31d3e372790c775" target="_blank" class="link-item">
+        <span class="link-icon">QII</span>
+        <span class="link-label">GitHub Actionsを月2000分動かして学んだTerraform + TROCCO入門（Qiita）</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://zenn.dev/shunsuke_suzuki" target="_blank" class="link-item">
+        <span class="link-icon">ZEN</span>
+        <span class="link-label">鈴木俊介氏のZenn記事一覧</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://speakerdeck.com/pei0804" target="_blank" class="link-item">
+        <span class="link-icon">SD</span>
+        <span class="link-label">近森淳平氏 Speaker Deck</span>
+        <span class="link-arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div>Data Engineering Study #28 — データ基盤のCI/CD</div>
+  <div>2025年2月27日（木）開催 / Forkwell × primeNumber 共催</div>
+  <div style="margin-top: 0.5rem;">
+    <a href="https://forkwell.connpass.com/event/339761/">connpassイベントページ</a>
+    &nbsp;/&nbsp;
+    <a href="https://twitter.com/intent/tweet?hashtags=DataEngineeringStudy">#DataEngineeringStudy</a>
+  </div>
+</footer>
+
+<script>
+  // Scroll-triggered fade-in
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
