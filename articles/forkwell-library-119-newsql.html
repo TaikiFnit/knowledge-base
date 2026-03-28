@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forkwell Library #119 — NewSQL徹底入門｜分散DBのアーキテクチャからユースケースまで</title>
+<meta name="description" content="Forkwell Library #119「NewSQL徹底入門」イベントレポート。ミック氏によるユースケース7選とアーキテクチャ解説（小林隆浩氏）、Q&Aセッションの全記録。DoorDash・レバテック・DMMの事例、LSM-Tree・Raft・シャーディングの仕組みを徹底解説。2026年2月11日開催。">
+<meta property="og:title" content="Forkwell Library #119「NewSQL徹底入門」— NewSQLユースケース7選 × アーキテクチャ深掘り">
+<meta property="og:description" content="RDBの堅牢性とNoSQLのスケーラビリティを兼ね備えた次世代DB「NewSQL」。著者ミック・小林隆浩両氏が語ったユースケースの実像、B-Tree vs LSM-Tree、Raftプロトコル、そして「日本発ユースケース」の可能性まで。書籍ではわからないオフレコ話満載のイベントレポート。">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="ja_JP">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --accent: #0EA5E9;
+  --accent-light: #38BDF8;
+  --accent-dark: #0284C7;
+  --accent-glow: rgba(14, 165, 233, 0.25);
+  --bg-deep: #020810;
+  --bg-card: #030C15;
+  --bg-card-hover: #051220;
+  --bg-code: #020A12;
+  --text-primary: #D8E8F0;
+  --text-secondary: #7098B0;
+  --text-muted: #2A4A5A;
+  --border: #001A2A;
+  --green: #34D399;
+  --yellow: #FBBF24;
+  --cyan: #67E8F9;
+  --orange: #FB923C;
+  --pink: #F472B6;
+  --purple: #A78BFA;
+  --teal: #2DD4BF;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.8;
+  overflow-x: hidden;
+}
+
+/* Noise overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Grid background pattern — blue/teal */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image:
+    linear-gradient(rgba(14, 165, 233, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding: 2rem;
+  text-align: center;
+  z-index: 1;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -10%; left: 50%; transform: translateX(-50%);
+  width: 900px; height: 700px;
+  background: radial-gradient(ellipse, var(--accent-glow) 0%, transparent 68%);
+  opacity: 0.6;
+  animation: pulse 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 200px;
+  background: linear-gradient(to bottom, transparent, var(--bg-deep));
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.7; transform: translateX(-50%) scale(1.08); }
+}
+
+.hero-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.1s;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--accent-light);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  border-radius: 100px;
+  background: rgba(14, 165, 233, 0.05);
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.2s;
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: blink 2s ease-in-out infinite;
+}
+
+/* DB Icon / Book visual element */
+.hero-db-icon {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 1.5rem;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.25s;
+}
+
+.db-icon-svg {
+  filter: drop-shadow(0 0 28px rgba(14, 165, 233, 0.5));
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.hero-title {
+  font-size: clamp(1.6rem, 4.5vw, 3.2rem);
+  font-weight: 900;
+  line-height: 1.2;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.4s;
+  max-width: 820px;
+}
+
+.hero-title .accent {
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent), var(--accent-light), #BAE6FD);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: clamp(0.9rem, 1.8vw, 1.05rem);
+  color: var(--text-secondary);
+  max-width: 620px;
+  margin-top: 1.5rem;
+  font-weight: 300;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.6s;
+  line-height: 1.7;
+}
+
+.hero-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 1rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.65s;
+}
+
+.hero-stat-row {
+  display: flex;
+  gap: 2.5rem;
+  margin-top: 3rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.8s;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hero-stat {
+  text-align: center;
+  padding: 1.2rem 1.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(3, 12, 21, 0.8);
+  backdrop-filter: blur(10px);
+  min-width: 110px;
+  transition: border-color 0.3s, transform 0.3s;
+}
+
+.hero-stat:hover {
+  border-color: rgba(14, 165, 233, 0.4);
+  transform: translateY(-2px);
+}
+
+.hero-stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  line-height: 1;
+  margin-bottom: 0.4rem;
+}
+
+.hero-stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+
+.hero-tools {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 2rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.95s;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tool-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  color: var(--accent-light);
+  background: rgba(14, 165, 233, 0.06);
+  letter-spacing: 0.05em;
+}
+
+.scroll-hint {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.25em;
+  animation: bob 2.5s ease-in-out infinite;
+  z-index: 1;
+}
+
+.scroll-hint .arrow {
+  width: 1px; height: 32px;
+  background: linear-gradient(to bottom, var(--text-muted), transparent);
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Navigation */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(2, 8, 16, 0.88);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  overflow-x: auto;
+}
+
+.nav-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0;
+  align-items: center;
+}
+
+.nav-home {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 1rem 1rem 1rem 0;
+  white-space: nowrap;
+  border-right: 1px solid var(--border);
+  margin-right: 0.5rem;
+  padding-right: 1rem;
+  transition: color 0.2s;
+}
+
+.nav-home:hover { color: var(--accent); }
+
+.nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 1rem 1rem;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  letter-spacing: 0.01em;
+}
+
+.nav a:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+/* Main content */
+.content {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 2rem 8rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Section */
+.section {
+  margin-top: 5.5rem;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent);
+  letter-spacing: 0.35em;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+}
+
+.section-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  line-height: 1.3;
+}
+
+.section-title .highlight {
+  color: var(--accent-light);
+}
+
+/* Speaker card */
+.speaker-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.2rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  margin-bottom: 2rem;
+  transition: border-color 0.25s, background 0.25s;
+}
+
+.speaker-card:hover {
+  border-color: rgba(14, 165, 233, 0.3);
+  background: var(--bg-card-hover);
+}
+
+.speaker-avatar {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.speaker-info {
+  flex: 1;
+}
+
+.speaker-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.speaker-org {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.6;
+}
+
+.speaker-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent-light);
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  padding: 0.2rem 0.55rem;
+  border-radius: 5px;
+  margin-top: 0.35rem;
+  display: inline-block;
+}
+
+.speaker-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent-light);
+  text-decoration: none;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.speaker-link:hover {
+  background: rgba(14, 165, 233, 0.08);
+  border-color: var(--accent);
+}
+
+.prose {
+  color: var(--text-secondary);
+  font-size: 0.94rem;
+  line-height: 2;
+  margin-bottom: 1.5rem;
+}
+
+.prose strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.prose a {
+  color: var(--accent-light);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+  transition: border-color 0.2s;
+}
+
+.prose a:hover {
+  border-bottom-color: var(--accent-light);
+}
+
+/* Subsection heading */
+.sub-heading {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 2.2rem 0 0.8rem;
+  color: var(--accent-light);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sub-heading::before {
+  content: '';
+  width: 3px; height: 1em;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Blockquote */
+blockquote {
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.07), rgba(14, 165, 233, 0.02));
+  padding: 1.3rem 1.6rem;
+  margin: 1.8rem 0;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.9;
+  position: relative;
+}
+
+blockquote::before {
+  content: '\201C';
+  font-size: 3rem;
+  color: var(--accent);
+  opacity: 0.25;
+  position: absolute;
+  top: -0.3rem;
+  left: 1rem;
+  font-family: Georgia, serif;
+  line-height: 1;
+}
+
+blockquote p { margin: 0; }
+
+blockquote .speaker-attr {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent);
+  margin-top: 0.7rem;
+  letter-spacing: 0.1em;
+  font-style: normal;
+}
+
+/* Alert boxes */
+.alert {
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.07), transparent);
+  padding: 1.2rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.alert.green {
+  border-left-color: var(--green);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.07), transparent);
+}
+
+.alert.yellow {
+  border-left-color: var(--yellow);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.07), transparent);
+}
+
+.alert.orange {
+  border-left-color: var(--orange);
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.07), transparent);
+}
+
+.alert.teal {
+  border-left-color: var(--teal);
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.07), transparent);
+}
+
+.alert-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.alert .alert-label { color: var(--accent-light); }
+.alert.green .alert-label { color: var(--green); }
+.alert.yellow .alert-label { color: var(--yellow); }
+.alert.orange .alert-label { color: var(--orange); }
+.alert.teal .alert-label { color: var(--teal); }
+
+.alert strong { color: var(--text-primary); }
+
+/* Insight list */
+.insight-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1.5rem 0;
+}
+
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.insight-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(14, 165, 233, 0.2);
+}
+
+.insight-icon {
+  color: var(--accent-light);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+  min-width: 1.2rem;
+}
+
+.insight-item strong {
+  color: var(--text-primary);
+}
+
+/* Scenario / Use Case grid */
+.scenario-grid {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1.5rem 0;
+}
+
+.scenario-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.3rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.scenario-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(14, 165, 233, 0.25);
+}
+
+.scenario-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  flex-shrink: 0;
+  min-width: 1.5rem;
+}
+
+.scenario-item strong {
+  color: var(--text-primary);
+}
+
+/* Links section */
+.links-grid {
+  display: grid;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  text-decoration: none;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.link-item:hover {
+  border-color: rgba(14, 165, 233, 0.4);
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  transform: translateX(3px);
+}
+
+.link-icon {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--accent-light);
+  min-width: 2.5rem;
+  opacity: 0.8;
+}
+
+.link-label {
+  flex: 1;
+}
+
+.link-arrow {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+
+.link-item:hover .link-arrow {
+  transform: translateX(3px);
+  color: var(--accent-light);
+}
+
+/* Closing quote card */
+.closing-quote {
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.05), rgba(2, 132, 199, 0.01));
+  border-radius: 14px;
+  padding: 1.8rem 2rem;
+  margin: 1.5rem 0;
+}
+
+.closing-quote-speaker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent-light);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
+}
+
+.closing-quote-text {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.9;
+  font-style: italic;
+}
+
+.closing-quote-text strong {
+  color: var(--text-primary);
+  font-style: normal;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+  margin: 5rem 0;
+}
+
+/* Code inline */
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  background: rgba(14, 165, 233, 0.08);
+  color: var(--accent-light);
+  padding: 0.15em 0.45em;
+  border-radius: 5px;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 3rem 2rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 2;
+  position: relative;
+  z-index: 1;
+}
+
+.footer a {
+  color: var(--accent-light);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer a:hover { color: var(--accent); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Scroll-triggered fade-in */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Section tag */
+.section-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  margin-bottom: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.section-tag.keynote {
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--accent-light);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.section-tag.talk {
+  background: rgba(14, 165, 233, 0.1);
+  color: var(--accent-light);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+}
+
+.section-tag.lt {
+  background: rgba(45, 212, 191, 0.1);
+  color: var(--teal);
+  border: 1px solid rgba(45, 212, 191, 0.25);
+}
+
+.section-tag.qa {
+  background: rgba(167, 139, 250, 0.1);
+  color: var(--purple);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+}
+
+.section-tag.closing {
+  background: rgba(14, 165, 233, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+}
+
+/* Feature grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.8rem 0;
+}
+
+@media (max-width: 600px) {
+  .feature-grid { grid-template-columns: 1fr; }
+}
+
+.feature-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 1.2rem 1.3rem;
+  background: var(--bg-card);
+  transition: border-color 0.25s, background 0.25s, transform 0.25s;
+}
+
+.feature-card:hover {
+  border-color: rgba(14, 165, 233, 0.35);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+
+.feature-card-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent-light);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+.feature-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.feature-card-desc strong {
+  color: var(--text-primary);
+}
+
+/* Panel highlight box */
+.panel-highlight {
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.06), rgba(14, 165, 233, 0.02));
+  border-radius: 14px;
+  padding: 1.5rem 2rem;
+  margin: 1.8rem 0;
+}
+
+.panel-highlight-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--accent-light);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.panel-highlight-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+
+.panel-highlight-text strong {
+  color: var(--text-primary);
+}
+
+/* DB Classification table-style grid */
+.db-class-grid {
+  display: grid;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+}
+
+.db-class-item {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.db-class-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(14, 165, 233, 0.2);
+}
+
+.db-class-item.active {
+  border-color: rgba(14, 165, 233, 0.4);
+  background: rgba(14, 165, 233, 0.04);
+}
+
+.db-class-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--accent-light);
+}
+
+.db-class-name strong {
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 0.1rem;
+}
+
+.db-class-example {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Q&A card */
+.qa-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  margin-bottom: 1.2rem;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.qa-card:hover {
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+.qa-question {
+  padding: 1rem 1.4rem;
+  background: rgba(167, 139, 250, 0.05);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+.qa-q-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--purple);
+  background: rgba(167, 139, 250, 0.12);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 5px;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.qa-answer {
+  padding: 1rem 1.4rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+
+.qa-answer strong {
+  color: var(--text-primary);
+}
+
+.qa-answerer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.05em;
+}
+
+/* Architecture component cards */
+.arch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 560px) {
+  .arch-grid { grid-template-columns: 1fr; }
+}
+
+.arch-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.2rem 1.3rem;
+  background: var(--bg-card);
+  transition: border-color 0.25s, background 0.25s, transform 0.25s;
+}
+
+.arch-card:hover {
+  border-color: rgba(14, 165, 233, 0.35);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+
+.arch-card-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.arch-card-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--accent-light);
+  margin-bottom: 0.5rem;
+}
+
+.arch-card-desc {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.arch-card-desc strong {
+  color: var(--text-primary);
+}
+
+/* Book banner */
+.book-banner {
+  border: 1px solid rgba(14, 165, 233, 0.4);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(2, 132, 199, 0.04));
+  border-radius: 14px;
+  padding: 1.5rem 2rem;
+  margin: 1.8rem 0;
+}
+
+.book-banner-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+.book-banner-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.book-banner-text {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.85;
+}
+
+.book-banner-text strong {
+  color: var(--accent-light);
+}
+
+/* No-slide note */
+.no-slide-note {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding: 0.6rem 1rem;
+  border: 1px dashed rgba(42, 74, 90, 0.7);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  display: inline-block;
+}
+
+/* Roadmap / Reading guide list */
+.roadmap-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.5rem 0;
+}
+
+.roadmap-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.roadmap-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(14, 165, 233, 0.25);
+}
+
+.roadmap-bullet {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.roadmap-item strong {
+  color: var(--text-primary);
+}
+
+@media (max-width: 600px) {
+  .hero-stat-row { gap: 0.8rem; }
+  .hero-stat { min-width: 90px; padding: 0.9rem 1rem; }
+  .hero-stat-value { font-size: 1.5rem; }
+  .speaker-card { flex-wrap: wrap; }
+  .panel-highlight { padding: 1.2rem 1.3rem; }
+  .book-banner { padding: 1.2rem 1.3rem; }
+  .db-class-item { grid-template-columns: 1.5rem 1fr; }
+  .db-class-example { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-eyebrow">Forkwell Library #119</div>
+  <div class="hero-badge">2026.02.11 · BOOK EVENT</div>
+
+  <!-- Database icon visual element -->
+  <div class="hero-db-icon">
+    <svg class="db-icon-svg" width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="NewSQL database icon">
+      <!-- Outer glow ring -->
+      <circle cx="44" cy="44" r="42" stroke="rgba(14,165,233,0.15)" stroke-width="1.5"/>
+      <circle cx="44" cy="44" r="36" stroke="rgba(14,165,233,0.08)" stroke-width="1"/>
+      <!-- DB cylinder top ellipse -->
+      <ellipse cx="44" cy="26" rx="20" ry="7" fill="rgba(14,165,233,0.12)" stroke="#0EA5E9" stroke-width="1.5"/>
+      <!-- DB cylinder body -->
+      <path d="M24 26 L24 50" stroke="#0284C7" stroke-width="1.5"/>
+      <path d="M64 26 L64 50" stroke="#0284C7" stroke-width="1.5"/>
+      <!-- DB cylinder bottom ellipse -->
+      <ellipse cx="44" cy="50" rx="20" ry="7" fill="rgba(14,165,233,0.08)" stroke="#0EA5E9" stroke-width="1.5"/>
+      <!-- middle line (shard indicator) -->
+      <ellipse cx="44" cy="38" rx="20" ry="7" fill="none" stroke="rgba(56,189,248,0.4)" stroke-width="1" stroke-dasharray="3 3"/>
+      <!-- Distributed nodes -->
+      <circle cx="30" cy="68" r="4" fill="rgba(56,189,248,0.3)" stroke="#38BDF8" stroke-width="1.2"/>
+      <circle cx="44" cy="72" r="4" fill="rgba(56,189,248,0.3)" stroke="#38BDF8" stroke-width="1.2"/>
+      <circle cx="58" cy="68" r="4" fill="rgba(56,189,248,0.3)" stroke="#38BDF8" stroke-width="1.2"/>
+      <!-- Connection lines -->
+      <line x1="34" y1="66" x2="40" y2="70" stroke="rgba(56,189,248,0.4)" stroke-width="1"/>
+      <line x1="48" y1="70" x2="54" y2="66" stroke="rgba(56,189,248,0.4)" stroke-width="1"/>
+      <line x1="44" y1="57" x2="30" y2="64" stroke="rgba(56,189,248,0.3)" stroke-width="1" stroke-dasharray="2 2"/>
+      <line x1="44" y1="57" x2="58" y2="64" stroke="rgba(56,189,248,0.3)" stroke-width="1" stroke-dasharray="2 2"/>
+      <line x1="44" y1="57" x2="44" y2="68" stroke="rgba(56,189,248,0.3)" stroke-width="1" stroke-dasharray="2 2"/>
+    </svg>
+  </div>
+
+  <h1 class="hero-title">
+    NewSQL<span class="accent">徹底入門</span>
+  </h1>
+  <p class="hero-subtitle">
+    『NewSQL徹底入門 — 分散DBのアーキテクチャからユースケースまで』（講談社）の著者ミック氏・小林隆浩氏が直接語ったユースケースの実像、アーキテクチャの深層、そして書籍には書けなかったオフレコ話。
+  </p>
+  <div class="hero-meta">2026年2月11日（水・祝）開催 · オンライン配信 · 約90分 · 講演2本 + LT + Q&A</div>
+  <div class="hero-stat-row">
+    <div class="hero-stat">
+      <div class="hero-stat-value">2</div>
+      <div class="hero-stat-label">著者講演</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">7</div>
+      <div class="hero-stat-label">ユースケース</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">6</div>
+      <div class="hero-stat-label">DB分類</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">4</div>
+      <div class="hero-stat-label">NewSQLコンポーネント</div>
+    </div>
+  </div>
+  <div class="hero-tools">
+    <span class="tool-chip">Spanner</span>
+    <span class="tool-chip">TiDB</span>
+    <span class="tool-chip">CockroachDB</span>
+    <span class="tool-chip">YugabyteDB</span>
+    <span class="tool-chip">DSQL</span>
+    <span class="tool-chip">PostgreSQL</span>
+    <span class="tool-chip">RocksDB</span>
+    <span class="tool-chip">Raft</span>
+    <span class="tool-chip">LSM-Tree</span>
+  </div>
+  <div class="scroll-hint">
+    SCROLL
+    <div class="arrow"></div>
+  </div>
+</section>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-home">← トップ</a>
+    <a href="#overview">概要</a>
+    <a href="#talk1">ミック</a>
+    <a href="#usecases">ユースケース</a>
+    <a href="#talk2">小林</a>
+    <a href="#arch">アーキテクチャ</a>
+    <a href="#lt">LT</a>
+    <a href="#qa">Q&A</a>
+    <a href="#links">リンク</a>
+  </div>
+</nav>
+
+<main class="content">
+
+  <!-- Section 0: Overview -->
+  <section class="section fade-in" id="overview">
+    <div class="section-number">00 — OVERVIEW</div>
+    <div class="section-tag keynote">イベント概要</div>
+    <h2 class="section-title">書籍著者が直接語る、<br><span class="highlight">NewSQLの全貌</span></h2>
+
+    <div class="book-banner">
+      <div class="book-banner-eyebrow">📘 対象書籍</div>
+      <div class="book-banner-title">『NewSQL徹底入門 — 分散DBのアーキテクチャからユースケースまで』</div>
+      <div class="book-banner-text">
+        講談社刊。<strong>ミック</strong>（第5・6・7章：分散トランザクション・SQL対応・ユースケース担当）と<strong>小林隆浩</strong>（第2・3・4章：アーキテクチャ・技術要素担当）による共著。2025年末刊行。日本で唯一、Spanner・DSQL・TiDB・CockroachDB・YugabyteDBといった<strong>複数のNewSQL製品を横断的に比較解説</strong>した書籍。
+      </div>
+    </div>
+
+    <p class="prose">
+      Forkwell Library は「著者・訳者・実践者を登壇者として招き、開発者が学びのきっかけを得られる勉強会」を標榜するシリーズ。第119回のテーマは、近年注目を集めながらも日本での認知がまだ薄い<strong>NewSQL</strong>。司会はForkwellの川俣氏が担当し、書籍の著者二人が講演とQ&Aを行った。
+    </p>
+
+    <p class="prose">
+      MC川俣氏の冒頭の言葉を借りれば、「RDBの堅牢な信頼性とNoSQLの圧倒的なスケーラビリティ、その両方を兼ね備えた次世代データベース、それがNewSQLです」。しかしこのイベントの真の価値は、書籍の内容を追うことではなく、<strong>著者が本には書けなかった現場感覚・業界観・技術的トレードオフ</strong>を率直に語ったことにある。
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-card-label">特徴①</div>
+        <div class="feature-card-desc"><strong>スライドなし</strong><br>Forkwell Library形式のため公開スライドなし。本稿は文字起こしから発掘したインサイトを中心に構成</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-label">特徴②</div>
+        <div class="feature-card-desc"><strong>日本発ユースケース</strong><br>レバテック・DMMの事例を「日本が先行しているユースケース」として著者が独自評価</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-label">特徴③</div>
+        <div class="feature-card-desc"><strong>アーキテクチャ6分類</strong><br>単一インスタンスからNewSQLまで、RDBの進化の全系譜を俯瞰する整理フレームワーク</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-label">特徴④</div>
+        <div class="feature-card-desc"><strong>率直なQ&A</strong><br>「安易にDSQLに移行しても問題ないか？」への「問題あります」という直球の回答など</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 1: Mick Lecture -->
+  <section class="section fade-in" id="talk1">
+    <div class="section-number">01 — TALK 01</div>
+    <div class="section-tag talk">講演① ミック</div>
+    <h2 class="section-title">NewSQLユースケース7選<br><span class="highlight">— 使いどころをつかむ</span></h2>
+
+    <div class="speaker-card">
+      <div class="speaker-avatar">ミ</div>
+      <div class="speaker-info">
+        <div class="speaker-name">ミック（@copinemickmack）</div>
+        <div class="speaker-org">元DBエンジニア（BI/DWH・パフォーマンス設計）→ 2018年より米国技術調査 → 現・技術戦略チーム<br>担当章：第5章（分散トランザクション）・第6章（SQL対応）・第7章（ユースケース）</div>
+        <span class="speaker-tag">講演時間: 04:49 – 31:27</span>
+      </div>
+    </div>
+
+    <div class="no-slide-note">※ 本イベントはスライド非公開（Forkwell Library形式）</div>
+
+    <div class="sub-heading">ミック氏の自己紹介 — 「今はDBから離れてしまいました」</div>
+
+    <p class="prose">
+      ミック氏は「元DBエンジニア」という肩書きを自ら強調しながら自己紹介した。BI/DWHなど分析系データベースの開発からスタートし、パフォーマンス設計・チューニングのチームで長らく活動。2018年からアメリカに渡り、技術調査とスタートアップ探索に従事。「今二千二十六年現在は会社の技術戦略を定めるチームに所属していまして、幅広くどんな分野の技術でも見ているという状況」とのこと。
+    </p>
+
+    <p class="prose">
+      書籍の読書ガイドマップを紹介しながら、本書を「左から順に読んでいただけるとギャップなくいけるようになっている」と語った。今日の講演は第七章のダイジェストだが、「NewSQLという名前を聞いたことはあるけれど具体的に知らない、製品を触ったことがない」という方のために、まず導入から始めるというていねいなアプローチを取った。
+    </p>
+
+    <div class="sub-heading">NewSQLとは何か — マイケル・ストーンブレーカーの定義</div>
+
+    <p class="prose">
+      「NewSQL」という単語が生まれたのは2017年頃。アナリストが使い始めた言葉が広まり、PostgreSQLの前身となるIngresを作ったことで知られる<strong>マイケル・ストーンブレーカー</strong>が同年のコラムで定義した。
+    </p>
+
+    <blockquote>
+      <p>「トランザクションに関するACIDの概念を維持しながら、SQLのインターフェースを持っていて、高いパフォーマンスとスケーラビリティを提供するシステム、これをNewSQLと呼ぶ」</p>
+      <div class="speaker-attr">— マイケル・ストーンブレーカー（2017年コラム）/ ミック氏の講演より</div>
+    </blockquote>
+
+    <p class="prose">
+      つまりNewSQLは「RDBの信頼性（ACID）とNoSQLのスケーラビリティを両立させた」データベースカテゴリーだ。主要製品として<strong>Spanner（Google）、DSQL（AWS）、TiDB（PingCAP）、CockroachDB、YugabyteDB</strong>が挙げられる。PostgreSQL互換が多数を占め、TiDBのみがMySQL互換という点も重要な特徴。
+    </p>
+
+    <div class="alert">
+      <div class="alert-label">ポイント</div>
+      ミック氏は「NewSQLという定義は曖昧さが残る」とも補足した。重要なのは定義の精緻さよりも「ACIDを維持しながらスケールアウトできる」という実用的な価値だ。
+    </div>
+  </section>
+
+  <!-- Use Cases section -->
+  <section class="section fade-in" id="usecases">
+    <div class="section-number">02 — USE CASES</div>
+    <div class="section-tag talk">ユースケース詳解</div>
+    <h2 class="section-title">7つのユースケース<br><span class="highlight">— 本に書けなかった現場感覚</span></h2>
+
+    <p class="prose">
+      書籍第七章のダイジェストだが、講演では書籍以上の「なぜ日本で普及しないのか」「どのユースケースが次に来るか」という著者の見立てが語られた。以下は各ユースケースの詳細と、トランスクリプトから拾った著者の肉声だ。
+    </p>
+
+    <div class="sub-heading">ユースケース① — グローバル分散（DoorDashの事例）</div>
+
+    <p class="prose">
+      最初に紹介されたのは<strong>DoorDash</strong>（米国フードデリバリー大手）の事例。DoorDashは<strong>CockroachDB</strong>を採用し、在庫情報をまずCockroachDBで受け取り、その後<strong>Kafka</strong>を使ってニアリアルタイムに後ろのマイクロサービス群へ流すアーキテクチャを構築している。
+    </p>
+
+    <p class="prose">
+      この文脈でミック氏は興味深い補足もした——DoorDashのアーキテクチャには実は<strong>Temporal（元Cadence、Uberが開発したワークフローエンジン）</strong>も組み込まれており、「NewSQLとワークフローエンジンの組み合わせ」が既に実例として存在すると後のQ&Aで言及した。
+    </p>
+
+    <div class="sub-heading">ユースケース② — マルチクラウド（金融規制対応）</div>
+
+    <p class="prose">
+      グローバルの金融業界では、規制対応として<strong>マルチクラウド運用</strong>が要求されるケースが増えている。NewSQLはその性質上、複数のクラウドにまたがってデータを分散配置することが得意だ。
+    </p>
+
+    <blockquote>
+      <p>「日本にいるとあんまりまだマルチクラウドの波って多分来てないと思います。日本はあんまりそういう金融の監督官庁とかがマルチクラウドを要請するような法律とか規制というのを持っていませんので。でも、グローバルで見るとマルチクラウド自体は今後来るのではないかと言われているトレンドの一つになっていますので、日本にも今後多分<strong>三年から五年ぐらい</strong>かけてこの波というのは入ってくるんじゃないかなと思います。」</p>
+      <div class="speaker-attr">— ミック氏</div>
+    </blockquote>
+
+    <p class="prose">
+      ミック氏が「知っている限り」で挙げた日本の実例は、<strong>北國銀行</strong>（マルチクラウドに取り組む地銀）と<strong>ZOZO</strong>程度とのこと。「本当にパブリッククラウドをマルチクラウドとして使っているという事例はまだまだそんなに多くはないかな」という率直な評価だった。
+    </p>
+
+    <div class="sub-heading">ユースケース③ — マルチテナント収容（レバテック・DMMの事例）</div>
+
+    <p class="prose">
+      ミック氏が「意外なダークホース」と表現したのがこのユースケースだ。マイクロサービスアーキテクチャを採るとサービスごとにデータストアが分散し、管理コストが爆発する。NewSQLを使えば複数のテナント・サービスを<strong>一元管理</strong>できる。
+    </p>
+
+    <p class="prose">
+      <strong>レバテック</strong>はRDSとAuroraの<strong>50クラスター</strong>という状況に陥っていた。毎日どこかで障害が発生し、障害対応に追われる日々。TiDB（MySQL互換）への移行で一元管理を実現し、リソース効率と管理効率が大幅改善した。
+    </p>
+
+    <p class="prose">
+      <strong>DMM</strong>はさらに深刻で、MySQL・Couchbase・Cassandraという<strong>異なる種類のデータベースが混在</strong>する状態だった。「三つの製品に精通しているエンジニアの人ってなかなかいない」とミック氏。TiDBへの集約によってOSSのSPOFだったオンプレミスMySQLを廃止し、開発効率を向上させた。
+    </p>
+
+    <blockquote>
+      <p>「このマルチテナント収容というユースケースは、もしかするとこれ<strong>日本で発明された、日本から出てきたユースケース</strong>じゃないかなと思っています。あんまり海外の事例を見ていてもこの使い方してるのを見ないんです。AtlassianというJiraとか作ってる会社が同じようなやり方をやってるのを見たぐらいで、他のユースケースというのは日本の会社さんしか見ないなと思います。」</p>
+      <div class="speaker-attr">— ミック氏</div>
+    </blockquote>
+
+    <p class="prose">
+      また、マルチテナント収容にはアプリケーション側の分散トランザクション実装（TCC・Sagaパターン）をデータベース側に委ねられるという副次的なメリットも。「補償トランザクションを自前で実装するのは非常に複雑で面倒くさい。それをNewSQLのACIDトランザクションに任せられる」という点は、開発コスト削減の観点からも見逃せない。
+    </p>
+
+    <div class="sub-heading">ユースケース④〜⑦ — HTAPとそれ以降（書籍参照）</div>
+
+    <p class="prose">
+      講演ではユースケース①②③を中心に解説し、④以降は書籍を参照するよう案内した。④はHTAP（Hybrid Transactional/Analytical Processing）ユースケースだ。OLTPとOLAPを一つのシステムで処理する能力を活かし、リアルタイム分析を必要とするユースケースへの応用が含まれる。
+    </p>
+
+    <div class="insight-list">
+      <div class="insight-item">
+        <span class="insight-icon">→</span>
+        <span><strong>ユースケース①</strong>：グローバル分散 — 複数リージョンにまたがる高可用性が必要なサービス（例：DoorDash / CockroachDB）</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">→</span>
+        <span><strong>ユースケース②</strong>：マルチクラウド — 金融規制等で複数クラウドへのデータ配置が必要な場合（3〜5年後に日本でも普及予測）</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">→</span>
+        <span><strong>ユースケース③</strong>：マルチテナント収容 — マイクロサービス乱立による管理コスト爆発への対処（日本発ユースケースの可能性）</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">→</span>
+        <span><strong>ユースケース④以降</strong>：HTAP（リアルタイム分析）・大規模OLTP・Geo分散等（書籍第7章を参照）</span>
+      </div>
+    </div>
+
+    <div class="sub-heading">CockroachDBが日本に来ない理由 — 著者の率直な分析</div>
+
+    <p class="prose">
+      Q&Aセッションで話題になった「CockroachDBがなぜ日本に進出していないのか」について、ミック氏はいくつかの仮説を語った。
+    </p>
+
+    <div class="scenario-grid">
+      <div class="scenario-item">
+        <span class="scenario-num">①</span>
+        <span><strong>地理的分散メリットの希薄さ</strong> — 「アメリカみたいな大きい国じゃないとあんまり意味をなさない」。国土が狭い日本では「複数リージョンにまたがる高可用性」の価値が相対的に低い</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">②</span>
+        <span><strong>厳格なライセンス</strong> — CockroachDBは「ライセンスを結構ガチガチに固めていたりするところ」があり、国際展開向きでない側面がある</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">③</span>
+        <span><strong>名前の問題</strong> — 川俣氏との会話で爆笑を誘ったのがこれ。「名前とシルエット的に果たして日本で受け入れられるのか」という問題。アメリカでは「なかなか死なないタフなイメージ」として受容されているが、日本人が抱く生理的嫌悪感は別物</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">④</span>
+        <span><strong>販社の不在</strong> — 小林氏の補足：NewSQL関連製品は「直接進出がメイン」で代理店ビジネスが少ない。CockroachDBを日本で担ぐベンダーが現状いない</span>
+      </div>
+    </div>
+
+    <blockquote>
+      <p>「自分はCockroachDB、結構機能的にはいいデータベースなんじゃないかなと思って個人的には高く評価しているデータベースなので、日本にも来てくれないかなと自分も思っています。まあちょっと名前とシルエット的に果たして日本で受け入れられるのかという問題があるんですけども、まあそこをクリアすればですね、結構いいライバルになっていくんじゃないかな。」</p>
+      <div class="speaker-attr">— ミック氏</div>
+    </blockquote>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 3: Kobayashi Lecture -->
+  <section class="section fade-in" id="talk2">
+    <div class="section-number">03 — TALK 02</div>
+    <div class="section-tag talk">講演② 小林 隆浩</div>
+    <h2 class="section-title">NewSQLのアーキテクチャ<br><span class="highlight">— RDBの進化</span></h2>
+
+    <div class="speaker-card">
+      <div class="speaker-avatar">小</div>
+      <div class="speaker-info">
+        <div class="speaker-name">小林 隆浩（@tzkb）</div>
+        <div class="speaker-org">PostgreSQL専門エンジニア。著書：『分散データベース』『マルチクラウドデータベース』（共著）<br>担当章：第2章（アーキテクチャ概観）・第3章（NewSQL製品紹介）・第4章（要素技術）</div>
+        <span class="speaker-tag">講演時間: 31:27 – 1:02:47</span>
+      </div>
+    </div>
+
+    <div class="no-slide-note">※ 本イベントはスライド非公開（Forkwell Library形式）</div>
+
+    <p class="prose">
+      小林氏の講演はミック氏の「なぜ・どこで」に対して「どのように動くのか」を深掘りする役割を担った。アーキテクチャの整理フレームワーク（DB6分類）から始め、ストレージエンジン（B-Tree vs LSM-Tree）、シャーディング、Raftコンセンサスプロトコルの三つの技術要素を順に解説した。
+    </p>
+
+    <p class="prose">
+      小林氏は「普段はPostgreSQLを仕事にしているが、いろんなデータベースに触るのが好き」と自己紹介。技術への純粋な好奇心と、PostgreSQLという深い専門性の組み合わせが、書籍の技術解説を支えている。
+    </p>
+  </section>
+
+  <!-- Architecture section -->
+  <section class="section fade-in" id="arch">
+    <div class="section-number">04 — ARCHITECTURE</div>
+    <div class="section-tag talk">アーキテクチャ詳解</div>
+    <h2 class="section-title">DB6分類とNewSQLの<br><span class="highlight">技術要素</span></h2>
+
+    <div class="sub-heading">データベース6分類フレームワーク</div>
+
+    <p class="prose">
+      書籍第二章の核心が「<strong>2軸によるDB分類</strong>」フレームワークだ。横軸が「スケールアウト（ノードを横に増やす能力）」、縦軸が「コンポーネント分離（クエリエンジンとストレージエンジンの独立化）」。この2軸を組み合わせると6つの分類が生まれ、現代のDB製品がどこに位置するかを俯瞰できる。
+    </p>
+
+    <div class="db-class-grid">
+      <div class="db-class-item">
+        <span class="db-class-num">①</span>
+        <div class="db-class-name"><strong>単一インスタンス</strong><br>スケールアップのみ。スケールアウト不可だがコスト最安</div>
+        <span class="db-class-example">MySQL, PostgreSQL</span>
+      </div>
+      <div class="db-class-item">
+        <span class="db-class-num">②</span>
+        <div class="db-class-name"><strong>レプリケーション</strong><br>読み取りをレプリカへ分散。書き込みは単一プライマリ</div>
+        <span class="db-class-example">RDS, MySQL with Replica</span>
+      </div>
+      <div class="db-class-item">
+        <span class="db-class-num">③</span>
+        <div class="db-class-name"><strong>シェアードストレージ</strong><br>複数ノードが共通ストレージを使用。コンピュートのみスケール</div>
+        <span class="db-class-example">Aurora</span>
+      </div>
+      <div class="db-class-item">
+        <span class="db-class-num">④</span>
+        <div class="db-class-name"><strong>シャーディング</strong><br>データをパーティション分割し複数ノードへ。書き込みもスケール</div>
+        <span class="db-class-example">Vitess, アプリ層シャーディング</span>
+      </div>
+      <div class="db-class-item">
+        <span class="db-class-num">⑤</span>
+        <div class="db-class-name"><strong>コンポーネント分離型</strong><br>クエリエンジンとストレージエンジンを独立スケール</div>
+        <span class="db-class-example">Snowflake（分析系）</span>
+      </div>
+      <div class="db-class-item active">
+        <span class="db-class-num">⑥</span>
+        <div class="db-class-name"><strong>NewSQL</strong><br>分散ストレージ上にSQLエンジン。ACID+水平スケール+マルチプライマリ</div>
+        <span class="db-class-example">TiDB, Spanner, CockroachDB</span>
+      </div>
+    </div>
+
+    <blockquote>
+      <p>「クエリエンジンとストレージエンジンというのがありまして、それをサーバーを分けて配置してあげる。さらにクエリエンジンとストレージエンジンをそれぞれのコンポーネントごとにスケールアウトしながら増やすというハイパースケールなDBが作られるようになってきた。この辺が今日お話しするメインということになってきます。」</p>
+      <div class="speaker-attr">— 小林 隆浩氏</div>
+    </blockquote>
+
+    <div class="sub-heading">技術要素① — ストレージエンジン：B-Tree vs LSM-Tree</div>
+
+    <p class="prose">
+      NewSQLが従来RDBと最も大きく異なるのが<strong>ストレージエンジン</strong>の設計だ。従来のRDBはB-Treeを採用してきたが、NewSQLはLSM-Treeを採用している。
+    </p>
+
+    <div class="arch-grid">
+      <div class="arch-card">
+        <div class="arch-card-num">従来 RDB</div>
+        <div class="arch-card-title">B-Tree（B木）</div>
+        <div class="arch-card-desc">
+          <strong>読み取り</strong>: 高速<br>
+          <strong>書き込み</strong>: 遅い（ランダム書き込み）<br>
+          <strong>容量効率</strong>: 低い（空き領域確保が必要）<br><br>
+          木構造でデータを管理。インデックスといえばB-Tree。更新時にツリーの再バランスが必要なため書き込みコストが高い。
+        </div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-card-num">NewSQL</div>
+        <div class="arch-card-title">LSM-Tree（Log-Structured Merge-Tree）</div>
+        <div class="arch-card-desc">
+          <strong>読み取り</strong>: やや遅い<br>
+          <strong>書き込み</strong>: 非常に速い（シーケンシャル書き込み）<br>
+          <strong>容量効率</strong>: 高い（圧縮が裏側で進む）<br><br>
+          メモリにデータを書き溜め（MemTable）→ ファイルにフラッシュ → コンパクションで統合。高スループット環境に最適。
+        </div>
+      </div>
+    </div>
+
+    <p class="prose">
+      LSM-Treeの具体的な実装として代表的なのが<strong>RocksDB</strong>（FacebookがLevelDBをフォークして開発）。TiDBもこのRocksDBをストレージレイヤーとして採用している。
+    </p>
+
+    <blockquote>
+      <p>「LSMツリーでは、まずメモリの方にデータをどんどん書き溜めていきますと。オプションでメモリが消失した時にデータが消えないように、裏側でログ（WAL）を書いているんですが、そのメモリ上のバッファみたいなMemTableというものが溢れてくるとファイルにフラッシュされる。そのファイルがどんどんレベル別にコンパクションという処理によってまとめられていく。そうすることで複数のバージョンを管理するようなことができる。」</p>
+      <div class="speaker-attr">— 小林 隆浩氏</div>
+    </blockquote>
+
+    <div class="sub-heading">技術要素② — シャーディング：Range型 vs Hash型</div>
+
+    <p class="prose">
+      NewSQLが水平スケールを実現する核心がシャーディングだ。データを分割して複数のノードに分散配置する。分割方式には主に二種類ある。
+    </p>
+
+    <div class="insight-list">
+      <div class="insight-item">
+        <span class="insight-icon">R</span>
+        <span><strong>Range型（範囲シャーディング）</strong>：連続したキー範囲で分割。TiDB・Spannerが採用。範囲スキャンに強く、ホットスポット問題に注意が必要</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">H</span>
+        <span><strong>Hash型（ハッシュシャーディング）</strong>：キーのハッシュ値でランダム分散。均一な負荷分散が得意だが、範囲スキャンが苦手</span>
+      </div>
+    </div>
+
+    <p class="prose">
+      シャーディングを動的に再分割する仕組みも重要だ。データが特定のシャードに集中しすぎた場合（ホットスポット）に自動的に再分割・再配置する機能を「Split & Merge」と呼び、NewSQLの運用管理を大幅に簡素化する。
+    </p>
+
+    <div class="sub-heading">技術要素③ — Raftコンセンサスプロトコル</div>
+
+    <p class="prose">
+      分散システムで複数のノードが<strong>同じデータを持ち、整合性を保つ</strong>ためのプロトコルがRaftだ。NewSQLの可用性を支える根幹技術であり、理解しておくと障害時の挙動が予測しやすくなる。
+    </p>
+
+    <div class="arch-grid">
+      <div class="arch-card">
+        <div class="arch-card-num">役割①</div>
+        <div class="arch-card-title">Leader Election（リーダー選出）</div>
+        <div class="arch-card-desc">ノードはLeader / Follower / Candidateの三役割を持つ。Leaderが不在になるとFollowerがCandidateになり選挙を開始。<strong>多数決（過半数）</strong>でLeaderが確定する。</div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-card-num">役割②</div>
+        <div class="arch-card-title">Log Replication（ログ複製）</div>
+        <div class="arch-card-desc">書き込みはLeaderが受け付け、Followerへログを複製。<strong>過半数のFollowerがACKを返した時点</strong>でコミットが確定する。これによりLeader障害時もデータが失われない。</div>
+      </div>
+    </div>
+
+    <blockquote>
+      <p>「後で説明するRaftというプロトコルで可用性を担保しています。マルチプライマリーということで、クエリエンジンは複数配置できるんですけれども、どのサーバーでも書き込みも読み取りも処理をすることができます。裏側でストレージエンジンに書き出しや読み取りを指揮するわけですけれども、その際にも<strong>分散トランザクションによってデータが保護</strong>されているというような形になっています。」</p>
+      <div class="speaker-attr">— 小林 隆浩氏</div>
+    </blockquote>
+
+    <div class="sub-heading">NewSQLの4コンポーネント — まとめ</div>
+
+    <p class="prose">
+      書籍でも図として示されているNewSQLの4コンポーネントをまとめると以下の通り。分散トランザクション（第4コンポーネント）はミック氏担当の第5章で詳述されている。
+    </p>
+
+    <div class="scenario-grid">
+      <div class="scenario-item">
+        <span class="scenario-num">①</span>
+        <span><strong>ストレージエンジン（LSM-Tree/RocksDB）</strong> — 高スループット書き込みと効率的なデータ圧縮を実現する物理層</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">②</span>
+        <span><strong>シャーディング（Range/Hash）</strong> — データを複数ノードに分散配置し水平スケールを実現。動的な分割・統合も管理</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">③</span>
+        <span><strong>Raftコンセンサス</strong> — 分散ノード間のデータ整合性と可用性を保証。Leader選出とログ複製で障害に強い構成を実現</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">④</span>
+        <span><strong>分散トランザクション</strong> — 複数のシャードにまたがるACIDトランザクションを保証（Percolatorプロトコル等）。第5章・ミック担当</span>
+      </div>
+    </div>
+
+    <div class="alert teal">
+      <div class="alert-label">小林氏からの一言</div>
+      「クエリ部分は標準的なSQLが使えますので、そこはそれほど大きく変わらないというか、変わらない部分になってまして、<strong>このデータを複数のサーバーにどう分散して整合性を取りながら格納するか、このストレージエンジンの下側の部分が従来のRDBと大きく違う</strong>よというのが今回のご説明になります。」
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Forkwell LT -->
+  <section class="section fade-in" id="lt">
+    <div class="section-number">05 — FORKWELL LT</div>
+    <div class="section-tag lt">Forkwell LT</div>
+    <h2 class="section-title">中川氏 — <span class="highlight">ITエンジニアの転職額</span></h2>
+
+    <div class="speaker-card">
+      <div class="speaker-avatar">中</div>
+      <div class="speaker-info">
+        <div class="speaker-name">中川（赤川）— Forkwell キャリアアドバイザー</div>
+        <div class="speaker-org">著書：『ITエンジニアの転職額 — 二万人の選択から見えた後悔しないキャリア戦略』（講談社）<br>集英社コンピュータフロア三週連続1位・増刷決定</div>
+        <span class="speaker-tag">LT時間: 1:02:47 – 1:08:05</span>
+      </div>
+    </div>
+
+    <p class="prose">
+      休憩を兼ねたForkwellからのお知らせとして、キャリアアドバイザー中川氏がLTを担当。書籍著者ミノ駆動（良いコード悪いコードで知られるミノ駆動）氏らにも推薦された『ITエンジニアの転職額』を紹介しながら、Forkwellのキャリア壁打ちサービスを訴求した。
+    </p>
+
+    <blockquote>
+      <p>「年収八百万円を超えるキャリアの壁打ちならフォークウェル——某歯医者さんの看板に倣ってお伝えしております。」</p>
+      <div class="speaker-attr">— 中川氏</div>
+    </blockquote>
+
+    <p class="prose">
+      昨年の実績として、<strong>年収650万→1,100万（+450万）</strong>や790万→1,000万といった事例を紹介。「こんなにITエンジニアのキャリアに詳しい人会ったことない」「転職は今じゃないって言ってくれて現職で何をするかを一緒に整理してくれた」といった反響を紹介した。マネジメント vs スペシャリスト、バックエンドの各キャリアパスを俯瞰したフレームワークを用いた壁打ちを提供しているとのこと。
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Q&A Session -->
+  <section class="section fade-in" id="qa">
+    <div class="section-number">06 — Q&A</div>
+    <div class="section-tag qa">視聴者 Q&A</div>
+    <h2 class="section-title">Q&Aセッション<br><span class="highlight">— 6問の深掘り</span></h2>
+
+    <p class="prose">
+      Slidoを通じて視聴者から寄せられた質問にミック・小林両氏が回答した。このセッションは書籍には載らない「実際の技術選定現場の声」に応える内容が多く、特に率直なコメントが目立った。
+    </p>
+
+    <!-- Q1: Spanner -->
+    <div class="qa-card">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q1</span>
+        Spannerの最小構成は意外と安いそうですが、費用以外に社内で訴求できそうな要素はどのようなものがあるでしょうか？
+      </div>
+      <div class="qa-answer">
+        <div class="qa-answerer">ミック氏：</div>
+        <strong>BigQueryとの連携</strong>がSpannerの最大の強みだ。NewSQLは基本的にOLTP向けだが、Spannerの場合はBigQueryから直接クエリを投げられる連携機能があり、SQL構文もBigQueryに合わせられる。「Google Cloudの機能を使う場合にはSpannerは非常に相性が良い。逆にGoogle Cloudの外に出てしまうと制限がある」という正直な評価。
+      </div>
+      <div class="qa-answer" style="border-top: 1px solid var(--border);">
+        <div class="qa-answerer">小林氏：</div>
+        「最小構成が意外と安い」というのは、Capacity Unitを小さく設定できるという話だと思われる。「<strong>普通に使うとそこには収まらない</strong>ですよね。各自の利用量を確認していただくのがいい」という現実的なコメントも。SpannerはGoogle Cloud専用であることを忘れずに。
+      </div>
+    </div>
+
+    <!-- Q2: 読書ガイド -->
+    <div class="qa-card">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q2</span>
+        DBの実装に対する知識があまりないのですが、今回の書籍を理解するために事前に理解しておいた方がいいことはありますか？おすすめの書籍があれば教えてください。
+      </div>
+      <div class="qa-answer">
+        <div class="qa-answerer">ミック氏（読書ロードマップ）：</div>
+        書籍の第一章で一から解説しているため「あまり気張らずに読んでいただける本」とのこと。ただし事前知識として推薦するのが：
+        <div style="margin-top: 0.8rem;">
+          <div class="roadmap-list">
+            <div class="roadmap-item">
+              <span class="roadmap-bullet">①</span>
+              <span><strong>『達人に学ぶDB設計徹底指南書』</strong>（ミック著）— RDB設計の汎用的な一冊。「これを読んでから読むとなるほどと思うことが多分ある」</span>
+            </div>
+            <div class="roadmap-item">
+              <span class="roadmap-bullet">②</span>
+              <span><strong>『ゼロから始めるデータベース操作』</strong>（キリンの本）— SQLを本当にゼロから解説。「この二冊読んでから本書を読めば脱落することなく完走できる」</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="qa-answer" style="border-top: 1px solid var(--border);">
+        <div class="qa-answerer">小林氏（さらに深く知りたい方へ）：</div>
+        書籍の参考文献から二冊を紹介：
+        <div style="margin-top: 0.8rem;">
+          <div class="roadmap-list">
+            <div class="roadmap-item">
+              <span class="roadmap-bullet">A</span>
+              <span><strong>『データ主導アプリケーションデザイン』</strong>（O'Reilly、通称イノシシ本）— 660ページの大著。「アプリケーションに近い側から見た分散データベースのアーキテクチャがわかる。仕組みに興味ある方にお勧め」</span>
+            </div>
+            <div class="roadmap-item">
+              <span class="roadmap-bullet">B</span>
+              <span><strong>『小説データベース』</strong>（O'Reilly、小林氏監訳、通称ヒラメ本）— 「よりリレーショナルデータベース寄りのマニアックな話がたくさん出ている。オタク的な知識が欲しい方に」。川俣氏に「ヒラメなのも結構すごい」と突っ込まれ会場笑い</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert">
+      <div class="alert-label">読書ガイド — 司会のコメント</div>
+      ミック氏のスライドに「物好きと変態」という分類の本が含まれており、川俣氏が「SQLみたいなこのテーマでこれだけ本が出てるっていうのもいいなと思いながら」とコメント。ミック氏は「読んで字のごとく本当にそうです」と即答。深い技術的な本への愛情がうかがえるやり取り。
+    </div>
+
+    <!-- Q3: 技術選定の制約 -->
+    <div class="qa-card">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q3</span>
+        技術選定時に考慮すべきNewSQLの制約事項について教えてください。
+      </div>
+      <div class="qa-answer">
+        <div class="qa-answerer">小林氏（レイテンシー・スループットの観点）：</div>
+        NewSQL導入前に確認すべき最重要指標は<strong>レイテンシーとスループット</strong>のバランスだ。
+        <div style="margin-top: 0.8rem; padding: 0.8rem 1rem; background: var(--bg-card-hover); border-radius: 8px; border: 1px solid var(--border);">
+          <div style="margin-bottom: 0.5rem; font-size: 0.85rem;"><strong style="color: var(--text-primary);">レイテンシー比較</strong></div>
+          <div style="font-size: 0.85rem; margin-bottom: 0.3rem;">RDS（従来型）: <strong style="color: var(--green);">5〜10ms</strong></div>
+          <div style="font-size: 0.85rem;">NewSQL: <strong style="color: var(--yellow);">50〜100ms</strong>（オーダーが変わる）</div>
+        </div>
+        「画面の応答でデータベースに許されるのが5ミリセックですよっていう場合にはあまり使わない方がいい」。一方でスループット面では「数万TPSを一つのDBでさばかなきゃいけない場合にNewSQLを使うことになる」。
+      </div>
+      <div class="qa-answer" style="border-top: 1px solid var(--border);">
+        <div class="qa-answerer">ミック氏（移行時の注意点）：</div>
+        <strong>①互換性</strong>：PostgreSQL互換が多い中でMySQL互換はTiDBのみ。移行前に確認必須。<br>
+        <strong>②トランザクション分離レベル</strong>：既存DBと合わせられなかったり、同じ分離レベルでも「実はちょっと挙動が違う」ことがある。<br>
+        <strong>③ORMのSQL互換性</strong>：ORMが生成するSQLがエラーになるケースあり。事前の動作検証が必要。<br>
+        <strong>④プロプライエタリDB互換なし</strong>：OracleやSQL Serverへの互換性はなし。PL/SQL等のトリガー・プロシージャは基本非対応。<br>
+        「古いエンプラのシステムに多いトリガー・プロシージャを比較的多く使っているケースには注意が必要」という重要なポイントも。
+      </div>
+    </div>
+
+    <!-- Q4: DSQL migration -->
+    <div class="qa-card">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q4</span>
+        AWSでLambdaを使う場合、今までVPCを入れてRDSを使っていましたが、安易にDSQLに移行しても問題ないでしょうか？
+      </div>
+      <div class="qa-answer">
+        <div class="qa-answerer">ミック氏：</div>
+        DSQLはPostgreSQL互換なのでPostgreSQL系なら比較的移行しやすい。ただし<strong>トランザクション分離レベルがSerializableのみ</strong>という制約があり、ORMのデフォルト設定によってはアプリケーションが動かなくなる可能性がある。また<strong>楽観的同時実行制御のみ</strong>という点も注意が必要。
+      </div>
+      <div class="qa-answer" style="border-top: 1px solid var(--border);">
+        <div class="qa-answerer">小林氏：</div>
+        率直に「<strong>問題あります</strong>」と回答。コスト面でRDSとDSQLは「全然違う」。DSQLは複数データセンターにまたがる高可用性を持つ特殊なDBなので、そういった要件がない場合は「RDSまたは通常のAuroraで十分」。Lambdaかどうかに関わらず同じ判断基準。
+      </div>
+    </div>
+
+    <!-- Q5: CockroachDB / TiDB -->
+    <div class="qa-card">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q5</span>
+        TiDBは日本市場にもそれなりに力を入れている印象がありますが、CockroachDBが代理店もなく日本に進出していないのはなぜでしょうか？
+      </div>
+      <div class="qa-answer">
+        <div class="qa-answerer">ミック氏：</div>
+        TiDBが日本で最も普及しているNewSQLというのは認識通り。CockroachDBは「DoorDash・Netflixなど名だたる企業にバックエンドとして入っている非常に実力ある会社」だが、①地理的分散メリットが日本では薄い、②ライセンスが厳格、③名前の問題（ゴキブリ）—— の三点が日本未進出の理由として考えられる。「CockroachDBを個人的には高く評価している。日本にも来てほしい」と語った。
+      </div>
+      <div class="qa-answer" style="border-top: 1px solid var(--border);">
+        <div class="qa-answerer">小林氏（販社の観点）：</div>
+        「海外製品は特定ベンダーが担いで入れたりするが、NewSQL関連は直接進出がメイン。CockroachDBを日本に導入したい日本のベンダーも今のところ少ない」という構造的な問題も指摘。
+      </div>
+    </div>
+
+    <!-- Q6: Read from Leader/Follower -->
+    <div class="qa-card">
+      <div class="qa-question">
+        <span class="qa-q-badge">Q6</span>
+        通販や予約サイトなどに使用する場合、リーダーから読むべきかフォロワーから読むべきか悩みそうです。
+      </div>
+      <div class="qa-answer">
+        <div class="qa-answerer">小林氏：</div>
+        基本方針は「<strong>書き込みはLeaderへ、読み取りはFollowerへ</strong>」。通販・予約サイトでは「他の人が予約したものがすぐ見えなきゃいけない状況というのは、競合した場合などを除いてあまりない」ため、少し古いデータを返すFollowerからの読み取りで十分なケースが多い。書き込みが重視されるところはLeaderに、読み取りはFollowerに。「ちょっと古くても大丈夫だよという形でアプリケーションを設計していただくのがいい」という実践的な指針を示した。
+      </div>
+    </div>
+
+    <div class="panel-highlight">
+      <div class="panel-highlight-label">Q&Aから見えたNewSQL導入の現実</div>
+      <div class="panel-highlight-text">
+        Q&Aセッション全体を通じて浮き彫りになったのは、<strong>NewSQLは「使える・使えない」の二択ではなく、レイテンシー・スループット・コスト・SQL互換性の各軸でトレードオフを理解した上で選択するDB</strong>だという事実だ。「安易に移行しても問題ないか？」という質問に「問題あります」と直球で答えた小林氏の言葉が象徴的だった。<br><br>
+        一方で「マルチテナント収容」のような日本発ユースケースでは、TiDBを中心に着実に採用実績が積み上がっている。NewSQLの本番採用は「大規模・グローバル」だけが条件ではなく、<strong>運用管理コストの削減</strong>という観点でも十分な選択肢になり得る——それがこのイベントの核心メッセージだった。
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Links -->
+  <section class="section fade-in" id="links">
+    <div class="section-number">07 — LINKS</div>
+    <div class="section-tag keynote">関連リンク</div>
+    <h2 class="section-title">関連リンク</h2>
+
+    <div class="links-grid">
+      <a href="https://forkwell.connpass.com/event/382291/" target="_blank" class="link-item">
+        <span class="link-icon">EVENT</span>
+        <span class="link-label">Connpass イベントページ — Forkwell Library #119</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://www.youtube.com/watch?v=IMNDU11jzJM" target="_blank" class="link-item">
+        <span class="link-icon">VIDEO</span>
+        <span class="link-label">YouTube アーカイブ動画（Forkwell）</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://speakerdeck.com/copinemickmack" target="_blank" class="link-item">
+        <span class="link-icon">SLIDE</span>
+        <span class="link-label">ミック — Speaker Deck プロフィール（過去スライド）</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://speakerdeck.com/tzkoba" target="_blank" class="link-item">
+        <span class="link-icon">SLIDE</span>
+        <span class="link-label">小林 隆浩 — Speaker Deck プロフィール（過去スライド）</span>
+        <span class="link-arrow">→</span>
+      </a>
+    </div>
+
+    <div class="sub-heading">書籍情報</div>
+
+    <div class="book-banner">
+      <div class="book-banner-eyebrow">📘 書籍詳細</div>
+      <div class="book-banner-title">『NewSQL徹底入門 — 分散DBのアーキテクチャからユースケースまで』</div>
+      <div class="book-banner-text">
+        著者：<strong>ミック</strong> &amp; <strong>小林 隆浩</strong>  ｜  出版社：<strong>講談社</strong>  ｜  刊行：<strong>2025年末</strong><br><br>
+        日本初の複数NewSQL製品横断解説本。Spanner・DSQL・TiDB・CockroachDB・YugabyteDBを網羅。アーキテクチャからユースケースまで、実践的な技術選定の指針を提供する。本書と合わせて読みたい参考書：『データ主導アプリケーションデザイン』（O'Reilly・通称イノシシ本）、『小説データベース』（O'Reilly・通称ヒラメ本・小林監訳）。
+      </div>
+    </div>
+
+    <div class="sub-heading">著者プロフィール</div>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-card-label">著者① ミック（@copinemickmack）</div>
+        <div class="feature-card-desc">元DBエンジニア。BI/DWH・パフォーマンス設計専門。2018年より米国技術調査。著書に『達人に学ぶDB設計徹底指南書』など多数。現・技術戦略チーム所属。書籍担当：第5章（分散トランザクション）・第6章（SQL対応）・第7章（ユースケース）</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-label">著者② 小林 隆浩（@tzkb）</div>
+        <div class="feature-card-desc">PostgreSQL専門エンジニア。O'Reilly Japan『小説データベース』監訳者。著書に『分散データベース』『マルチクラウドデータベース』。書籍担当：第2章（アーキテクチャ概観）・第3章（製品紹介）・第4章（要素技術）</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div>Forkwell Library #119 — 2026年2月11日（水・祝）開催</div>
+  <div>NewSQL徹底入門｜分散DBのアーキテクチャからユースケースまで</div>
+  <div style="margin-top: 0.5rem;">
+    著者：ミック &amp; 小林 隆浩  ｜  MC：川俣（Forkwell）
+  </div>
+  <div style="margin-top: 0.5rem;">
+    主催：<a href="https://forkwell.connpass.com/" target="_blank">Forkwell</a>
+  </div>
+  <div style="margin-top: 0.5rem; color: var(--text-muted);">
+    イベントページ: <a href="https://forkwell.connpass.com/event/382291/" target="_blank">forkwell.connpass.com/event/382291</a>  ｜
+    YouTube: <a href="https://www.youtube.com/watch?v=IMNDU11jzJM" target="_blank">youtube.com/watch?v=IMNDU11jzJM</a>
+  </div>
+</footer>
+
+<script>
+// Scroll-triggered fade-in
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
