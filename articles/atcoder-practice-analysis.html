@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AtCoder Practice Analysis — Taiki</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232736;
+    --border: #2d3148;
+    --text: #e2e4eb;
+    --text-dim: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --orange: #fb923c;
+    --red: #f87171;
+    --pink: #f472b6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.3rem; }
+  h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem; color: var(--accent); }
+  h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .subtitle { color: var(--text-dim); margin-bottom: 2rem; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem;
+    text-align: center;
+  }
+  .stat-number { font-size: 2rem; font-weight: 700; }
+  .stat-label { color: var(--text-dim); font-size: 0.85rem; }
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin: 2px;
+  }
+  .tag-a { background: #34d39930; color: var(--green); }
+  .tag-b { background: #6c8cff25; color: var(--accent); }
+  .tag-c { background: #fbbf2425; color: var(--yellow); }
+  .tag-d { background: #fb923c25; color: var(--orange); }
+  .tag-e { background: #f8717125; color: var(--red); }
+  .tag-incomplete { background: #f8717118; color: var(--red); border: 1px dashed var(--red); }
+  .tag-algo { background: var(--surface2); color: var(--accent2); border: 1px solid #a78bfa30; }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 2rem; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .timeline-item {
+    position: relative;
+    margin-bottom: 1.2rem;
+    padding: 0.8rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -1.65rem;
+    top: 1rem;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+  }
+  .timeline-date {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+  .timeline-problems { margin-top: 0.3rem; }
+
+  /* Charts via CSS */
+  .bar-chart { margin: 1rem 0; }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .bar-label {
+    width: 120px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-align: right;
+    padding-right: 12px;
+    flex-shrink: 0;
+  }
+  .bar-track {
+    flex: 1;
+    height: 24px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    transition: width 0.5s ease;
+  }
+
+  /* Heatmap */
+  .heatmap {
+    display: grid;
+    grid-template-columns: repeat(53, 1fr);
+    gap: 2px;
+    margin: 1rem 0;
+  }
+  .heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    min-width: 8px;
+  }
+  .heat-0 { background: var(--surface2); }
+  .heat-1 { background: #34d39940; }
+  .heat-2 { background: #34d39970; }
+  .heat-3 { background: #34d399a0; }
+  .heat-4 { background: #34d399; }
+
+  /* Difficulty over time scatter */
+  .scatter-chart {
+    position: relative;
+    height: 200px;
+    margin: 1.5rem 0 1rem;
+    border-left: 2px solid var(--border);
+    border-bottom: 2px solid var(--border);
+  }
+  .scatter-dot {
+    position: absolute;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    transform: translate(-50%, 50%);
+    opacity: 0.85;
+  }
+  .scatter-label-y {
+    position: absolute;
+    left: -28px;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    transform: translateY(50%);
+  }
+  .scatter-label-x {
+    position: absolute;
+    bottom: -22px;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    transform: translateX(-50%);
+  }
+
+  .insight-box {
+    background: #6c8cff10;
+    border: 1px solid #6c8cff30;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin: 0.8rem 0;
+  }
+  .insight-box.warning {
+    background: #fbbf2410;
+    border-color: #fbbf2430;
+  }
+  .insight-box.danger {
+    background: #f8717110;
+    border-color: #f8717130;
+  }
+
+  .algo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .algo-card {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  .algo-card h4 { font-size: 0.9rem; margin-bottom: 0.4rem; }
+  .algo-count { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+  .algo-examples { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.3rem; }
+
+  .code-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .code-box {
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.78rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+  .code-box .label {
+    display: block;
+    color: var(--text-dim);
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  .rec-card {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.8rem;
+    border-left: 3px solid var(--accent);
+  }
+  .rec-card.priority-high { border-left-color: var(--red); }
+  .rec-card.priority-mid { border-left-color: var(--yellow); }
+
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 1rem; }
+    .code-compare { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<h1>AtCoder Practice Analysis</h1>
+<p class="subtitle">2025年2月25日 — 2026年3月7日 &middot; 全32セッション &middot; 140問</p>
+
+<!-- Summary Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--green)">140</div>
+    <div class="stat-label">解いた問題数</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--accent)">32</div>
+    <div class="stat-label">練習セッション</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--yellow)">12.5</div>
+    <div class="stat-label">期間（月）</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--orange)">~7</div>
+    <div class="stat-label">未完了のD問題</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--accent2)">5+</div>
+    <div class="stat-label">BFS問題を解決</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--red)">0</div>
+    <div class="stat-label">DP問題を解決</div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- 1. Difficulty Progression -->
+<h2>1. 難易度の推移</h2>
+<div class="card">
+  <h3>解いた問題の難易度（時系列）</h3>
+  <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:1rem;">左が初期、右が最近。上ほど難しい。<span style="color:var(--red)">●</span> は未完了</p>
+
+  <div class="scatter-chart">
+    <!-- Y axis labels -->
+    <span class="scatter-label-y" style="bottom:0%">A</span>
+    <span class="scatter-label-y" style="bottom:25%">B</span>
+    <span class="scatter-label-y" style="bottom:50%">C</span>
+    <span class="scatter-label-y" style="bottom:75%">D</span>
+    <span class="scatter-label-y" style="bottom:95%">E</span>
+
+    <!-- X axis: months -->
+    <span class="scatter-label-x" style="left:2%">2/25</span>
+    <span class="scatter-label-x" style="left:12%">3/25</span>
+    <span class="scatter-label-x" style="left:22%">5/25</span>
+    <span class="scatter-label-x" style="left:35%">6/25</span>
+    <span class="scatter-label-x" style="left:48%">8/25</span>
+    <span class="scatter-label-x" style="left:65%">11/25</span>
+    <span class="scatter-label-x" style="left:80%">12/25</span>
+    <span class="scatter-label-x" style="left:92%">2/26</span>
+
+    <!-- Feb 2025: mostly B -->
+    <div class="scatter-dot" style="left:1%;bottom:25%;background:var(--accent)" title="abc068-B"></div>
+    <div class="scatter-dot" style="left:1.5%;bottom:25%;background:var(--accent)" title="abc074-b"></div>
+    <div class="scatter-dot" style="left:2%;bottom:25%;background:var(--accent)" title="abc086-b"></div>
+    <div class="scatter-dot" style="left:2.5%;bottom:25%;background:var(--accent)" title="abc088-b"></div>
+    <div class="scatter-dot" style="left:3%;bottom:50%;background:var(--yellow)" title="abc160-c"></div>
+    <div class="scatter-dot" style="left:3.5%;bottom:0%;background:var(--green)" title="agc014-a"></div>
+    <!-- Feb 27 -->
+    <div class="scatter-dot" style="left:5%;bottom:25%;background:var(--accent)" title="abc094-b"></div>
+    <div class="scatter-dot" style="left:5.5%;bottom:25%;background:var(--accent)" title="abc116-b"></div>
+    <div class="scatter-dot" style="left:6%;bottom:25%;background:var(--accent)" title="abc122-b"></div>
+    <div class="scatter-dot" style="left:6.5%;bottom:50%;background:var(--yellow)" title="abc132-c"></div>
+    <div class="scatter-dot" style="left:7%;bottom:50%;background:var(--yellow)" title="abc142-c"></div>
+    <div class="scatter-dot" style="left:7.5%;bottom:50%;background:var(--yellow)" title="abc149-c"></div>
+    <div class="scatter-dot" style="left:8%;bottom:50%;background:var(--yellow)" title="abc161-c"></div>
+    <div class="scatter-dot" style="left:8.5%;bottom:0%;background:var(--green)" title="arc126-a"></div>
+
+    <!-- Mar 2025 -->
+    <div class="scatter-dot" style="left:11%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:11.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:12%;bottom:50%;background:var(--yellow)" title="C"></div>
+    <div class="scatter-dot" style="left:12.5%;bottom:75%;background:var(--orange)" title="D (pigeon)"></div>
+    <div class="scatter-dot" style="left:14%;bottom:25%;background:var(--accent)" title="abc081-b"></div>
+    <div class="scatter-dot" style="left:14.5%;bottom:25%;background:var(--accent)" title="abc108-b"></div>
+    <div class="scatter-dot" style="left:15%;bottom:50%;background:var(--yellow)" title="abc150-c"></div>
+    <div class="scatter-dot" style="left:15.5%;bottom:75%;background:var(--orange)" title="abc153-d"></div>
+    <div class="scatter-dot" style="left:17%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:17.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:18%;bottom:50%;background:var(--yellow)" title="C"></div>
+
+    <!-- Apr-May 2025 -->
+    <div class="scatter-dot" style="left:22%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:22.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:23%;bottom:50%;background:var(--yellow)" title="C"></div>
+    <div class="scatter-dot" style="left:23.5%;bottom:75%;background:var(--red)" title="D (incomplete)"></div>
+    <div class="scatter-dot" style="left:25%;bottom:25%;background:var(--accent)" title="abc052-b"></div>
+    <div class="scatter-dot" style="left:26%;bottom:0%;background:var(--green)" title="abc404-A"></div>
+    <div class="scatter-dot" style="left:26.5%;bottom:25%;background:var(--accent)" title="abc404-B"></div>
+    <div class="scatter-dot" style="left:27%;bottom:50%;background:var(--yellow)" title="abc404-C"></div>
+    <div class="scatter-dot" style="left:27.5%;bottom:75%;background:var(--orange)" title="abc404-D"></div>
+
+    <!-- May-Jun 2025 -->
+    <div class="scatter-dot" style="left:30%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:30.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:31%;bottom:50%;background:var(--yellow)" title="C"></div>
+    <div class="scatter-dot" style="left:31.5%;bottom:75%;background:var(--orange)" title="D (BFS!)"></div>
+    <div class="scatter-dot" style="left:33%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:33.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:34%;bottom:50%;background:var(--yellow)" title="C"></div>
+    <div class="scatter-dot" style="left:34.5%;bottom:75%;background:var(--red)" title="D (incomplete)"></div>
+    <div class="scatter-dot" style="left:36%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:36.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:37%;bottom:50%;background:var(--red)" title="C (incomplete)"></div>
+
+    <!-- Jun-Jul 2025 -->
+    <div class="scatter-dot" style="left:40%;bottom:0%;background:var(--green)" title="abc410-A"></div>
+    <div class="scatter-dot" style="left:40.5%;bottom:25%;background:var(--accent)" title="abc410-B"></div>
+    <div class="scatter-dot" style="left:41%;bottom:50%;background:var(--yellow)" title="abc410-C"></div>
+    <div class="scatter-dot" style="left:41.5%;bottom:75%;background:var(--red)" title="abc410-D (incomplete)"></div>
+    <div class="scatter-dot" style="left:45%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:45.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:46%;bottom:50%;background:var(--yellow)" title="C (recursive)"></div>
+
+    <!-- Aug 2025 -->
+    <div class="scatter-dot" style="left:50%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:50.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:51%;bottom:50%;background:var(--yellow)" title="C (binary search)"></div>
+    <div class="scatter-dot" style="left:53%;bottom:50%;background:var(--yellow)" title="abc340-c (memo DFS)"></div>
+    <div class="scatter-dot" style="left:55%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:55.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:56%;bottom:50%;background:var(--yellow)" title="C"></div>
+    <div class="scatter-dot" style="left:56.5%;bottom:75%;background:var(--orange)" title="D (BFS+state)"></div>
+
+    <!-- Nov 2025 -->
+    <div class="scatter-dot" style="left:65%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:65.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:66%;bottom:50%;background:var(--yellow)" title="C (RLE)"></div>
+    <div class="scatter-dot" style="left:66.5%;bottom:75%;background:var(--red)" title="D (incomplete)"></div>
+    <div class="scatter-dot" style="left:68%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:68.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:69%;bottom:50%;background:var(--yellow)" title="C"></div>
+
+    <!-- Dec 2025 -->
+    <div class="scatter-dot" style="left:75%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:75.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:76%;bottom:50%;background:var(--yellow)" title="C"></div>
+    <div class="scatter-dot" style="left:76.5%;bottom:75%;background:var(--orange)" title="D (BFS reverse)"></div>
+    <div class="scatter-dot" style="left:78%;bottom:50%;background:var(--yellow)" title="abc336-C"></div>
+    <div class="scatter-dot" style="left:80%;bottom:0%;background:var(--green)" title="abc436-A"></div>
+    <div class="scatter-dot" style="left:80.5%;bottom:25%;background:var(--accent)" title="abc436-B"></div>
+    <div class="scatter-dot" style="left:81%;bottom:50%;background:var(--yellow)" title="abc436-C"></div>
+    <div class="scatter-dot" style="left:81.5%;bottom:75%;background:var(--orange)" title="abc436-D (BFS+warp)"></div>
+    <div class="scatter-dot" style="left:83%;bottom:50%;background:var(--yellow)" title="abc301-C"></div>
+
+    <!-- Jan-Mar 2026 -->
+    <div class="scatter-dot" style="left:87%;bottom:50%;background:var(--red)" title="abc196-C (incomplete)"></div>
+    <div class="scatter-dot" style="left:90%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:90.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:91%;bottom:50%;background:var(--yellow)" title="C"></div>
+    <div class="scatter-dot" style="left:93%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:93.5%;bottom:50%;background:var(--yellow)" title="C"></div>
+    <div class="scatter-dot" style="left:96%;bottom:0%;background:var(--green)" title="A"></div>
+    <div class="scatter-dot" style="left:96.5%;bottom:25%;background:var(--accent)" title="B"></div>
+    <div class="scatter-dot" style="left:97%;bottom:50%;background:var(--yellow)" title="C"></div>
+  </div>
+
+  <div class="insight-box">
+    <strong>傾向:</strong> 初期（2025年2〜3月）はB問題中心。5月のabc404でD問題を初めてコンテスト中に解き、8月のabc824ではBFS+状態管理のD問題をクリア。12月にはabc436でBFS+テレポートのD問題も解決。ただし、D問題の成功率は約40%（挑戦7回中、完了3〜4回）で、壁になっている。
+  </div>
+</div>
+
+<!-- Difficulty Distribution -->
+<div class="card">
+  <h3>難易度別の解答数</h3>
+  <div class="bar-chart">
+    <div class="bar-row">
+      <span class="bar-label">A問題</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:25%;background:var(--green)">~35</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">B問題</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:40%;background:var(--accent)">~55</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">C問題</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:28%;background:var(--yellow)">~38</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">D問題</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:8%;background:var(--orange)">~10</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">D未完了</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:5%;background:var(--red)">~7</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- 2. Algorithm/Technique Breakdown -->
+<h2>2. 使用アルゴリズム・テクニック</h2>
+
+<div class="algo-grid">
+  <div class="algo-card">
+    <h4>BFS / グラフ探索</h4>
+    <div class="algo-count">6問</div>
+    <div class="algo-examples">abc510/D, abc824/D, abc1206/D, abc436/D, abc329/C, abc404/C</div>
+    <div style="margin-top:0.5rem"><span class="tag tag-algo">得意分野</span></div>
+  </div>
+  <div class="algo-card">
+    <h4>数学 / 算術</h4>
+    <div class="algo-count">20+問</div>
+    <div class="algo-examples">abc068-B, abc153-d, abc158-b, abc161-c, abc336-C, abc1129/A</div>
+  </div>
+  <div class="algo-card">
+    <h4>ソート + 貪欲法</h4>
+    <div class="algo-count">10+問</div>
+    <div class="algo-examples">abc088-b, abc094-b, abc132-c, abc142-c, abc607/B, abc123-b</div>
+  </div>
+  <div class="algo-card">
+    <h4>全探索 / ブルートフォース</h4>
+    <div class="algo-count">8問</div>
+    <div class="algo-examples">abc404/D, arc126-a, abc150_c, abc207/C, abc122-b</div>
+    <div style="margin-top:0.5rem"><span class="tag tag-incomplete">要注意: DPで解くべき問題も含む</span></div>
+  </div>
+  <div class="algo-card">
+    <h4>文字列操作</h4>
+    <div class="algo-count">8問</div>
+    <div class="algo-examples">abc084-b, abc063-b, abc809/B, abc436/A, abc301/C</div>
+  </div>
+  <div class="algo-card">
+    <h4>累積和 / imos法</h4>
+    <div class="algo-count">4問</div>
+    <div class="algo-examples">abc510/C, abc809/C, abc531/C, abc824/C</div>
+  </div>
+  <div class="algo-card">
+    <h4>二分探索</h4>
+    <div class="algo-count">2問</div>
+    <div class="algo-examples">abc809/C (bsearch_index), abc607/B</div>
+  </div>
+  <div class="algo-card">
+    <h4>メモ化再帰</h4>
+    <div class="algo-count">1問</div>
+    <div class="algo-examples">abc340-c（DPに最も近い解法）</div>
+    <div style="margin-top:0.5rem"><span class="tag tag-algo">DP入口</span></div>
+  </div>
+</div>
+
+<div class="insight-box warning" style="margin-top:1.5rem">
+  <strong>重要な発見:</strong> 困ったときの「全探索に逃げる」パターンが見える。arc126-aでは5つの操作の全順列を試す方法で解いている。abc404/Dでは全組み合わせを列挙。abc150_cでは全順列をソート。これらは小さい入力では通るが、D問題以上では計算量が爆発する。DPや貪欲法で定式化する力が次のステップへの鍵。
+</div>
+
+<hr class="section-divider">
+
+<!-- 3. Code Style Evolution -->
+<h2>3. コードスタイルの変化</h2>
+
+<div class="card">
+  <h3>初期 vs 最近の比較</h3>
+
+  <div class="code-compare">
+    <div class="code-box">
+      <span class="label">2025年2月 — abc068-B (work版)</span>
+N = $stdin.gets.to_i
+ans_cnt = 0
+ans = 1
+
+N.times do |i|
+  tmp = 0
+  j = (i+1)
+  loop do
+    tmp += 1 if j % 2 == 0
+    break unless j % 2 == 0
+    break if j == 1
+    j = j / 2
+  end
+  if ans_cnt < tmp
+    ans_cnt = tmp
+    ans = i+1
+  end
+end
+
+puts ans</div>
+    <div class="code-box">
+      <span class="label">2025年12月 — abc436/A</span>
+N = $stdin.gets.to_i
+S = $stdin.gets.strip
+
+puts (('o' * N) + S)[-N..-1]
+
+<span class="label" style="margin-top:1rem">2026年2月 — abc207/B</span>
+N, K = $stdin.gets.split(' ').map(&amp;:to_i)
+
+def ketawa n
+  n.to_s.split('').map(&amp;:to_i).sum
+end
+
+puts (1..N).map{ ketawa(it) }
+      .filter { it == K }.count</div>
+  </div>
+
+  <div style="margin-top:1rem">
+    <h3>進化のポイント</h3>
+    <div class="bar-chart" style="margin-top:0.8rem">
+      <div class="bar-row">
+        <span class="bar-label">関数型スタイル</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:85%;background:var(--green)">map/filter/rejectの多用</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Ruby 3.4 <code>it</code></span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:60%;background:var(--accent)">最近のコードで頻出</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">ワンライナー力</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:70%;background:var(--accent2)">abc063-b, abc123-b, abc436/A</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Hash活用</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:90%;background:var(--yellow)">ほぼ全てのC/D問題で使用</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">メソッド分離</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:75%;background:var(--orange)">solveメソッドパターン定着</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- 4. The D-Problem Wall -->
+<h2>4. D問題の壁：完了 vs 未完了</h2>
+
+<div class="card">
+  <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border);text-align:left;">
+        <th style="padding:8px;">日付</th>
+        <th style="padding:8px;">問題</th>
+        <th style="padding:8px;">必要な手法</th>
+        <th style="padding:8px;">結果</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/03/01</td>
+        <td style="padding:8px">D (pigeon swap)</td>
+        <td style="padding:8px"><span class="tag tag-algo">データ構造</span><span class="tag tag-algo">シミュレーション</span></td>
+        <td style="padding:8px"><span class="tag tag-c" style="background:#34d39930;color:var(--green)">完了</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/03/03</td>
+        <td style="padding:8px">abc153-d</td>
+        <td style="padding:8px"><span class="tag tag-algo">数学</span><span class="tag tag-algo">再帰</span></td>
+        <td style="padding:8px"><span class="tag tag-c" style="background:#34d39930;color:var(--green)">完了</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/04/27</td>
+        <td style="padding:8px">D (distance)</td>
+        <td style="padding:8px"><span class="tag tag-algo">貪欲法?</span></td>
+        <td style="padding:8px"><span class="tag tag-incomplete">未完了</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/05/02</td>
+        <td style="padding:8px">abc404-D</td>
+        <td style="padding:8px"><span class="tag tag-algo">全探索</span>（<span class="tag tag-algo">DP推奨</span>）</td>
+        <td style="padding:8px"><span class="tag tag-c" style="background:#34d39930;color:var(--green)">完了（力業）</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/05/10</td>
+        <td style="padding:8px">D (BFS迷路)</td>
+        <td style="padding:8px"><span class="tag tag-algo">BFS</span></td>
+        <td style="padding:8px"><span class="tag tag-c" style="background:#34d39930;color:var(--green)">完了</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/05/31</td>
+        <td style="padding:8px">D (bit flip)</td>
+        <td style="padding:8px"><span class="tag tag-algo">DP / 貪欲</span></td>
+        <td style="padding:8px"><span class="tag tag-incomplete">未完了（設計途中で放棄）</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/06/14</td>
+        <td style="padding:8px">abc410-D</td>
+        <td style="padding:8px"><span class="tag tag-algo">グラフ</span></td>
+        <td style="padding:8px"><span class="tag tag-incomplete">未完了（入力読むだけ）</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/08/24</td>
+        <td style="padding:8px">D (BFS+flip状態)</td>
+        <td style="padding:8px"><span class="tag tag-algo">BFS</span><span class="tag tag-algo">状態管理</span></td>
+        <td style="padding:8px"><span class="tag tag-c" style="background:#34d39930;color:var(--green)">完了</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/11/22</td>
+        <td style="padding:8px">D (数列)</td>
+        <td style="padding:8px"><span class="tag tag-algo">数学</span><span class="tag tag-algo">枝切り探索</span></td>
+        <td style="padding:8px"><span class="tag tag-incomplete">未完了（設計で詰まる）</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;color:var(--text-dim)">2025/12/06</td>
+        <td style="padding:8px">D (逆グラフBFS)</td>
+        <td style="padding:8px"><span class="tag tag-algo">BFS</span><span class="tag tag-algo">逆グラフ</span></td>
+        <td style="padding:8px"><span class="tag tag-c" style="background:#34d39930;color:var(--green)">完了</span></td>
+      </tr>
+      <tr>
+        <td style="padding:8px;color:var(--text-dim)">2025/12/13</td>
+        <td style="padding:8px">abc436-D (warp)</td>
+        <td style="padding:8px"><span class="tag tag-algo">BFS</span><span class="tag tag-algo">テレポート</span></td>
+        <td style="padding:8px"><span class="tag tag-c" style="background:#34d39930;color:var(--green)">完了</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="insight-box" style="margin-top:1rem">
+    <strong>パターン:</strong> D問題を解けるかどうかは「BFSで解けるかどうか」にほぼ直結している。BFS系のD問題は全て完了。非BFS系（DP、貪欲最適化、高度なデータ構造）は高確率で未完了。
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- 5. Gaps & Recommendations -->
+<h2>5. ギャップと学習ロードマップ</h2>
+
+<div class="card">
+  <h3>解いていない（＝見えない）問題カテゴリ</h3>
+  <p style="color:var(--text-dim);font-size:0.88rem;margin-bottom:1rem;">手元にあるのは解けた問題だけ。逆に、解けた問題の傾向から「何が足りないか」を推測する。</p>
+
+  <div class="rec-card priority-high">
+    <h3 style="color:var(--red)">優先度: 高 — 動的計画法 (DP)</h3>
+    <p style="font-size:0.88rem;margin-top:0.3rem;">
+      140問中、DPで解いた問題が<strong>ゼロ</strong>。abc340-cのメモ化再帰が唯一のDP的アプローチだが、これは分割統治に近い。
+      ABC-Dで頻出のナップサック、区間DP、桁DPなどの典型問題を体系的に学ぶ必要がある。
+    </p>
+    <p style="font-size:0.82rem;color:var(--text-dim);margin-top:0.5rem;">
+      <strong>おすすめ問題:</strong> Educational DP Contest (EDPC) の A〜F、ABC-Dのdp問題タグ
+    </p>
+  </div>
+
+  <div class="rec-card priority-high">
+    <h3 style="color:var(--red)">優先度: 高 — 尺取り法 / Two Pointers</h3>
+    <p style="font-size:0.88rem;margin-top:0.3rem;">
+      「なんとなくわかるようになった」とのことだが、コード中に明確な尺取り法の実装が見当たらない。
+      abc127の区間の交差（max/min）は近いが、典型的な尺取り法ではない。
+      C問題でも頻出なので、典型問題で手を動かして定着させるとC問題の安定度が上がるはず。
+    </p>
+    <p style="font-size:0.82rem;color:var(--text-dim);margin-top:0.5rem;">
+      <strong>おすすめ問題:</strong> ABC038-D, ABC098-D, ABC130-D, ABC353-C
+    </p>
+  </div>
+
+  <div class="rec-card priority-mid">
+    <h3 style="color:var(--yellow)">優先度: 中 — Union-Find / 素集合データ構造</h3>
+    <p style="font-size:0.88rem;margin-top:0.3rem;">
+      グラフ問題でBFSは使えているが、Union-Findが必要な連結成分系の問題は見当たらない。
+      ABC-Dで頻出の手法。
+    </p>
+  </div>
+
+  <div class="rec-card priority-mid">
+    <h3 style="color:var(--yellow)">優先度: 中 — 二分探索の応用</h3>
+    <p style="font-size:0.88rem;margin-top:0.3rem;">
+      abc809/Cで<code>bsearch_index</code>を使っているので基本は理解している。
+      「答えで二分探索」のパターン（ABC023-Dなど）を身につけると、C/D問題の幅が広がる。
+    </p>
+  </div>
+
+  <div class="rec-card">
+    <h3>優先度: 低 — 計算量の意識</h3>
+    <p style="font-size:0.88rem;margin-top:0.3rem;">
+      abc404/Dの全組み合わせ列挙、arc126-aの全順列など、小さい入力では通るが大きい入力では TLE する可能性がある書き方が散見される。
+      O(N)、O(NlogN)、O(N²)の感覚を身につけると、実装前に方針の良し悪しが判断できるようになる。
+    </p>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- 6. Activity Heatmap -->
+<h2>6. 練習頻度</h2>
+
+<div class="card">
+  <h3>月別の練習状況</h3>
+  <div class="bar-chart">
+    <div class="bar-row">
+      <span class="bar-label">2025/02</span>
+      <div class="bar-track"><div class="bar-fill" style="width:70%;background:var(--green)">3セッション (20+問)</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2025/03</span>
+      <div class="bar-track"><div class="bar-fill" style="width:60%;background:var(--green)">3セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2025/04</span>
+      <div class="bar-track"><div class="bar-fill" style="width:20%;background:var(--yellow)">2セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2025/05</span>
+      <div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--green)">3セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2025/06</span>
+      <div class="bar-track"><div class="bar-fill" style="width:40%;background:var(--yellow)">3セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2025/07</span>
+      <div class="bar-track"><div class="bar-fill" style="width:15%;background:var(--orange)">1セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2025/08</span>
+      <div class="bar-track"><div class="bar-fill" style="width:40%;background:var(--yellow)">3セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2025/09-10</span>
+      <div class="bar-track"><div class="bar-fill" style="width:3%;background:var(--red)">0</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2025/11</span>
+      <div class="bar-track"><div class="bar-fill" style="width:40%;background:var(--yellow)">3セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2025/12</span>
+      <div class="bar-track"><div class="bar-fill" style="width:60%;background:var(--green)">4セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2026/01</span>
+      <div class="bar-track"><div class="bar-fill" style="width:10%;background:var(--red)">1セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2026/02</span>
+      <div class="bar-track"><div class="bar-fill" style="width:20%;background:var(--orange)">2セッション</div></div>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">2026/03</span>
+      <div class="bar-track"><div class="bar-fill" style="width:10%;background:var(--orange)">1セッション</div></div>
+    </div>
+  </div>
+
+  <div class="insight-box warning">
+    <strong>停滞期:</strong> 2025年9〜10月は完全に空白。2026年に入ってからも頻度が低下している。「停滞している」という自覚と一致する。12月の集中期（4セッション）のような短期集中が効果的かもしれない。
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- 7. Summary -->
+<h2>7. まとめ</h2>
+
+<div class="card" style="background: linear-gradient(135deg, var(--surface), var(--surface2));">
+  <h3>強み</h3>
+  <div style="margin:0.8rem 0;font-size:0.9rem;">
+    <span class="tag tag-algo" style="font-size:0.85rem;">BFS完全マスター</span>
+    <span class="tag tag-algo" style="font-size:0.85rem;">Ruby力が高い</span>
+    <span class="tag tag-algo" style="font-size:0.85rem;">Hash活用上手</span>
+    <span class="tag tag-algo" style="font-size:0.85rem;">累積和OK</span>
+    <span class="tag tag-algo" style="font-size:0.85rem;">二分探索の基本OK</span>
+  </div>
+
+  <h3 style="margin-top:1.2rem;">壁を越えるための3ステップ</h3>
+  <div style="margin-top:0.8rem;font-size:0.9rem;">
+    <div style="display:flex;gap:0.8rem;align-items:flex-start;margin-bottom:0.8rem;">
+      <span style="background:var(--red);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">1</span>
+      <div>
+        <strong>Educational DP Contest (EDPC) を A〜F まで解く</strong><br>
+        <span style="color:var(--text-dim);">DPの基本パターン（ナップサック、最長部分列、区間など）を身につける。これだけでD問題の成功率が大幅に上がるはず。</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.8rem;align-items:flex-start;margin-bottom:0.8rem;">
+      <span style="background:var(--yellow);color:#000;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">2</span>
+      <div>
+        <strong>尺取り法の典型問題を5問以上解く</strong><br>
+        <span style="color:var(--text-dim);">C問題の安定度が上がり、「BFS以外のC問題で詰まる」状況が改善される。</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+      <span style="background:var(--accent);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">3</span>
+      <div>
+        <strong>毎週1回ABCに参加する習慣を取り戻す</strong><br>
+        <span style="color:var(--text-dim);">12月の集中期がこれまでで最も成長した時期。頻度が落ちると腕も鈍る。</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="text-align:center;color:var(--text-dim);margin-top:2rem;font-size:0.8rem;">
+  Generated 2026-03-16 &middot; 140 solutions analyzed across 32 sessions
+</p>
+
+</body>
+</html>

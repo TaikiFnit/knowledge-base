@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knowledge Base</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #08080C;
+  --bg-card: #0F0F16;
+  --bg-card-hover: #16161F;
+  --text: #E0DED8;
+  --text-dim: #6E6E80;
+  --text-muted: #3E3E50;
+  --accent: #CC342D;
+  --accent-light: #E8554E;
+  --border: #1A1A28;
+  --green: #34D399;
+  --cyan: #67E8F9;
+  --orange: #FB923C;
+  --purple: #A78BFA;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  padding: 5rem 2rem 3rem;
+  text-align: center;
+  position: relative;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 400px;
+  background: radial-gradient(circle, rgba(204,52,45,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.header-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+.header h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.header h1 .accent {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header-desc {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-top: 1rem;
+  font-weight: 300;
+}
+
+/* Filter tabs */
+.filter-bar {
+  max-width: 720px;
+  margin: 2rem auto 0;
+  padding: 0 2rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.filter-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+.filter-tag:hover, .filter-tag.active {
+  border-color: var(--accent);
+  color: var(--accent-light);
+  background: rgba(204,52,45,0.08);
+}
+
+/* Article list */
+.articles {
+  max-width: 720px;
+  margin: 3rem auto;
+  padding: 0 2rem;
+  display: grid;
+  gap: 1px;
+}
+
+.article-card {
+  display: block;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s;
+}
+.article-card:first-child { border-top: 1px solid var(--border); }
+.article-card:hover { padding-left: 1rem; background: var(--bg-card); }
+
+.article-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+.article-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.article-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+.tag-ruby { background: rgba(204,52,45,0.15); color: var(--accent-light); }
+.tag-analysis { background: rgba(103,232,249,0.1); color: var(--cyan); }
+.tag-guide { background: rgba(52,211,153,0.1); color: var(--green); }
+.tag-research { background: rgba(167,139,250,0.1); color: var(--purple); }
+.tag-tool { background: rgba(251,146,60,0.1); color: var(--orange); }
+.tag-data-engineering { background: rgba(56,189,248,0.1); color: #38BDF8; }
+.tag-learning { background: rgba(250,204,21,0.1); color: #FACC15; }
+.tag-atcoder { background: rgba(52,211,153,0.1); color: var(--green); }
+.tag-python { background: rgba(59,130,246,0.1); color: #3B82F6; }
+.tag-sql { background: rgba(244,114,182,0.1); color: #F472B6; }
+.tag-infra { background: rgba(168,162,158,0.1); color: #A8A29E; }
+
+.article-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 0.3rem;
+}
+.article-desc {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  line-height: 1.6;
+}
+.article-arrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  transition: color 0.2s;
+}
+.article-card:hover .article-arrow { color: var(--accent-light); }
+
+/* Empty state */
+.empty-note {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 3rem 2rem;
+  border-top: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-mono">Personal Knowledge Base</div>
+  <h1>調査 &amp; 分析<span class="accent">レポート</span></h1>
+  <p class="header-desc">競プロ、技術、ツール、その他のナレッジを蓄積していく場所</p>
+</header>
+
+<div class="filter-bar">
+  <button class="filter-tag active" data-tag="all">ALL</button>
+  <button class="filter-tag" data-tag="ruby">Ruby</button>
+  <button class="filter-tag" data-tag="atcoder">AtCoder</button>
+  <button class="filter-tag" data-tag="data-engineering">データエンジニアリング</button>
+  <button class="filter-tag" data-tag="learning">学習</button>
+  <button class="filter-tag" data-tag="guide">ガイド</button>
+  <button class="filter-tag" data-tag="analysis">分析</button>
+  <button class="filter-tag" data-tag="research">リサーチ</button>
+  <button class="filter-tag" data-tag="tool">ツール</button>
+  <button class="filter-tag" data-tag="python">Python</button>
+  <button class="filter-tag" data-tag="sql">SQL</button>
+  <button class="filter-tag" data-tag="infra">インフラ</button>
+</div>
+
+<section class="articles" id="articles">
+
+  <!-- ===== ここに新しい記事を追加 ===== -->
+
+  <a class="article-card" href="articles/atcoder-practice-analysis.html" data-tags="atcoder,ruby,analysis">
+    <div class="article-meta">
+      <span class="article-date">2026-03-28</span>
+      <span class="article-tag tag-atcoder">AtCoder</span>
+      <span class="article-tag tag-ruby">Ruby</span>
+      <span class="article-tag tag-analysis">分析</span>
+    </div>
+    <div class="article-title">AtCoder Practice Analysis — 練習状況の分析レポート</div>
+    <div class="article-desc">AtCoderでの練習状況をデータで可視化。解答数・正答率・難易度別の傾向を分析し、今後の学習方針を考察。</div>
+    <div class="article-arrow">→ 読む</div>
+  </a>
+
+  <a class="article-card" href="articles/ruby-atcoder-guide.html" data-tags="ruby,atcoder,guide">
+    <div class="article-meta">
+      <span class="article-date">2026-03-28</span>
+      <span class="article-tag tag-ruby">Ruby</span>
+      <span class="article-tag tag-guide">ガイド</span>
+    </div>
+    <div class="article-title">競プロRubyの速度限界と高速化の全技法</div>
+    <div class="article-desc">AtCoderでRubyを使い続けるための実践的パフォーマンスガイド。ループ構文、入出力、多倍長整数、アルゴリズム別の対策を網羅。</div>
+    <div class="article-arrow">→ 読む</div>
+  </a>
+
+</section>
+
+<footer class="footer">
+  KNOWLEDGE BASE — CONTINUOUSLY UPDATED
+</footer>
+
+<script>
+document.querySelectorAll('.filter-tag').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tag').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tag = btn.dataset.tag;
+    document.querySelectorAll('.article-card').forEach(card => {
+      if (tag === 'all' || card.dataset.tags.includes(tag)) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  });
+});
+</script>
+
+</body>
+</html>

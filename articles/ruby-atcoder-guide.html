@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>競プロRuby 高速化ガイド</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ruby-red: #CC342D;
+  --ruby-light: #E8554E;
+  --ruby-dark: #8B1A15;
+  --ruby-glow: rgba(204, 52, 45, 0.3);
+  --bg-deep: #0A0A0F;
+  --bg-card: #12121A;
+  --bg-card-hover: #1A1A25;
+  --bg-code: #0D0D14;
+  --text-primary: #E8E6E3;
+  --text-secondary: #8A8A9A;
+  --text-muted: #55556A;
+  --border: #1E1E2E;
+  --green: #50FA7B;
+  --yellow: #F1FA8C;
+  --cyan: #8BE9FD;
+  --orange: #FFB86C;
+  --pink: #FF79C6;
+  --purple: #BD93F9;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.8;
+  overflow-x: hidden;
+}
+
+/* Noise overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding: 2rem;
+  text-align: center;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -20%; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, var(--ruby-glow) 0%, transparent 70%);
+  opacity: 0.4;
+  animation: pulse 6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.5; transform: translateX(-50%) scale(1.1); }
+}
+
+.hero-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--ruby-light);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.2s;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1.1;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.4s;
+}
+
+.hero-title .accent {
+  background: linear-gradient(135deg, var(--ruby-red), var(--ruby-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin-top: 1.5rem;
+  font-weight: 300;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.6s;
+}
+
+.hero-stat-row {
+  display: flex;
+  gap: 3rem;
+  margin-top: 3rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.8s;
+}
+
+.hero-stat {
+  text-align: center;
+}
+
+.hero-stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ruby-light);
+}
+
+.hero-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+}
+
+.scroll-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.2em;
+  animation: bob 2s ease-in-out infinite;
+}
+
+.scroll-hint .arrow {
+  width: 1px; height: 30px;
+  background: linear-gradient(to bottom, var(--text-muted), transparent);
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Navigation */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  overflow-x: auto;
+}
+
+.nav-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0;
+}
+
+.nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 1rem 1.2rem;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.nav a:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--ruby-red);
+}
+
+/* Main content */
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 2rem 6rem;
+}
+
+/* Section */
+.section {
+  margin-top: 5rem;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--ruby-red);
+  letter-spacing: 0.3em;
+  margin-bottom: 0.5rem;
+}
+
+.section-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.section-title .highlight {
+  color: var(--ruby-light);
+}
+
+.prose {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 2;
+  margin-bottom: 1.5rem;
+}
+
+.prose strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Alert boxes */
+.alert {
+  border-left: 3px solid var(--ruby-red);
+  background: linear-gradient(135deg, rgba(204, 52, 45, 0.08), transparent);
+  padding: 1.2rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.alert.green {
+  border-left-color: var(--green);
+  background: linear-gradient(135deg, rgba(80, 250, 123, 0.06), transparent);
+}
+
+.alert.yellow {
+  border-left-color: var(--yellow);
+  background: linear-gradient(135deg, rgba(241, 250, 140, 0.06), transparent);
+}
+
+.alert-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+.alert.green .alert-label { color: var(--green); }
+.alert.yellow .alert-label { color: var(--yellow); }
+.alert .alert-label { color: var(--ruby-light); }
+
+/* Code blocks */
+.code-block {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.code-dot.red { background: #FF5F56; }
+.code-dot.yellow { background: #FFBD2E; }
+.code-dot.green { background: #27C93F; }
+
+.code-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.code-body {
+  padding: 1.2rem 1.5rem;
+  overflow-x: auto;
+}
+
+.code-body pre {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.code-body .kw { color: var(--pink); }
+.code-body .fn { color: var(--green); }
+.code-body .str { color: var(--yellow); }
+.code-body .num { color: var(--purple); }
+.code-body .cm { color: var(--text-muted); font-style: italic; }
+.code-body .var { color: var(--cyan); }
+.code-body .op { color: var(--ruby-light); }
+.code-body .sym { color: var(--orange); }
+
+/* Benchmark table */
+.bench-table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+}
+
+.bench-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.bench-table td {
+  padding: 0.8rem 1rem;
+  font-size: 0.88rem;
+  border-bottom: 1px solid rgba(30, 30, 46, 0.5);
+  color: var(--text-secondary);
+}
+
+.bench-table tr:first-child td {
+  color: var(--green);
+  font-weight: 500;
+}
+
+.bench-table .mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+}
+
+.bar-cell {
+  position: relative;
+}
+
+.bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ruby-red);
+  transition: width 0.6s ease;
+}
+
+.bar.fastest { background: var(--green); }
+
+/* Comparison cards */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 600px) {
+  .compare { grid-template-columns: 1fr; }
+}
+
+.compare-card {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.compare-card.slow { border-color: rgba(255, 85, 85, 0.3); }
+.compare-card.fast { border-color: rgba(80, 250, 123, 0.3); }
+
+.compare-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  padding: 0.6rem 1rem;
+  text-transform: uppercase;
+}
+
+.compare-card.slow .compare-label {
+  color: var(--ruby-light);
+  background: rgba(204, 52, 45, 0.1);
+}
+
+.compare-card.fast .compare-label {
+  color: var(--green);
+  background: rgba(80, 250, 123, 0.08);
+}
+
+.compare-card pre {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.7;
+  padding: 1rem;
+  color: var(--text-secondary);
+  background: var(--bg-code);
+}
+
+/* Rating tier */
+.tier-grid {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1.5rem 0;
+}
+
+.tier {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.tier:hover { background: var(--bg-card-hover); }
+
+.tier-color {
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.tier-color.gray { background: #808080; }
+.tier-color.brown { background: #804000; }
+.tier-color.teal { background: #00C0C0; }
+.tier-color.blue { background: #0000FF; }
+.tier-color.yel { background: #C0C000; }
+
+.tier-name {
+  font-weight: 500;
+  font-size: 0.88rem;
+  min-width: 100px;
+}
+
+.tier-desc {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+/* Checklist */
+.checklist {
+  margin: 2rem 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.check-item:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--ruby-dark);
+}
+
+.check-icon {
+  color: var(--ruby-light);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 3rem 2rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.footer a {
+  color: var(--ruby-light);
+  text-decoration: none;
+}
+
+/* Inline code */
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  background: rgba(204, 52, 45, 0.1);
+  color: var(--ruby-light);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+  margin: 4rem 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-badge">AtCoder × Ruby Performance Guide</div>
+  <h1 class="hero-title">
+    競プロ<span class="accent">Ruby</span>の<br>速度限界と高速化の全技法
+  </h1>
+  <p class="hero-subtitle">
+    C++比10倍のハンデを埋めて戦い抜くための、実践的パフォーマンスガイド
+  </p>
+  <div class="hero-stat-row">
+    <div class="hero-stat">
+      <div class="hero-stat-value">~10×</div>
+      <div class="hero-stat-label">C++との速度差</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">10<sup>7</sup></div>
+      <div class="hero-stat-label">Rubyの実質ステップ上限</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">2s</div>
+      <div class="hero-stat-label">言語補正なし制限時間</div>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    SCROLL
+    <div class="arrow"></div>
+  </div>
+</section>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#env">実行環境</a>
+    <a href="#loop">ループ構文</a>
+    <a href="#io">入出力・文字列・配列</a>
+    <a href="#bignum">多倍長・GC</a>
+    <a href="#algo">アルゴリズム別</a>
+    <a href="#rating">レーティング別</a>
+    <a href="#summary">まとめ</a>
+  </div>
+</nav>
+
+<main class="content">
+
+  <!-- Section 1: Environment -->
+  <section class="section" id="env">
+    <div class="section-number">01</div>
+    <h2 class="section-title">AtCoderの<span class="highlight">Ruby実行環境</span></h2>
+    <p class="prose">
+      AtCoderで現在利用できるRubyは<strong>Ruby 3.2.2（MRI）</strong>で、<code>--jit --yjit-exec-mem-size=128</code>オプション付きで実行される。つまり<strong>YJITが有効</strong>だ。ただし実行時間制限はC++と完全に同一（多くの問題で2秒）であり、言語ごとの補正は一切ない。
+    </p>
+    <div class="alert green">
+      <div class="alert-label">利用可能なライブラリ</div>
+      競プロで重要な<strong>ac-library-rb</strong>（ACLのRuby移植版）が使える。DSU、セグメント木、遅延セグ木、BIT、優先度付きキュー、最大フロー、SCC、2-SATなどを網羅。加えて<strong>rbtree</strong>、<strong>sorted_set</strong>、<strong>numo-narray</strong>も利用可能。
+    </div>
+    <div class="alert yellow">
+      <div class="alert-label">2025年秋の言語アップデート</div>
+      Ruby 3.4への更新に加え、<strong>TruffleRuby</strong>（GraalVMベースのJIT実装）が新規追加予定。MRIより大幅な高速化が見込まれ、「想定解法なのにTLE」の頻度が減る期待がある。
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 2: Loop -->
+  <section class="section" id="loop">
+    <div class="section-number">02</div>
+    <h2 class="section-title">ループ構文の選択が<span class="highlight">生死を分ける</span></h2>
+    <p class="prose">
+      Rubyにおける最大の高速化ポイントは<strong>ループ構文の選択</strong>だ。<code>times</code>、<code>each</code>、<code>for</code>、<code>loop</code>はブロック呼び出しのオーバーヘッドを伴うが、<code>while</code>はブロックを使わないため大幅に速い。
+    </p>
+
+    <table class="bench-table">
+      <thead>
+        <tr>
+          <th>構文</th>
+          <th>実行時間</th>
+          <th style="width:40%">相対速度</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">while</td>
+          <td class="mono">0.031s</td>
+          <td class="bar-cell"><div class="bar fastest" style="width:44%"></div></td>
+        </tr>
+        <tr>
+          <td class="mono">times</td>
+          <td class="mono">0.050s</td>
+          <td class="bar-cell"><div class="bar" style="width:71%"></div></td>
+        </tr>
+        <tr>
+          <td class="mono">each</td>
+          <td class="mono">0.051s</td>
+          <td class="bar-cell"><div class="bar" style="width:73%"></div></td>
+        </tr>
+        <tr>
+          <td class="mono">for</td>
+          <td class="mono">0.054s</td>
+          <td class="bar-cell"><div class="bar" style="width:77%"></div></td>
+        </tr>
+        <tr>
+          <td class="mono">loop</td>
+          <td class="mono">0.070s</td>
+          <td class="bar-cell"><div class="bar" style="width:100%"></div></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="prose">
+      <code>while</code>は<code>loop</code>の<strong>約2倍速</strong>、<code>times</code>の<strong>約1.6倍速</strong>。二重ループの計測ではN=5000のとき<code>for</code>が1002msに対し<code>while</code>は<strong>615ms</strong>で、2秒制限でAC/TLEを分ける決定的な差となる。
+    </p>
+
+    <div class="compare">
+      <div class="compare-card slow">
+        <div class="compare-label">✗ 遅い</div>
+<pre><span class="var">n</span>.<span class="fn">times</span> { |<span class="var">i</span>| <span class="fn">process</span>(<span class="var">i</span>) }</pre>
+      </div>
+      <div class="compare-card fast">
+        <div class="compare-label">✓ 速い</div>
+<pre><span class="var">i</span> = <span class="num">0</span>
+<span class="kw">while</span> <span class="var">i</span> < <span class="var">n</span>
+  <span class="fn">process</span>(<span class="var">i</span>)
+  <span class="var">i</span> += <span class="num">1</span>
+<span class="kw">end</span></pre>
+      </div>
+    </div>
+
+    <div class="alert">
+      <div class="alert-label">目安</div>
+      計算量が10<sup>6</sup>を超えるループではwhileへの書き換えが必須。多重ループで効果は倍増する。
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 3: IO / String / Array -->
+  <section class="section" id="io">
+    <div class="section-number">03</div>
+    <h2 class="section-title">入出力・文字列・配列の<span class="highlight">落とし穴</span></h2>
+
+    <h3 style="font-size:1.1rem; margin:2rem 0 0.8rem; color:var(--orange);">入出力の高速化</h3>
+    <p class="prose">
+      出力関数の選択で<strong>3〜6倍の差</strong>がつく。<code>p</code>が1913msに対し<code>puts</code>は499ms、文字列にためて一括出力すると<strong>308ms</strong>まで短縮される。入力は行ごとの<code>gets</code>より<code>$stdin.read</code>で一括読み込みが高速。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dot red"></div>
+        <div class="code-dot yellow"></div>
+        <div class="code-dot green"></div>
+        <span class="code-label">高速入出力テンプレート</span>
+      </div>
+      <div class="code-body">
+<pre><span class="cm"># 高速入力</span>
+<span class="var">N</span>, <span class="var">M</span>, *<span class="var">AS</span> = <span class="var">$stdin</span>.<span class="fn">read</span>.<span class="fn">split</span>.<span class="fn">map</span>(&<span class="sym">:to_i</span>)
+
+<span class="cm"># 高速出力</span>
+<span class="var">buf</span> = <span class="str">""</span>
+<span class="var">results</span>.<span class="fn">each</span> { |<span class="var">r</span>| <span class="var">buf</span> <span class="op">&lt;&lt;</span> <span class="str">"#{r}\n"</span> }
+<span class="fn">puts</span> <span class="var">buf</span></pre>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem; margin:2rem 0 0.8rem; color:var(--cyan);">文字列 → 数値配列に変換せよ</h3>
+    <p class="prose">
+      文字列の添字アクセスは配列の<strong>約3倍遅い</strong>。重要度★★★★★のテクニックが、<strong>文字列をbytes配列に変換して処理する</strong>方法だ。
+    </p>
+
+    <div class="compare">
+      <div class="compare-card slow">
+        <div class="compare-label">✗ 遅い：文字列のまま</div>
+<pre><span class="var">s</span> = <span class="fn">gets</span>.<span class="fn">chomp</span>
+<span class="var">s</span>[<span class="var">i</span>] == <span class="str">"#"</span></pre>
+      </div>
+      <div class="compare-card fast">
+        <div class="compare-label">✓ 速い：bytes変換</div>
+<pre><span class="var">s</span> = <span class="fn">gets</span>.<span class="fn">chomp</span>.<span class="fn">bytes</span>
+<span class="var">s</span>[<span class="var">i</span>] == <span class="num">35</span>  <span class="cm"># '#'</span></pre>
+      </div>
+    </div>
+
+    <h3 style="font-size:1.1rem; margin:2rem 0 0.8rem; color:var(--pink);">配列操作の罠</h3>
+
+    <div class="compare">
+      <div class="compare-card slow">
+        <div class="compare-label">✗ 一時配列を毎回生成</div>
+<pre><span class="var">ans</span> = [<span class="var">ans</span>, <span class="var">result</span>].<span class="fn">max</span></pre>
+      </div>
+      <div class="compare-card fast">
+        <div class="compare-label">✓ 直接比較</div>
+<pre><span class="var">ans</span> = <span class="var">result</span> <span class="kw">if</span> <span class="var">result</span> > <span class="var">ans</span></pre>
+      </div>
+    </div>
+
+    <p class="prose">
+      BFSのキューは<code>Array#shift</code>ではなく、<strong>インデックス管理方式</strong>が最も安全かつ高速。二次元配列アクセスでは、内側の配列を変数に取り出すだけで<strong>約7%の高速化</strong>が見込める。
+    </p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dot red"></div>
+        <div class="code-dot yellow"></div>
+        <div class="code-dot green"></div>
+        <span class="code-label">BFSキューの正しい実装</span>
+      </div>
+      <div class="code-body">
+<pre><span class="var">queue</span> = [<span class="var">start</span>]
+<span class="var">head</span> = <span class="num">0</span>
+<span class="kw">while</span> <span class="var">head</span> < <span class="var">queue</span>.<span class="fn">size</span>
+  <span class="var">v</span> = <span class="var">queue</span>[<span class="var">head</span>]
+  <span class="var">head</span> += <span class="num">1</span>
+  <span class="cm"># ... queue.push(next_v) で追加</span>
+<span class="kw">end</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 4: Bignum & GC -->
+  <section class="section" id="bignum">
+    <div class="section-number">04</div>
+    <h2 class="section-title">多倍長整数とGCが引き起こす<span class="highlight">見えないTLE</span></h2>
+    <p class="prose">
+      Rubyは整数オーバーフローが起きず自動的にBignum（多倍長整数）に拡張される。安全だが、<strong>Bignumの演算はFixnumより桁違いに遅い</strong>。剰余を取らずに巨大整数を計算し続けるとTLE/MLEの原因になる。
+    </p>
+
+    <div class="compare">
+      <div class="compare-card slow">
+        <div class="compare-label">✗ 致命的に遅い</div>
+<pre><span class="var">power</span> = (<span class="var">i</span> ** <span class="var">j</span>) % <span class="var">MOD</span></pre>
+      </div>
+      <div class="compare-card fast">
+        <div class="compare-label">✓ 組み込み繰り返し二乗法</div>
+<pre><span class="var">power</span> = <span class="var">i</span>.<span class="fn">pow</span>(<span class="var">j</span>, <span class="var">MOD</span>)</pre>
+      </div>
+    </div>
+
+    <p class="prose">
+      <code>Integer#pow(exp, mod)</code>は内部でC実装の繰り返し二乗法を使うため、自前実装より圧倒的に速い。この差は「計算不能 vs 一瞬」レベル。
+    </p>
+
+    <div class="alert green">
+      <div class="alert-label">frozen_string_literal</div>
+      ファイル先頭に<code># frozen_string_literal: true</code>を記述すると、文字列リテラルが再利用され<strong>GC圧力が大幅に減少</strong>する。<code>puts "Yes"</code>を100万回実行で289ms → <strong>213ms</strong>へ改善。
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 5: Algorithm-specific -->
+  <section class="section" id="algo">
+    <div class="section-number">05</div>
+    <h2 class="section-title">C++では余裕だがRubyで<span class="highlight">TLEになる</span>パターン</h2>
+
+    <h3 style="font-size:1.05rem; margin:2rem 0 0.5rem; color:var(--orange);">ダイクストラ法 / 優先度付きキュー</h3>
+    <p class="prose">
+      Rubyの標準ライブラリには優先度付きキューがない。毎回<code>sort</code>して最小値を取り出す実装は壊滅的に遅い。<strong>ac-library-rbのPriorityQueue</strong>を使うか、辺の重みが少数種類なら01-BFSで優先キューごと回避する。
+    </p>
+
+    <h3 style="font-size:1.05rem; margin:2rem 0 0.5rem; color:var(--cyan);">セグメント木 / BIT</h3>
+    <p class="prose">
+      再帰型は非再帰型より遅い（メソッド呼び出しオーバーヘッド）。非再帰型またはac-library-rbのSegtreeを使うべき。BITで済む場面ならBITの方が定数倍が軽い。
+    </p>
+
+    <h3 style="font-size:1.05rem; margin:2rem 0 0.5rem; color:var(--pink);">2次元DPとO(N²)解法</h3>
+    <div class="alert">
+      <div class="alert-label">重要</div>
+      <strong>N≤5000のO(N²)解法はRubyではほぼ通らない。</strong>N=2000のN²=4×10⁶がwhileでギリギリ。配列初期化も<code>Array.new(n, 0)</code>はブロック付きの<strong>10倍速</strong>。2次元配列を1次元にフラット化し、MOD演算でBignumを回避する工夫が必要。
+    </div>
+
+    <h3 style="font-size:1.05rem; margin:2rem 0 0.5rem; color:var(--purple);">Union-Find / BFS / DFS</h3>
+    <p class="prose">
+      再帰DFSはメソッド呼び出しオーバーヘッド＋スタック制限の二重苦。<strong>明示的スタックによる非再帰化</strong>が鉄則。Union-Findの経路圧縮もwhileループで実装すべき。
+    </p>
+
+    <h3 style="font-size:1.05rem; margin:2rem 0 0.5rem; color:var(--yellow);">O(N√N) 以上は実質不可能</h3>
+    <p class="prose">
+      N=10⁵でN√N≈3×10⁷はRubyの実質上限を超える。logを1つ落とせないか（二分探索→しゃくとり法など）検討する価値がある。
+    </p>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 6: Rating tiers -->
+  <section class="section" id="rating">
+    <div class="section-number">06</div>
+    <h2 class="section-title">レーティング帯別の<span class="highlight">Ruby適性</span></h2>
+
+    <div class="tier-grid">
+      <div class="tier">
+        <div class="tier-color gray"></div>
+        <div class="tier-name">灰〜茶色</div>
+        <div class="tier-desc">全く問題なし。便利メソッド群（gcd, bsearch, pow）はむしろ有利</div>
+      </div>
+      <div class="tier">
+        <div class="tier-color teal"></div>
+        <div class="tier-name">緑〜水色</div>
+        <div class="tier-desc">一部TLEが出始めるが、定数倍高速化テクニックで対処可能</div>
+      </div>
+      <div class="tier">
+        <div class="tier-color blue"></div>
+        <div class="tier-name">青</div>
+        <div class="tier-desc">RubyのみではACできない問題が増加。Crystal/C++の併用を推奨</div>
+      </div>
+      <div class="tier">
+        <div class="tier-color yel"></div>
+        <div class="tier-name">黄色以上</div>
+        <div class="tier-desc">Rubyのみでは極めて厳しい</div>
+      </div>
+    </div>
+
+    <div class="alert yellow">
+      <div class="alert-label">Crystalという選択肢</div>
+      「Fast as C, Slick as Ruby」を掲げるCrystalは、Rubyとほぼ同じ文法でC言語並みの速度を実現。kona0001氏（青コーダー）は「約30問解けば慣れる」と報告。ただし多倍長整数がなく、型指定・Nilチェックが必要。
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 7: Summary -->
+  <section class="section" id="summary">
+    <div class="section-number">07</div>
+    <h2 class="section-title"><span class="highlight">チェックリスト</span></h2>
+    <p class="prose">
+      提出前に確認すべき最重要テクニック。これらを徹底すればC++比10倍のハンデを相当程度埋められる。
+    </p>
+
+    <div class="checklist">
+      <div class="check-item">
+        <span class="check-icon">❶</span>
+        <span>計算量10⁶超のループを<strong>while</strong>に書き換えたか</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">❷</span>
+        <span>入力は<code>$stdin.read</code>で一括読み込みしているか</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">❸</span>
+        <span>文字列を<code>.bytes</code>で数値配列に変換しているか</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">❹</span>
+        <span>MOD演算をこまめに行い<strong>Bignum</strong>を回避しているか</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">❺</span>
+        <span>データ構造は<strong>ac-library-rb</strong>を活用しているか</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">❻</span>
+        <span>再帰DFSを<strong>明示的スタック</strong>の非再帰に書き換えたか</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">❼</span>
+        <span><code>[x,y].min/max</code>をif文の直接比較に置き換えたか</span>
+      </div>
+      <div class="check-item">
+        <span class="check-icon">❽</span>
+        <span>BFSキューをインデックス管理方式にしているか</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>参考：<a href="https://zenn.dev/universato/articles/20201210-z-ruby" target="_blank">universato氏 Ruby競プロTips 108</a> ／ <a href="https://kona0001.hatenablog.com/entry/2021/06/07/170343" target="_blank">kona0001氏 定数倍高速化手法</a> ／ <a href="https://github.com/universato/ac-library-rb" target="_blank">ac-library-rb</a></p>
+</footer>
+
+</body>
+</html>
