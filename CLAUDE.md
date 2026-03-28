@@ -16,7 +16,8 @@
 
 ```
 knowledge-base/
-├── CLAUDE.md              # このファイル（エージェント向け仕様）
+├── CLAUDE.md              # エージェント向け仕様（正本）
+├── agents.md              # CLAUDE.md へのシンボリックリンク
 ├── README.md              # プロジェクト説明
 ├── index.html             # トップページ（記事一覧 + タグフィルター）
 ├── articles/              # 各記事（1記事 = 1 HTML + 任意で .md）
@@ -25,6 +26,13 @@ knowledge-base/
 │   └── atcoder-practice-analysis.html
 └── vercel.json            # Vercel設定
 ```
+
+## エージェント仕様ファイルの運用
+
+- **正本**: `CLAUDE.md` — 仕様の編集は必ずこちらに対して行う
+- **シンボリックリンク**: `agents.md -> CLAUDE.md` — Claude以外のエージェント（Gemini、GPT、Cursor、Devin等）が参照するためのエイリアス
+- 今後特定エージェント用のファイル名規約が増えた場合は、同様にCLAUDE.mdへのシンボリックリンクを追加する（例: `AGENTS.md`, `COPILOT.md` 等）
+- **絶対に内容をコピーして複数ファイルで管理しないこと**（内容が乖離する原因になる）
 
 ## デザイン仕様
 
@@ -79,7 +87,9 @@ knowledge-base/
 - トップへ戻るリンクを含める: `<a href="../index.html">← トップに戻る</a>`
 - Markdown版（.md）も同ディレクトリに配置（推奨）
 
-### 2. index.html に記事カードを追加
+### 2. index.html に記事カードを追加（必須）
+
+**記事ファイルを追加したら、必ずindex.htmlにもカードを追加すること。index.htmlが未更新の記事はサイト上で発見できない。**
 
 `<!-- ===== ここに新しい記事を追加 ===== -->` コメントの**直後**に追加（新着順）。
 
