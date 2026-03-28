@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apache Spark 徹底入門 — 分散処理エンジンの原理と実践</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #38BDF8;
+            --accent-light: #7DD3FC;
+            --accent-dark: #0284C7;
+            --accent-glow: rgba(56, 189, 248, 0.25);
+            --bg-deep: #060B14;
+            --bg-card: #0D1421;
+            --bg-code: #080E1A;
+            --text-primary: #E8EDF3;
+            --text-secondary: #8A9AB8;
+            --text-muted: #4A5A75;
+            --border: #172035;
+            --green: #34D399;
+            --yellow: #FBBF24;
+            --cyan: #67E8F9;
+            --orange: #FB923C;
+            --purple: #A78BFA;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Grid background pattern */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(90deg, var(--border) 1px, transparent 1px),
+                linear-gradient(0deg, var(--border) 1px, transparent 1px);
+            background-size: 80px 80px;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.3;
+        }
+
+        /* Noise overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' seed='1'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        main {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 40px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            animation: fadeUp 0.8s ease-out;
+        }
+
+        .hero-eyebrow {
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-meta {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .hero-meta-item {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .stat-box {
+            background-color: rgba(13, 20, 33, 0.8);
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: 8px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Sticky Navigation */
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            background-color: rgba(6, 11, 20, 0.95);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            overflow-x: auto;
+        }
+
+        .sticky-nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+            white-space: nowrap;
+        }
+
+        .sticky-nav a:hover {
+            color: var(--accent);
+        }
+
+        .sticky-nav-home {
+            color: var(--accent);
+            font-weight: 600;
+            margin-right: 16px;
+            border-right: 1px solid var(--border);
+            padding-right: 16px;
+        }
+
+        /* Content Layout */
+        .content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+
+        .section {
+            margin-bottom: 80px;
+            animation: fadeUp 0.8s ease-out forwards;
+            opacity: 0;
+        }
+
+        .section:nth-child(1) { animation-delay: 0.1s; }
+        .section:nth-child(2) { animation-delay: 0.2s; }
+        .section:nth-child(3) { animation-delay: 0.3s; }
+        .section:nth-child(4) { animation-delay: 0.4s; }
+        .section:nth-child(5) { animation-delay: 0.5s; }
+        .section:nth-child(6) { animation-delay: 0.6s; }
+        .section:nth-child(7) { animation-delay: 0.7s; }
+        .section:nth-child(8) { animation-delay: 0.8s; }
+        .section:nth-child(9) { animation-delay: 0.9s; }
+        .section:nth-child(10) { animation-delay: 1.0s; }
+
+        .section-number {
+            display: inline-block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .section-title {
+            font-size: 2.3rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        .section-subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 28px;
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 18px;
+            color: var(--text-primary);
+        }
+
+        ul, ol {
+            margin-left: 24px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 14px;
+            color: var(--text-primary);
+        }
+
+        strong {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        em {
+            color: var(--cyan);
+            font-style: italic;
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        code {
+            color: var(--cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        pre code {
+            color: var(--text-primary);
+        }
+
+        /* Inline code */
+        p code, li code {
+            background-color: rgba(56, 189, 248, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--cyan);
+        }
+
+        /* Alert Boxes */
+        .alert {
+            border-left: 4px solid;
+            padding: 20px;
+            margin-bottom: 24px;
+            border-radius: 6px;
+            background-color: rgba(13, 20, 33, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .alert-green {
+            border-left-color: var(--green);
+            background-color: rgba(52, 211, 153, 0.08);
+        }
+
+        .alert-green strong {
+            color: var(--green);
+        }
+
+        .alert-yellow {
+            border-left-color: var(--yellow);
+            background-color: rgba(251, 191, 36, 0.08);
+        }
+
+        .alert-yellow strong {
+            color: var(--yellow);
+        }
+
+        .alert-orange {
+            border-left-color: var(--orange);
+            background-color: rgba(251, 146, 60, 0.08);
+        }
+
+        .alert-orange strong {
+            color: var(--orange);
+        }
+
+        .alert-cyan {
+            border-left-color: var(--cyan);
+            background-color: rgba(103, 232, 249, 0.08);
+        }
+
+        .alert-cyan strong {
+            color: var(--cyan);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            background-color: rgba(13, 20, 33, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        th {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-bottom: 2px solid var(--border);
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: rgba(56, 189, 248, 0.05);
+        }
+
+        /* References */
+        .references {
+            background-color: rgba(13, 20, 33, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 60px;
+            backdrop-filter: blur(10px);
+        }
+
+        .references h3 {
+            font-size: 1.4rem;
+            margin-bottom: 16px;
+            color: var(--accent-light);
+        }
+
+        .references ul {
+            margin-left: 0;
+        }
+
+        .references li {
+            margin-bottom: 12px;
+        }
+
+        .references a {
+            color: var(--cyan);
+            text-decoration: none;
+            word-break: break-word;
+        }
+
+        .references a:hover {
+            color: var(--accent-light);
+            text-decoration: underline;
+        }
+
+        /* Architecture Diagram Placeholder */
+        .diagram {
+            background-color: rgba(13, 20, 33, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Back to Top Button */
+        .back-to-top {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            width: 50px;
+            height: 50px;
+            background-color: var(--accent);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+            transition: all 0.3s;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        .back-to-top:hover {
+            background-color: var(--accent-light);
+            transform: translateY(-4px);
+            box-shadow: 0 6px 16px rgba(56, 189, 248, 0.4);
+        }
+
+        .back-to-top.show {
+            display: flex;
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 60px 24px;
+            }
+
+            .hero-title {
+                font-size: 2.2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .sticky-nav {
+                flex-wrap: wrap;
+                padding: 12px 20px;
+                gap: 16px;
+            }
+
+            .content {
+                padding: 40px 24px;
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .back-to-top {
+                bottom: 20px;
+                right: 20px;
+                width: 45px;
+                height: 45px;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-eyebrow">STUDY NOTES / O'REILLY LEARNING SPARK</div>
+            <h1 class="hero-title">Apache Spark 徹底入門</h1>
+            <p class="hero-subtitle">O'Reilly Learning Spark 学習ノート — アーキテクチャからクエリ最適化、データレイクまで</p>
+            <div class="hero-meta">
+                <div class="hero-meta-item"><strong>分散処理エンジン</strong> Apache Spark の原理と実践</div>
+                <div class="hero-meta-item"><strong>作成日:</strong> 2025年02月15日</div>
+            </div>
+            <div class="hero-stats">
+                <div class="stat-box">
+                    <div class="stat-value">YARN/K8s</div>
+                    <div class="stat-label">デプロイモード</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">Catalyst</div>
+                    <div class="stat-label">クエリオプティマイザ</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">DataFrame</div>
+                    <div class="stat-label">統合API</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sticky Navigation -->
+        <nav class="sticky-nav">
+            <a href="../index.html" class="sticky-nav-home">← トップに戻る</a>
+            <a href="#section-01">歴史と位置づけ</a>
+            <a href="#section-02">アーキテクチャ</a>
+            <a href="#section-03">Structured API</a>
+            <a href="#section-04">Catalyst最適化</a>
+            <a href="#section-05">Transformation</a>
+            <a href="#section-06">データソース</a>
+            <a href="#section-07">クエリ最適化</a>
+            <a href="#section-08">Open Table Format</a>
+            <a href="#section-09">Databricks対応</a>
+            <a href="#section-10">デプロイモード</a>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- Section 01 -->
+            <section class="section" id="section-01">
+                <div class="section-number">01</div>
+                <h2 class="section-title">Sparkの歴史と位置づけ</h2>
+                <p>Apache Sparkは、Hadoopエコシステムの分散処理エンジンの統一化という課題から生まれました。2000年代中盤、Hadoop + MapReduceは大規模データ処理の標準でしたが、その後、複数の最適化エンジンが乱立します。</p>
+                <ul>
+                    <li><strong>Hive</strong> — MapReduceを使用したSQLレイヤー（低速）</li>
+                    <li><strong>Impala</strong> — C++での直接実装（高速だが複雑）</li>
+                    <li><strong>Presto</strong> — インタラクティブクエリエンジン</li>
+                    <li><strong>Tez</strong> — 改善されたDAGエンジン</li>
+                </ul>
+                <p>各エンジンが異なるAPIとメタデータ形式を持つため、統合への課題がありました。そこで<strong>Spark（2011年、UC Berkeleyで開発）</strong が登場し、以下の革新をもたらしました：</p>
+                <ul>
+                    <li><strong>統一API</strong> — RDD、DataFrame、SQL、MLlib、Streaming が共存</li>
+                    <li><strong>メモリ内処理</strong> — 中間結果をメモリに保持、ディスク I/O削減</li>
+                    <li><strong>ストレージの分離</strong> — HDFS、S3など複数のストレージに対応</li>
+                    <li><strong>複数デプロイモード対応</strong> — Standalone、YARN、Kubernetes</li>
+                </ul>
+                <p>重要な点として、<strong>Spark は Hadoop の一部ではなく、独立した計算エンジン</strong>です。HDFS等のストレージレイヤーとは分離されており、Spark 自体はストレージに関知しません。</p>
+                <p>現在のSparkエコシステム（2025年）：</p>
+                <ul>
+                    <li><strong>Spark SQL</strong> — ANSI SQL:2003準拠、Catalyst最適化</li>
+                    <li><strong>MLlib</strong> — 分散機械学習ライブラリ</li>
+                    <li><strong>Structured Streaming</strong> — イベント駆動型ストリーム処理</li>
+                    <li><strong>GraphX</strong> — グラフ処理フレームワーク</li>
+                </ul>
+                <p><strong>Databricks</strong（Spark創設者によって2013年設立）がマネージドSaaSを提供し、Spark 実装の商用化を実現しています。</p>
+            </section>
+
+            <!-- Section 02 -->
+            <section class="section" id="section-02">
+                <div class="section-number">02</div>
+                <h2 class="section-title">アーキテクチャの全体像</h2>
+                <p>Sparkアプリケーションは <strong>Driver-Executor 分散アーキテクチャ</strong> を採用しています。</p>
+
+                <h3 class="section-subtitle">コアコンポーネント</h3>
+                <p><strong>Driver プロセス</strong></p>
+                <ul>
+                    <li>ユーザーコード（main()メソッド）が実行されるJVM プロセス</li>
+                    <li>Spark SQL/DataFrameコードを <strong>DAG（有向非巡回グラフ）</strong> に変換</li>
+                    <li>Executorへのタスク配分、実行監視、結果集約</li>
+                    <li>Spark UI（ポート4040）でリアルタイム実行状況を提供</li>
+                </ul>
+                <p><strong>Executor プロセス</strong></p>
+                <ul>
+                    <li>ワーカーノードで実行されるJVM プロセス（通常 1ノード = 1 Executor）</li>
+                    <li>割り当てられたメモリとコアで並列タスク実行</li>
+                    <li>アプリケーション終了まで生存（動的割り当て有効時は異なる）</li>
+                </ul>
+                <p><strong>Cluster Manager</strong></p>
+                <ul>
+                    <li>リソース管理とスケジューリング</li>
+                    <li>YARN（Hadoop）、Kubernetes、Standalone、Databricks Managed</li>
+                </ul>
+                <p><strong>SparkSession</strong></p>
+                <ul>
+                    <li>Spark 2.0以降で導入された統一エントリーポイント</li>
+                    <li>従来の SparkContext、SQLContext、HiveContext を統合</li>
+                    <li>DataFrame/SQL API への唯一のアクセス手段</li>
+                </ul>
+
+                <h3 class="section-subtitle">アーキテクチャ図</h3>
+                <div class="diagram">
+┌─────────────────────────────────────────────────────┐<br>
+│                    Driver Node                       │<br>
+│  ┌──────────────────────────────────────────────┐  │<br>
+│  │          SparkSession / SparkContext         │  │<br>
+│  │    - DAG生成                                  │  │<br>
+│  │    - タスク配分                               │  │<br>
+│  │    - 結果収集                                 │  │<br>
+│  └──────────────────────────────────────────────┘  │<br>
+└──────────────────────┬────────────────────────────┘<br>
+           │<br>
+      [Cluster Manager]<br>
+      YARN / K8s / Standalone<br>
+           │<br>
+     ┌─────┴──────┬─────────┐<br>
+     ▼            ▼         ▼<br>
+┌─────────┐ ┌──────────┐ ┌──────────┐<br>
+│Executor1│ │ Executor2│ │ Executor3│<br>
+│  Cache  │ │  Cache   │ │  Cache   │<br>
+│  Tasks  │ │  Tasks   │ │  Tasks   │<br>
+└─────────┘ └──────────┘ └──────────┘
+                </div>
+
+                <h3 class="section-subtitle">実行フロー例</h3>
+                <pre><code># Python/PySpark での例
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder \
+    .appName("WordCount") \
+    .master("spark://master:7077") \
+    .getOrCreate()
+
+# Transformations（遅延評価）
+df = spark.read.text("data.txt")
+words = df.select(explode(split(col("value"), " "))) \
+    .groupBy("col").count()
+
+# Action（実行トリガー）
+words.show()  # ここでDAG実行開始
+        </code></pre>
+            </section>
+
+            <!-- Section 03 -->
+            <section class="section" id="section-03">
+                <div class="section-number">03</div>
+                <h2 class="section-title">Structured API — DataFrame、Dataset、RDD</h2>
+                <p>Spark の API レイヤーは、段階的な進化を遂げています。RDD → DataFrame → Dataset という階層構造で、抽象度と最適化レベルが向上します。</p>
+
+                <h3 class="section-subtitle">RDD（Resilient Distributed Dataset）時代の課題</h3>
+                <ul>
+                    <li>汎用的だが、Spark内部が最適化できない（ユーザーコード任せ）</li>
+                    <li><code>Iterator[T]</code> のため列指定不可、スキーマなし</li>
+                    <li>シャッフル時のメモリ効率が低い</li>
+                </ul>
+
+                <h3 class="section-subtitle">DataFrame — 名前付き列とスキーマの統合</h3>
+                <p><strong>Pandas DataFrameに類似した設計ですが、分散</strong>。</p>
+                <ul>
+                    <li>名前付き列を持つ、スキーマ定義済みの分散テーブル</li>
+                    <li>Spark内部（Catalyst最適化）が列構造を把握できる</li>
+                    <li>SQL と Python/Scala/Java/R の統一API</li>
+                    <li><strong>Python、R ユーザーの主な選択肢</strong>（Dataset はJava/Scala向け）</li>
+                </ul>
+
+                <h3 class="section-subtitle">Dataset — 型安全なAPI</h3>
+                <ul>
+                    <li>Scala と Java でのみ利用可（Python不可）</li>
+                    <li>コンパイル時の型チェック + DataFrame の最適化</li>
+                    <li>大規模統型データ処理に向く（例：ケースクラスの集合）</li>
+                </ul>
+
+                <h3 class="section-subtitle">スキーマ定義の2つの方法</h3>
+                <pre><code># 方法1：プログラム的定義（StructType）
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+
+schema = StructType([
+    StructField("name", StringType()),
+    StructField("age", IntegerType()),
+    StructField("city", StringType())
+])
+
+df = spark.read.schema(schema).json("data.json")
+
+# 方法2：DDL 文字列（簡潔）
+schema_ddl = "name STRING, age INT, city STRING"
+df = spark.read.schema(schema_ddl).json("data.json")
+
+# 方法3：推論（小データ向け）
+df = spark.read.option("inferSchema", "true").json("data.json")
+        </code></pre>
+
+                <h3 class="section-subtitle">API の選択基準</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>言語</th>
+                            <th>推奨API</th>
+                            <th>理由</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Python / R</td>
+                            <td>DataFrame</td>
+                            <td>Dataset非サポート、Catalyst最適化恩恵大</td>
+                        </tr>
+                        <tr>
+                            <td>Scala / Java</td>
+                            <td>Dataset</td>
+                            <td>型安全性 + Catalyst + パフォーマンス</td>
+                        </tr>
+                        <tr>
+                            <td>カスタム処理</td>
+                            <td>RDD</td>
+                            <td>通常不要、特殊ケースのみ</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Section 04 -->
+            <section class="section" id="section-04">
+                <div class="section-number">04</div>
+                <h2 class="section-title">Spark SQL エンジンと Catalyst オプティマイザ</h2>
+                <p>Spark SQL は<strong>ANSI SQL:2003準拠</strong>の SQL エンジンであり、その核心は Catalyst オプティマイザです。</p>
+
+                <h3 class="section-subtitle">4フェーズのクエリプラン生成</h3>
+                <ol>
+                    <li><strong>解析（Analysis）</strong> — SQL を解析、テーブル・列名をカタログで検証、スキーマ解決</li>
+                    <li><strong>論理最適化（Logical Optimization）</strong> — 規則ベースの変換（述語押し下げ、列刈り込み）</li>
+                    <li><strong>物理計画（Physical Planning）</strong> — 複数の物理プラン生成、コストベース最適化で選択</li>
+                    <li><strong>コード生成（Code Generation）</strong> — Tungsten による whole-stage Java code generation</li>
+                </ol>
+
+                <h3 class="section-subtitle">Catalyst の最適化ルール</h3>
+                <ul>
+                    <li><strong>述語押し下げ（Predicate Pushdown）</strong> — フィルタ条件をデータソース直前に移動、不要データ早期除外</li>
+                    <li><strong>列刈り込み（Column Pruning）</strong> — SELECT で使用されない列を読み込み対象から除外</li>
+                    <li><strong>定数畳み込み（Constant Folding）</strong> — <code>1 + 2</code> を実行時ではなくコンパイル時に <code>3</code> に</li>
+                    <li><strong>ブール式簡略化（Boolean Simplification）</strong> — <code>a OR a</code> を <code>a</code> に</li>
+                    <li><strong>コスト最適化（CBO）</strong> — テーブル統計情報（行数、列の分布）を基に JOIN 順序最適化</li>
+                </ul>
+
+                <h3 class="section-subtitle">Tungsten — Whole-Stage Code Generation</h3>
+                <p>従来の Spark では各 operator（filter、join等）が個別に呼び出され、中間オブジェクト生成が多発していました。</p>
+                <pre><code>// 従来：複数の operator が独立実行
+result = []
+for row in data:
+    if row.age > 30:           # filter operator
+        result.append(row)
+for row in result:
+    output.append(row.name)    # select operator
+
+// Tungsten: 単一の最適化関数へ融合
+def fused_function(data):
+    for row in data:
+        if row.age > 30:
+            yield row.name     # 中間リスト不生成
+        </code></pre>
+
+                <p><strong>利点：</strong></p>
+                <ul>
+                    <li>仮想関数呼び出し（virtual call overhead）の削減</li>
+                    <li>CPU キャッシュ効率向上、レジスタ活用</li>
+                    <li>中間オブジェクトのメモリ割り当て削減</li>
+                    <li>Spark 2.0 以降、デフォルト有効（<code>spark.sql.codegen.wholeStage</code>）</li>
+                </ul>
+
+                <h3 class="section-subtitle">実行計画の確認</h3>
+                <pre><code># explain() でプラン確認
+df.select("name", "age").filter(col("age") > 30).explain(True)
+
+# 出力例：
+# == Parsed Logical Plan ==
+# Filter (age#5 > 30)
+# +- Project [name#4, age#5]
+#    +- Relation [name#4, age#5]
+#
+# == Optimized Logical Plan ==
+# Project [name#4]
+# +- Filter (age#5 > 30)
+#    +- Relation [name#4, age#5]
+#
+# == Physical Plan ==
+# *(1) Project [name#4]
+# +- *(1) Filter (age#5 > 30)
+#    +- *(1) Scan parquet[name#4,age#5]
+        </code></pre>
+            </section>
+
+            <!-- Section 05 -->
+            <section class="section" id="section-05">
+                <div class="section-number">05</div>
+                <h2 class="section-title">Transformation と Action — 遅延評価の仕組み</h2>
+
+                <h3 class="section-subtitle">遅延評価（Lazy Evaluation）</h3>
+                <p>Spark の重要な設計思想：<strong>Transformation（変換）は遅延評価され、Action（アクション）が呼ばれるまで実行されない</strong>。</p>
+
+                <h3 class="section-subtitle">Transformation（遅延評価）</h3>
+                <ul>
+                    <li><code>select()、filter()、map()、join()、groupBy()、union()</code> など</li>
+                    <li>新しい DataFrame/RDD を返すが、実際には計算しない</li>
+                    <li>DAG にステップを追加するだけ</li>
+                </ul>
+
+                <h3 class="section-subtitle">Action（即時実行）</h3>
+                <ul>
+                    <li><code>show()、collect()、count()、write()、take()、first()</code> など</li>
+                    <li>呼び出された瞬間にDAG 実行開始</li>
+                    <li>結果をメモリ或いはストレージに具現化</li>
+                </ul>
+
+                <h3 class="section-subtitle">Narrow vs Wide Transformation</h3>
+                <p><strong>Narrow Transformation</strong>（狭い依存）：各出力パーティションが1つの入力パーティションに依存。</p>
+                <ul>
+                    <li><code>filter()、select()、flatMap()、map()</code></li>
+                    <li>シャッフルなし、単一ステージで処理</li>
+                    <li>ノード間のデータ移動なし</li>
+                </ul>
+
+                <p><strong>Wide Transformation</strong>（広い依存）：各出力パーティションが複数の入力パーティションに依存。</p>
+                <ul>
+                    <li><code>groupBy()、reduceByKey()、join()、distinct()、repartition()</code></li>
+                    <li>シャッフル必須（ネットワーク・ディスク I/O 発生）</li>
+                    <li>各 wide transformation でステージ区切り</li>
+                </ul>
+
+                <div class="alert alert-yellow">
+                    <p><strong>性能最適化のポイント：</strong> Wide transformation は避けられない場合が多いですが、データスキューに注意。Spark 3.x の AQE（Adaptive Query Execution）は skewed joins を自動検出・最適化します。</p>
+                </div>
+
+                <h3 class="section-subtitle">Partition と並列度</h3>
+                <p><strong>Partition</strong>：データの物理的分散単位。1パーティション = 1Executor 内の1タスク処理。</p>
+                <ul>
+                    <li>並列度 = パーティション数（コア数 ≥ パーティション数のとき）</li>
+                    <li>パーティション数 < コア数 → 処理スロット遊び
+                    <li>パーティション数 >> コア数 → タスク起動オーバーヘッド増加</li>
+                </ul>
+
+                <h3 class="section-subtitle">repartition() vs coalesce()</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>関数</th>
+                            <th>用途</th>
+                            <th>シャッフル</th>
+                            <th>用例</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>repartition(n)</code></td>
+                            <td>増減（パーティション数変更）</td>
+                            <td>有</td>
+                            <td>4 → 16、8 → 3 パーティション</td>
+                        </tr>
+                        <tr>
+                            <td><code>coalesce(n)</code></td>
+                            <td>削減（パーティション統合）</td>
+                            <td>無</td>
+                            <td>1000 → 100（最終出力前）</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <pre><code># 最適なパーティション計算
+# 規則：1パーティション当たり 100MB～1GB
+file_size_mb = 500
+target_partition_mb = 200
+optimal_partitions = max(1, file_size_mb // target_partition_mb)
+
+df = spark.read.parquet("large_file")
+df_repart = df.repartition(optimal_partitions)
+        </code></pre>
+            </section>
+
+            <!-- Section 06 -->
+            <section class="section" id="section-06">
+                <div class="section-number">06</div>
+                <h2 class="section-title">データソースと I/O</h2>
+
+                <h3 class="section-subtitle">DataFrameReader/Writer API</h3>
+                <p>Spark の I/O は統一された API で複数フォーマット対応：</p>
+
+                <h3 class="section-subtitle">一般的なフォーマット</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>フォーマット</th>
+                            <th>圧縮</th>
+                            <th>スキーマ推論</th>
+                            <th>用途</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>Parquet</code></td>
+                            <td>Snappy（デフォルト）</td>
+                            <td>あり</td>
+                            <td>分析用、推奨デフォルト</td>
+                        </tr>
+                        <tr>
+                            <td><code>ORC</code></td>
+                            <td>ZSTD、GZIP</td>
+                            <td>あり</td>
+                            <td>Hive互換、高圧縮</td>
+                        </tr>
+                        <tr>
+                            <td><code>JSON</code></td>
+                            <td>GZIP</td>
+                            <td>あり</td>
+                            <td>スキーマ緩い、遅い</td>
+                        </tr>
+                        <tr>
+                            <td><code>CSV</code></td>
+                            <td>GZIP</td>
+                            <td>あり</td>
+                            <td>トランザクション源</td>
+                        </tr>
+                        <tr>
+                            <td><code>Avro</code></td>
+                            <td>snappy</td>
+                            <td>スキーマ埋込</td>
+                            <td>ストリーム、スキーマ進化</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="section-subtitle">読み込み・書き込み例</h3>
+                <pre><code># 読み込み
+df = spark.read \
+    .format("parquet") \
+    .option("mergeSchema", "true") \
+    .load("s3://bucket/path/")
+
+# 書き込み
+df.write \
+    .mode("overwrite") \
+    .format("parquet") \
+    .option("compression", "snappy") \
+    .save("s3://bucket/output/")
+
+# テーブル化（SQL利用可能化）
+df.write.mode("overwrite").saveAsTable("my_table")
+        </code></pre>
+
+                <h3 class="section-subtitle">Managed vs Unmanaged テーブル</h3>
+                <ul>
+                    <li><strong>Managed</strong>：データとメタデータが Spark Warehouse に保存</li>
+                    <li><strong>Unmanaged（External）</strong>：メタデータは Spark、データはユーザー指定パス</li>
+                </ul>
+
+                <h3 class="section-subtitle">キャッシング（メモリ最適化）</h3>
+                <pre><code># 頻出 DataFrame をメモリ段階保存
+df_hot = spark.read.parquet("frequently_accessed_table")
+df_hot.cache()  # MEMORY_AND_DISK がデフォルト
+df_hot.count()  # キャッシュ実行トリガー
+
+# SQL でキャッシング
+spark.sql("CACHE LAZY TABLE my_table")
+        </code></pre>
+            </section>
+
+            <!-- Section 07 -->
+            <section class="section" id="section-07">
+                <div class="section-number">07</div>
+                <h2 class="section-title">クエリの最適化とチューニング</h2>
+
+                <h3 class="section-subtitle">Spark 3.x 以降の改革：AQE（適応的クエリ実行）</h3>
+                <p>従来 Spark は実行前にクエリプラン確定し、実行中は不変でした。Spark 3.0（2020年）で<strong>AQE（Adaptive Query Execution）</strong>が導入され、</p>
+
+                <ul>
+                    <li><strong>動的パーティション数調整</strong> — シャッフル後、パーティションサイズ不適切なら自動 coalesce</li>
+                    <li><strong>JOIN 戦略動的選択</strong> — 片側テーブルが予想より小さければ broadcast join に変更</li>
+                    <li><strong>Skew join の自動分割</strong> — データスキューが検出されれば該当パーティション分割</li>
+                </ul>
+
+                <h3 class="section-subtitle">Dynamic Partition Pruning（DPP）</h3>
+                <p>large_table と small_table の JOIN で、small_table フィルタ値が large_table のパーティション剪定に使われる。</p>
+
+                <pre><code># DPP の例
+SELECT o.order_id, c.customer_name
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+WHERE c.country = 'Japan'
+
+# 最適化：
+# 1. customers を country='Japan' でフィルタ
+# 2. 該当 customer_id リスト抽出
+# 3. orders テーブルのパーティション（customer_id が partition key）を早期剪定
+        </code></pre>
+
+                <h3 class="section-subtitle">JOIN 戦略の選択</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>戦略</th>
+                            <th>条件</th>
+                            <th>コスト</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Broadcast Hash Join</strong></td>
+                            <td>片側 &lt; broadcast threshold（デフォルト 10MB）</td>
+                            <td>低（小テーブル全ノード配信）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Shuffle Sort Merge Join</strong></td>
+                            <td>大テーブル × 大テーブル</td>
+                            <td>高（full shuffle 必須）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Shuffle Hash Join</strong></td>
+                            <td>メモリ豊富な環境</td>
+                            <td>中（partition単位 hash table）</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 class="section-subtitle">Spark UI でのプロファイリング</h3>
+                <ul>
+                    <li><strong>http://driver_host:4040</strong> — Jobs、Stages、Tasks タブで実行詳細確認</li>
+                    <li><strong>Task Duration</strong> — 遅いタスクがあれば data skew の可能性</li>
+                    <li><strong>Shuffle Metrics</strong> — 読み書きバイト数で network 実合評価</li>
+                    <li><strong>Stage Duration</strong> — 各 wide transformation の実コスト確認</li>
+                </ul>
+
+                <div class="alert alert-cyan">
+                    <p><strong>推奨設定（Spark 3.4+）：</strong> AQE はデフォルト有効です。特別な設定不要ですが、過度な skew への <code>spark.sql.adaptive.skewJoin.enabled=true</code> 確認推奨。</p>
+                </div>
+            </section>
+
+            <!-- Section 08 -->
+            <section class="section" id="section-08">
+                <div class="section-number">08</div>
+                <h2 class="section-title">データレイクと Open Table Format</h2>
+
+                <h3 class="section-subtitle">データレイク的課題</h3>
+                <p>2010年代中盤、企業は</p>
+                <ul>
+                    <li><strong>Data Lake</strong>（HDFS + Spark）と</li>
+                    <li><strong>Data Warehouse</strong>（Snowflake、BigQuery）の2層</li>
+                </ul>
+                <p>を併存していました。課題：</p>
+                <ul>
+                    <li>ACID トランザクション不足（中間状態可視、重複問題）</li>
+                    <li>スキーマ進化への対応不足</li>
+                    <li>変更データキャプチャ（CDC）未対応</li>
+                    <li>パーティション管理の手作業負荷</li>
+                </ul>
+
+                <h3 class="section-subtitle">Lakehouse Paradigm</h3>
+                <p><strong>Lakehouse</strong> = Data Lake の scale + Data Warehouse の ACID 特性</p>
+                <p><strong>Medallion Architecture</strong> との組み合わせ：</p>
+                <ul>
+                    <li><strong>Bronze</strong>：raw data（変換なし、全カラム保持）</li>
+                    <li><strong>Silver</strong>：cleaned data（スキーマ検証、重複排除、JOIN結果）</li>
+                    <li><strong>Gold</strong>：business-ready（集計、モデル）</li>
+                </ul>
+
+                <h3 class="section-subtitle">Open Table Format の比較</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>フォーマット</th>
+                            <th>開発元</th>
+                            <th>特徴</th>
+                            <th>推奨用途</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Delta Lake</strong></td>
+                            <td>Databricks</td>
+                            <td>Parquet + ACID log、Spark native</td>
+                            <td>Spark 中心、高速書き込み</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Apache Iceberg</strong></td>
+                            <td>Apache Foundation</td>
+                            <td>メタデータレイヤー詳細、engine-agnostic</td>
+                            <td>大規模 batch、multi-engine</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Apache Hudi</strong></td>
+                            <td>Uber（Apache）</td>
+                            <td>CoW/MoR mode、CDC対応</td>
+                            <td>高頻度更新、streaming CDC</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p><strong>現状（2025-2026）：</strong> Iceberg がオープンネス・portability で優位、Delta が Spark コミュニティで主流、Hudi は Uber等 streaming-heavy 企業向け。</p>
+            </section>
+
+            <!-- Section 09 -->
+            <section class="section" id="section-09">
+                <div class="section-number">09</div>
+                <h2 class="section-title">Spark on Databricks — OSS Spark との相違</h2>
+
+                <h3 class="section-subtitle">Photon Engine</h3>
+                <p>Databricks は<strong>Photon</strong>というプロプライエタリエンジンを開発。JVM ベース Spark の上に C++ ベース実行レイヤーを追加。</p>
+
+                <ul>
+                    <li><strong>ガベージコレクション排除</strong> — JVM GC pause なし</li>
+                    <li><strong>ベクトル化実行</strong> — CPUベクトル命令（SIMD）活用</li>
+                    <li><strong>パフォーマンス</strong> — 3~8倍高速化（TPC-DS ベンチマーク：2倍）</li>
+                    <li><strong>互換性</strong> — Spark API そのまま、drop-in 置き換え</li>
+                </ul>
+
+                <h3 class="section-subtitle">Databricks Runtime</h3>
+                <p>Apache Spark に独自の最適化を含む runtime：</p>
+                <ul>
+                    <li><strong>DBR（Databricks Runtime）</strong> — Apache Spark + Photon + 独自 optimizer</li>
+                    <li><strong>Dynamic allocation が強化</strong> — YARN より高速スケール</li>
+                    <li><strong>統合パイプライン</strong> — Delta Lake、MLflow、Notebooks 統合</li>
+                </ul>
+
+                <h3 class="section-subtitle">Databricks と自前 Spark on YARN/K8s の選択</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>観点</th>
+                            <th>Databricks</th>
+                            <th>OSS Spark (YARN/K8s)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>初期コスト</td>
+                            <td>低（SaaS）</td>
+                            <td>中~高（インフラ構築）</td>
+                        </tr>
+                        <tr>
+                            <td>性能最適化</td>
+                            <td>Photon、AQE デフォルト</td>
+                            <td>手作業必須</td>
+                        </tr>
+                        <tr>
+                            <td>運用負荷</td>
+                            <td>最小</td>
+                            <td>大（YARN/K8s 管理）</td>
+                        </tr>
+                        <tr>
+                            <td>カスタマイズ</td>
+                            <td>限定</td>
+                            <td>完全自由</td>
+                        </tr>
+                        <tr>
+                            <td>データ主権</td>
+                            <td>Databricks DC</td>
+                            <td>完全自己管理</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Section 10 -->
+            <section class="section" id="section-10">
+                <div class="section-number">10</div>
+                <h2 class="section-title">デプロイモード比較</h2>
+
+                <h3 class="section-subtitle">Local モード</h3>
+                <ul>
+                    <li><strong>開発・テスト向け</strong>、単一マシンで driver + executor 実行</li>
+                    <li><code>spark-submit --master local[4]</code> で4スレッド並列</li>
+                </ul>
+
+                <h3 class="section-subtitle">Standalone</h3>
+                <ul>
+                    <li>Spark付属のシンプルな cluster manager</li>
+                    <li>小～中規模クラスタ向け、オーバーヘッド最小</li>
+                    <li>HA（High Availability）には ZooKeeper 別途必要</li>
+                </ul>
+
+                <h3 class="section-subtitle">YARN（Hadoop Ecosystem）</h3>
+                <ul>
+                    <li><strong>Hadoop エコシステム統合</strong> — HBase、Hive と共存可能</li>
+                    <li>エンタープライズ標準（既存 Hadoop 環境での自然な選択）</li>
+                    <li><strong>課題</strong> — YARN scheduling latency、動的割り当ての複雑さ</li>
+                </ul>
+
+                <h3 class="section-subtitle">Kubernetes</h3>
+                <ul>
+                    <li><strong>クラウドネイティブ</strong> — Docker コンテナベース、pod 単位</li>
+                    <li>水平スケーリング迅速（30秒以内）、CI/CD 統合</li>
+                    <li><strong>課題</strong> — 初期設定複雑、リソース監視が別必要</li>
+                    <li>パフォーマンス — YARN と同等（正しく設定時）</li>
+                </ul>
+
+                <h3 class="section-subtitle">Databricks</h3>
+                <ul>
+                    <li>完全マネージド cluster manager、自動スケーリング</li>
+                    <li>Job cluster（単一ジョブ）vs All-purpose cluster（複数セッション）</li>
+                    <li>Serverless オプション（起動 < 10秒）</li>
+                </ul>
+
+                <h3 class="section-subtitle">デプロイ例</h3>
+                <pre><code># Standalone cluster submit
+spark-submit \
+    --master spark://master:7077 \
+    --deploy-mode cluster \
+    --total-executor-cores 16 \
+    --executor-memory 8g \
+    script.py
+
+# YARN cluster mode
+spark-submit \
+    --master yarn \
+    --deploy-mode cluster \
+    --num-executors 10 \
+    --executor-cores 4 \
+    --executor-memory 8g \
+    script.py
+
+# Kubernetes
+spark-submit \
+    --master k8s://https://k8s-master:6443 \
+    --deploy-mode cluster \
+    --conf spark.kubernetes.container.image=spark:3.4.0 \
+    script.py
+        </code></pre>
+            </section>
+
+            <!-- Section Final -->
+            <section class="section" id="section-final">
+                <div class="section-number">終</div>
+                <h2 class="section-title">まとめ — 10年腐らない Spark の原理原則</h2>
+
+                <p>Spark は <strong>2011年の誕生以来、基本設計は変わっていません</strong>。これは同時に、その設計が極めて堅牢であることの証明です。</p>
+
+                <h3 class="section-subtitle">変わらない原理</h3>
+                <ul>
+                    <li><strong>遅延評価</strong> — Action が呼ばれるまで DAG を構築し、全体最適化を可能に</li>
+                    <li><strong>不変性（Immutability）</strong> — RDD/DataFrame は変更不可、新規オブジェクト生成が安全な並列処理を実現</li>
+                    <li><strong>DAG スケジューリング</strong> — 細粒度 task へ分割、失敗パーティションの independent 再実行可能</li>
+                    <li><strong>Catalyst 最適化</strong> — ユーザーコードはロジックに専念、Spark が自動最適化</li>
+                </ul>
+
+                <h3 class="section-subtitle">技術進化の歴史</h3>
+                <ul>
+                    <li><strong>Spark 1.x</strong> — RDD 中心、Python support 追加</li>
+                    <li><strong>Spark 2.x</strong> — DataFrame/SQL 統一、SparkSession 導入、Tungsten whole-stage codegen</li>
+                    <li><strong>Spark 3.x</strong> — AQE（適応的最適化）、DPP、GPU support 実験的追加</li>
+                    <li><strong>Spark 4.0+（2025）</strong> — Photon 標準化検討、Iceberg/Delta の完全統合</li>
+                </ul>
+
+                <h3 class="section-subtitle">データ量増加への対応</h3>
+                <p>データが 100GB → 100TB → ペタバイト規模へ増加しても、Spark の基本原理は変わりません：</p>
+                <ul>
+                    <li>partition/parallelism の管理ルール一貫</li>
+                    <li>shuffle の物理メモリ制約は同じ（分散アルゴリズムで回避）</li>
+                    <li>Catalyst の最適化ロジック健全</li>
+                </ul>
+
+                <h3 class="section-subtitle">これから学ぶべき最優先事項</h3>
+                <div class="alert alert-green">
+                    <p><strong>重要：</strong></p>
+                    <ol>
+                        <li><strong>DataFrame API の習得</strong> — 将来すべての高レベルスクリプティングはこれ</li>
+                        <li><strong>Catalyst 最適化の理解</strong> — <code>explain()</code> を読む癖をつける</li>
+                        <li><strong>Partition 戦略</strong> — performance tuning の 9割はここ</li>
+                        <li><strong>Open Table Format 選択</strong> — Delta/Iceberg どちらにしろ、ACID table format は必須</li>
+                    </ol>
+                </p>
+            </section>
+
+            <!-- References -->
+            <div class="references">
+                <h3>参考資料・外部リンク</h3>
+                <ul>
+                    <li><a href="https://spark.apache.org/docs/latest/cluster-overview.html" target="_blank">Apache Spark Cluster Mode Overview — Official Documentation</a></li>
+                    <li><a href="https://www.databricks.com/blog/2015/04/13/deep-dive-into-spark-sqls-catalyst-optimizer.html" target="_blank">Deep Dive into Spark SQL's Catalyst Optimizer — Databricks Blog</a></li>
+                    <li><a href="https://spark.apache.org/docs/latest/sql-performance-tuning.html" target="_blank">Performance Tuning — Apache Spark Official Guide</a></li>
+                    <li><a href="https://medium.com/@ty.berretty/understanding-adaptive-query-execution-aqe-and-dynamic-partition-pruning-dpp-in-pyspark-53c1a255e82c" target="_blank">Understanding AQE and DPP in PySpark — Medium</a></li>
+                    <li><a href="https://www.onehouse.ai/blog/apache-hudi-vs-delta-lake-vs-apache-iceberg-lakehouse-feature-comparison" target="_blank">Delta Lake vs Iceberg vs Hudi — Open Table Format Comparison</a></li>
+                    <li><a href="https://www.databricks.com/product/photon" target="_blank">Databricks Photon Engine — Official Product Page</a></li>
+                    <li><a href="https://bigdataperformance.substack.com/p/mastering-apache-spark-partitioning" target="_blank">Mastering Spark Partitioning: Coalesce vs Repartition — Big Data Performance</a></li>
+                    <li><a href="https://www.databricks.com/glossary/catalyst-optimizer" target="_blank">What is Catalyst Optimizer — Databricks Glossary</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Back to Top Button -->
+        <button class="back-to-top" id="backToTop">↑</button>
+    </main>
+
+    <script>
+        // Back to Top Button
+        const backToTopButton = document.getElementById('backToTop');
+
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.add('show');
+            } else {
+                backToTopButton.classList.remove('show');
+            }
+        });
+
+        backToTopButton.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
