@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Engineering Study #31 — 公開企画会議 アドバイザーと語る気になる技術</title>
+<meta name="description" content="Data Engineering Study #31「公開企画会議 アドバイザーと語る気になる技術」の要約。さがら・ikki・吉田の3名によるアドバイザーLT、公開企画会議（パネル討論）の詳細レポート。2025年9月30日開催。">
+<meta property="og:title" content="Data Engineering Study #31 要約 — 公開企画会議 アドバイザーと語る気になる技術">
+<meta property="og:description" content="2025年激動のMDSトレンド、AI時代のデータエンジニアの役割変化、そして「基礎をやりましょう」という3者共鳴の言葉まで——アドバイザーたちが本音で語った公開企画会議。">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="ja_JP">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --accent: #8B5CF6;
+  --accent-light: #A78BFA;
+  --accent-dark: #6D28D9;
+  --accent-glow: rgba(139, 92, 246, 0.25);
+  --bg-deep: #060B14;
+  --bg-card: #0D1121;
+  --bg-card-hover: #131926;
+  --bg-code: #08091A;
+  --text-primary: #E8EDF3;
+  --text-secondary: #8A9AB8;
+  --text-muted: #4A5A75;
+  --border: #16203A;
+  --green: #34D399;
+  --yellow: #FBBF24;
+  --cyan: #67E8F9;
+  --orange: #FB923C;
+  --pink: #F472B6;
+  --purple: #A78BFA;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.8;
+  overflow-x: hidden;
+}
+
+/* Noise overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Grid background pattern */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image:
+    linear-gradient(rgba(139, 92, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  padding: 2rem;
+  text-align: center;
+  z-index: 1;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -10%; left: 50%; transform: translateX(-50%);
+  width: 900px; height: 700px;
+  background: radial-gradient(ellipse, var(--accent-glow) 0%, transparent 68%);
+  opacity: 0.6;
+  animation: pulse 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 200px;
+  background: linear-gradient(to bottom, transparent, var(--bg-deep));
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.7; transform: translateX(-50%) scale(1.08); }
+}
+
+.hero-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.1s;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--accent-light);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 100px;
+  background: rgba(139, 92, 246, 0.05);
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.2s;
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.hero-title {
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  font-weight: 900;
+  line-height: 1.15;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.4s;
+  max-width: 820px;
+}
+
+.hero-title .accent {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light), #C4B5FD);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-subtitle {
+  font-size: clamp(0.9rem, 1.8vw, 1.15rem);
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin-top: 1.5rem;
+  font-weight: 300;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.6s;
+  line-height: 1.7;
+}
+
+.hero-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 1rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.65s;
+}
+
+.hero-stat-row {
+  display: flex;
+  gap: 2.5rem;
+  margin-top: 3rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.8s;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hero-stat {
+  text-align: center;
+  padding: 1.2rem 1.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(13, 17, 33, 0.8);
+  backdrop-filter: blur(10px);
+  min-width: 110px;
+  transition: border-color 0.3s, transform 0.3s;
+}
+
+.hero-stat:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  transform: translateY(-2px);
+}
+
+.hero-stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  line-height: 1;
+  margin-bottom: 0.4rem;
+}
+
+.hero-stat-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+
+.hero-tools {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 2rem;
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards 0.95s;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tool-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  color: var(--accent-light);
+  background: rgba(139, 92, 246, 0.06);
+  letter-spacing: 0.05em;
+}
+
+.scroll-hint {
+  position: absolute;
+  bottom: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.25em;
+  animation: bob 2.5s ease-in-out infinite;
+  z-index: 1;
+}
+
+.scroll-hint .arrow {
+  width: 1px; height: 32px;
+  background: linear-gradient(to bottom, var(--text-muted), transparent);
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Navigation */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(6, 11, 20, 0.88);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  overflow-x: auto;
+}
+
+.nav-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  gap: 0;
+  align-items: center;
+}
+
+.nav-home {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 1rem 1rem 1rem 0;
+  white-space: nowrap;
+  border-right: 1px solid var(--border);
+  margin-right: 0.5rem;
+  padding-right: 1rem;
+  transition: color 0.2s;
+}
+
+.nav-home:hover { color: var(--accent); }
+
+.nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 1rem 1rem;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  letter-spacing: 0.01em;
+}
+
+.nav a:hover {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+}
+
+/* Main content */
+.content {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 2rem 8rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Section */
+.section {
+  margin-top: 5.5rem;
+}
+
+.section-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent);
+  letter-spacing: 0.35em;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+}
+
+.section-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  line-height: 1.3;
+}
+
+.section-title .highlight {
+  color: var(--accent-light);
+}
+
+/* Speaker card */
+.speaker-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.2rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  margin-bottom: 2rem;
+  transition: border-color 0.25s, background 0.25s;
+}
+
+.speaker-card:hover {
+  border-color: rgba(139, 92, 246, 0.3);
+  background: var(--bg-card-hover);
+}
+
+.speaker-avatar {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.speaker-info {
+  flex: 1;
+}
+
+.speaker-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.speaker-org {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.speaker-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent-light);
+  text-decoration: none;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.speaker-link:hover {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: var(--accent);
+}
+
+.prose {
+  color: var(--text-secondary);
+  font-size: 0.94rem;
+  line-height: 2;
+  margin-bottom: 1.5rem;
+}
+
+.prose strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.prose a {
+  color: var(--accent-light);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.3);
+  transition: border-color 0.2s;
+}
+
+.prose a:hover {
+  border-bottom-color: var(--accent-light);
+}
+
+/* Subsection heading */
+.sub-heading {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 2.2rem 0 0.8rem;
+  color: var(--accent-light);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sub-heading::before {
+  content: '';
+  width: 3px; height: 1em;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Blockquote */
+blockquote {
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.07), rgba(139, 92, 246, 0.02));
+  padding: 1.3rem 1.6rem;
+  margin: 1.8rem 0;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.9;
+  position: relative;
+}
+
+blockquote::before {
+  content: '\201C';
+  font-size: 3rem;
+  color: var(--accent);
+  opacity: 0.25;
+  position: absolute;
+  top: -0.3rem;
+  left: 1rem;
+  font-family: Georgia, serif;
+  line-height: 1;
+}
+
+blockquote p { margin: 0; }
+
+/* Alert boxes */
+.alert {
+  border-left: 3px solid var(--accent);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.07), transparent);
+  padding: 1.2rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.alert.green {
+  border-left-color: var(--green);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.07), transparent);
+}
+
+.alert.yellow {
+  border-left-color: var(--yellow);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.07), transparent);
+}
+
+.alert.orange {
+  border-left-color: var(--orange);
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.07), transparent);
+}
+
+.alert-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.alert .alert-label { color: var(--accent-light); }
+.alert.green .alert-label { color: var(--green); }
+.alert.yellow .alert-label { color: var(--yellow); }
+.alert.orange .alert-label { color: var(--orange); }
+
+/* Insight list */
+.insight-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1.5rem 0;
+}
+
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.insight-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.insight-icon {
+  color: var(--accent-light);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+  min-width: 1.2rem;
+}
+
+.insight-item strong {
+  color: var(--text-primary);
+}
+
+/* Scenario grid */
+.scenario-grid {
+  display: grid;
+  gap: 0.8rem;
+  margin: 1.5rem 0;
+}
+
+.scenario-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.3rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.scenario-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.scenario-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  flex-shrink: 0;
+  min-width: 1.5rem;
+}
+
+.scenario-item strong {
+  color: var(--text-primary);
+}
+
+/* Links section */
+.links-grid {
+  display: grid;
+  gap: 0.6rem;
+  margin: 1.5rem 0;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  text-decoration: none;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.link-item:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  transform: translateX(3px);
+}
+
+.link-icon {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--accent-light);
+  min-width: 2rem;
+  opacity: 0.8;
+}
+
+.link-label {
+  flex: 1;
+}
+
+.link-arrow {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+
+.link-item:hover .link-arrow {
+  transform: translateX(3px);
+  color: var(--accent-light);
+}
+
+/* Closing quote card */
+.closing-quote {
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(139, 92, 246, 0.01));
+  border-radius: 14px;
+  padding: 1.8rem 2rem;
+  margin: 1.5rem 0;
+}
+
+.closing-quote-speaker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent-light);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
+}
+
+.closing-quote-text {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.9;
+  font-style: italic;
+}
+
+.closing-quote-text strong {
+  color: var(--text-primary);
+  font-style: normal;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+  margin: 5rem 0;
+}
+
+/* Code inline */
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  background: rgba(139, 92, 246, 0.08);
+  color: var(--accent-light);
+  padding: 0.15em 0.45em;
+  border-radius: 5px;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 3rem 2rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 2;
+  position: relative;
+  z-index: 1;
+}
+
+.footer a {
+  color: var(--accent-light);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer a:hover { color: var(--accent); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Scroll-triggered fade-in */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Section tag */
+.section-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  margin-bottom: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.section-tag.keynote {
+  background: rgba(167, 139, 250, 0.12);
+  color: var(--purple);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.section-tag.talk {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--accent-light);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.section-tag.lt {
+  background: rgba(251, 191, 36, 0.1);
+  color: var(--yellow);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.section-tag.insights {
+  background: rgba(103, 232, 249, 0.1);
+  color: var(--cyan);
+  border: 1px solid rgba(103, 232, 249, 0.25);
+}
+
+.section-tag.qa {
+  background: rgba(244, 114, 182, 0.1);
+  color: var(--pink);
+  border: 1px solid rgba(244, 114, 182, 0.25);
+}
+
+.section-tag.panel {
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--accent-light);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+/* Tool card */
+.tool-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 1.3rem;
+  background: var(--bg-card);
+  transition: border-color 0.25s, background 0.25s, transform 0.25s;
+}
+
+.tool-card:hover {
+  border-color: rgba(139, 92, 246, 0.35);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+
+.tool-card-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  margin-bottom: 0.5rem;
+}
+
+.tool-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* Feature grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 1.8rem 0;
+}
+
+@media (max-width: 600px) {
+  .feature-grid { grid-template-columns: 1fr; }
+}
+
+.feature-card {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 1.2rem 1.3rem;
+  background: var(--bg-card);
+  transition: border-color 0.25s, background 0.25s, transform 0.25s;
+}
+
+.feature-card:hover {
+  border-color: rgba(139, 92, 246, 0.35);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+
+.feature-card-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent-light);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+.feature-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.feature-card-desc strong {
+  color: var(--text-primary);
+}
+
+/* Roadmap list */
+.roadmap-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.5rem 0;
+}
+
+.roadmap-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.roadmap-item:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.roadmap-bullet {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-light);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.roadmap-item strong {
+  color: var(--text-primary);
+}
+
+/* Slide embed */
+.slide-embed {
+  margin: 1.5rem 0;
+}
+
+/* Panel highlight box */
+.panel-highlight {
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.06), rgba(139, 92, 246, 0.02));
+  border-radius: 14px;
+  padding: 1.5rem 2rem;
+  margin: 1.8rem 0;
+}
+
+.panel-highlight-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--accent-light);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.panel-highlight-text {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.9;
+}
+
+.panel-highlight-text strong {
+  color: var(--text-primary);
+}
+
+@media (max-width: 600px) {
+  .hero-stat-row { gap: 0.8rem; }
+  .hero-stat { min-width: 90px; padding: 0.9rem 1rem; }
+  .hero-stat-value { font-size: 1.5rem; }
+  .speaker-card { flex-wrap: wrap; }
+  .panel-highlight { padding: 1.2rem 1.3rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-eyebrow">Data Engineering Study</div>
+  <div class="hero-badge">#31 — 2025.09.30 Forkwell × primeNumber</div>
+  <h1 class="hero-title">
+    Data Engineering Study #31<br><span class="accent">公開企画会議<br>アドバイザーと語る気になる技術</span>
+  </h1>
+  <p class="hero-subtitle">
+    買収の嵐が吹き荒れた2025年のMDS最前線から、AI時代のデータエンジニアの生存戦略まで——3名のアドバイザーが本音でぶつかった公開企画会議の全記録。
+  </p>
+  <div class="hero-meta">2025年9月30日（火）開催 / Forkwell × primeNumber 共催</div>
+  <div class="hero-stat-row">
+    <div class="hero-stat">
+      <div class="hero-stat-value">3</div>
+      <div class="hero-stat-label">アドバイザーLT</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">Q&amp;A</div>
+      <div class="hero-stat-label">各LT後</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">公開</div>
+      <div class="hero-stat-label">企画会議</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value">~64</div>
+      <div class="hero-stat-label">分</div>
+    </div>
+  </div>
+  <div class="hero-tools">
+    <span class="tool-chip">Snowflake</span>
+    <span class="tool-chip">Databricks</span>
+    <span class="tool-chip">dbt</span>
+    <span class="tool-chip">Fivetran</span>
+    <span class="tool-chip">LLMエージェント</span>
+    <span class="tool-chip">セマンティックレイヤー</span>
+    <span class="tool-chip">DataContract</span>
+  </div>
+  <div class="scroll-hint">
+    SCROLL
+    <div class="arrow"></div>
+  </div>
+</section>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="../index.html" class="nav-home">← トップ</a>
+    <a href="#overview">概要</a>
+    <a href="#sagara">さがら</a>
+    <a href="#ikki">ikki</a>
+    <a href="#yoshida">吉田</a>
+    <a href="#panel">公開企画会議</a>
+    <a href="#links">リンク</a>
+  </div>
+</nav>
+
+<main class="content">
+
+  <!-- Section 0: Overview -->
+  <section class="section fade-in" id="overview">
+    <div class="section-number">00 — OVERVIEW</div>
+    <div class="section-tag keynote">イベント概要</div>
+    <h2 class="section-title">アドバイザーが語る、<br><span class="highlight">前例のない公開企画会議</span></h2>
+
+    <p class="prose">
+      Data Engineering Study #31は、通常のLT登壇とは一線を画す特殊フォーマットで開催された。Forkwell × primeNumber共催のこのシリーズで、今回初めて「アドバイザー」という役職を持つ3名が一堂に会し、それぞれ10分のLTを行った後、イベントの最後に「公開企画会議」というパネルディスカッションを展開するという構成だ。
+    </p>
+
+    <p class="prose">
+      MCを務めたのはprimeNumberの北川氏（タイガー）。アドバイザーの3名は、クラスメソッドでMDSテックリードを務める<strong>相樂 悟（さがら）</strong>氏、stable株式会社代表取締役の<strong>宮崎 一樹（ikki）</strong>氏、株式会社10Xのデータエンジニア<strong>吉田 康久</strong>氏（@syou6162）。それぞれが異なる視座と専門性を持ちながら、2025年のデータエンジニアリングという共通テーマに向き合った。
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-card-label">テーマ①</div>
+        <div class="feature-card-desc"><strong>MDS最新動向</strong><br>2025年の買収ラッシュ・AI統合の最前線</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-label">テーマ②</div>
+        <div class="feature-card-desc"><strong>AIとデータ基盤の論点</strong><br>確率論的処理 vs 決定論的処理の棲み分け</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-label">テーマ③</div>
+        <div class="feature-card-desc"><strong>データエンジニアの生存戦略</strong><br>LLMエージェント時代に「残る仕事」とは</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-label">テーマ④</div>
+        <div class="feature-card-desc"><strong>公開企画会議</strong><br>Snowflake vs Databricks、今やるべき基礎とは</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 1: さがら -->
+  <section class="section fade-in" id="sagara">
+    <div class="section-number">01 — ADVISOR LT 01</div>
+    <div class="section-tag talk">アドバイザーLT①</div>
+    <h2 class="section-title">Modern Data Stack最新動向<br><span class="highlight">～買収・AI、激動の2025年～</span></h2>
+
+    <div class="speaker-card">
+      <div class="speaker-avatar">S</div>
+      <div class="speaker-info">
+        <div class="speaker-name">相樂 悟（さがら）</div>
+        <div class="speaker-org">クラスメソッド株式会社 — モダンデータスタックチーム テックリード / Snowflake Data Superhero 2025</div>
+      </div>
+      <a href="https://speakerdeck.com/sagara/modern-data-stackzui-xin-dong-xiang-kuizu-mai-shou-ai-ji-dong-no2025nian" target="_blank" class="speaker-link">Speaker Deck →</a>
+    </div>
+
+    <div class="slide-embed">
+      <iframe class="speakerdeck-iframe" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 315;" frameborder="0" src="https://speakerdeck.com/player/ada17a1604164e7186c6a25c7900a338" title="Modern Data Stack最新動向 ～買収・AI、激動の2025年～" allowfullscreen="true" data-ratio="1.7777777777777777"></iframe>
+    </div>
+
+    <div class="sub-heading">クイズ形式という工夫 ― 「10分では足りない」</div>
+
+    <p class="prose">
+      さがら氏はこのLTをクイズ形式で進行した。理由は明快だ。「2025年のMDSは話したいことが多すぎて、10分では到底追いつかない。クイズにすれば聴衆が考える時間が生まれる」。MDSの熱量をそのまま10分に圧縮するのではなく、参加者が能動的に答えを探すことで記憶に残りやすくする構成だ。
+    </p>
+
+    <div class="sub-heading">2025年だけで8社が買収された衝撃</div>
+
+    <p class="prose">
+      さがら氏が最も強調したのは、2025年という年の「買収ラッシュ」だ。この一年だけで以下の8社がM&Aの対象となった：
+    </p>
+
+    <div class="scenario-grid">
+      <div class="scenario-item">
+        <span class="scenario-num">01</span>
+        <span><strong>SDF</strong> — dbtの競合がdbt Labsに買収され「Fusion」としてベータリリース→パブリックプレビューへ</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">02</span>
+        <span><strong>Tobiko（SQL Mesh）</strong> — Fivetranが9月に買収。データ変換領域への本格参入を示す</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">03</span>
+        <span><strong>Census（Reverse ETL）</strong> — Fivetranが5月に買収。データロード→変換→リバースETLを一手に担う構図が完成</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">04</span>
+        <span><strong>Informatica</strong> — Salesforceが5月に買収。エンタープライズデータ統合の巨人が傘下へ</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">05</span>
+        <span><strong>Metaphor</strong> — データカタログ系。業界再編の波に</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">06</span>
+        <span><strong>CastorDoc</strong> — データカタログ系。Metaphorと同様の流れ</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">07</span>
+        <span><strong>Satori</strong> — データガバナンス。セキュリティ領域でも再編</span>
+      </div>
+      <div class="scenario-item">
+        <span class="scenario-num">08</span>
+        <span><strong>Metaplane</strong> — データオブザーバビリティ。モニタリング市場にも波及</span>
+      </div>
+    </div>
+
+    <p class="prose">
+      中でもさがら氏が「衝撃的」と評したのがFivetranの動きだ。もともとデータロード（EL）の専業だったFivetranが、SQL MeshとCensusをわずか数ヶ月の間に立て続けに買収することで、データパイプライン全体——EL・変換・リバースETL——を垂直統合した。「Fivetranがデータロードだけでなくリバースとデータ変換も取り込んだのは業界の常識を変える動き」と語った。
+    </p>
+
+    <blockquote>
+      <p>「dbtの競合だったSDFをdbt Labsが買収する。昨日の敵が今日の味方になる。これがMDSの2025年だ」 — さがら氏（意訳）</p>
+    </blockquote>
+
+    <div class="sub-heading">Snowflake vs Databricks ― 「どちらも本気のAI統合」</div>
+
+    <p class="prose">
+      2問目のクイズは「2025年6月に自然言語BIを発表した2製品は？」というものだった。正解はSnowflakeの<strong>Snowflake Intelligence</strong>とDatabricksの<strong>Databricks One / AI/BI Dashboards</strong>だ。両者ともLLMをバックエンドに据え、自然言語でデータを問い合わせできる機能を相次いで発表した。
+    </p>
+
+    <p class="prose">
+      方向性の違いについて、さがら氏は「Snowflakeはよりシンプルに（Simplicity）、DatabricksはUnity Catalog軸でエンジニア寄り」と整理した。ただし補足として「Snowflakeもエンジニア向けの機能を強化しているし、Databricksもシンプルさを追求しているので、一概には言えない」と注釈を付け加えている。差別化を語りつつも、その差が縮まり続けているという現実も正直に伝えた。
+    </p>
+
+    <div class="alert">
+      <div class="alert-label">注目技術</div>
+      Snowflakeの<strong>Workload Identity Federation</strong>: AWS IAMロールベース認証を採用し、GitHub Actionsからシークレット情報なしで認証できるようになった。Databricksの<strong>Databricks One</strong>: 単一UIから自然言語でデータ問い合わせ・AI/BIダッシュボード生成・アプリ連携までを一気通貫で行う。
+    </div>
+
+    <div class="sub-heading">さがらの予測 ― カタログ・オブザーバビリティは再編が続く</div>
+
+    <p class="prose">
+      さがら氏は2025年の買収トレンドを踏まえ、今後もデータカタログとオブザーバビリティの領域での再編が続くと予測した。注目サービスとして挙げたのは、データカタログのSaaSとして<strong>Atlan</strong>、OSSとして<strong>Open Metadata</strong>、オブザーバビリティでは<strong>Monte Carlo</strong>だ。また、SnowflakeのAdaptive Data WarehouseにおけるIcebergネイティブサポートやPolaris CatalogのOSS化も、オープン規格をめぐる競争の激化を示す動きとして取り上げた。
+    </p>
+
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 2: ikki -->
+  <section class="section fade-in" id="ikki">
+    <div class="section-number">02 — ADVISOR LT 02</div>
+    <div class="section-tag talk">アドバイザーLT②</div>
+    <h2 class="section-title">今注目しているデータエンジニアリングの<span class="highlight">論点</span></h2>
+
+    <div class="speaker-card">
+      <div class="speaker-avatar">I</div>
+      <div class="speaker-info">
+        <div class="speaker-name">宮崎 一樹（ikki）</div>
+        <div class="speaker-org">stable株式会社 — 代表取締役 / データエンジニアリング領域クライアントワーク（正社員3名 + 業務委託12名）</div>
+      </div>
+      <a href="https://speakerdeck.com/ikkimiyazaki/imazhu-mu-siteirudetaenziniaringunolun-dian" target="_blank" class="speaker-link">Speaker Deck →</a>
+    </div>
+
+    <div class="slide-embed">
+      <iframe class="speakerdeck-iframe" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 315;" frameborder="0" src="https://speakerdeck.com/player/3ce3c8877eb541dbbe88c33c4e63faed" title="今注目しているデータエンジニアリングの論点" allowfullscreen="true" data-ratio="1.7777777777777777"></iframe>
+    </div>
+
+    <div class="sub-heading">「今度こそ」という問い ― 10〜15年前から変わらない課題</div>
+
+    <p class="prose">
+      ikkiのLTは一つの根本的な疑問から始まる。「今度こそデータ整備の重要性を上げられるのか？」。10〜15年前のデータサイエンスブームでも、データ整備の大切さは散々語られたが、実際には多くの組織で進まなかった。AIブームが再び追い風となっている今、同じ轍を踏まないためにはどうすればいいか。ikki氏はSNS上の「10年放置されてきたデータ整備、AIブームで変わるか？」という批判的なツイートを引用しながら、その問いを真正面から受け止めた。
+    </p>
+
+    <p class="prose">
+      「Garbage In, Garbage Out」という原則は相変わらず有効だ。OpenAIをはじめとするAI基盤は急速に進化しているが、<strong>自社内部のデータは自分たちでしか整備できない</strong>。外部に任せることができない部分こそが、データエンジニアリングの価値の核心にある。
+    </p>
+
+    <div class="sub-heading">名言「交通量を増やさないと交通整理のROIが上がらない」</div>
+
+    <p class="prose">
+      ikkiのLTで最も印象的だったのは、この一文だ。ガバナンスは重要だが、データが活用されていない状態でガバナンスだけを整えても意味がない。まず「データ活用の総量」を増やすことが先決だという主張だ。
+    </p>
+
+    <blockquote>
+      <p>「交通量を増やさないと交通整理のROIが上がらない。ガバナンスより先に、まず活用量を上げることを考えるべき」 — ikki氏</p>
+    </blockquote>
+
+    <p class="prose">
+      具体的な提案として、ikki氏が示したのは「データ活用の総量を増やす」という方向性だ。従来は事業部からデータチームへの依頼が人間のボトルネックを通ることで処理件数が制限されていた。しかしAIエージェントにレスポンスを任せれば、事業部の問い合わせを大量処理できる。データ活用の幅と頻度を同時に広げることが、データ整備投資の正当化につながる。
+    </p>
+
+    <div class="sub-heading">AIは「確率論的」、データ基盤は「決定論的」</div>
+
+    <p class="prose">
+      ikki氏はAIとデータ基盤の関係を、哲学的な対比で整理した。AIは確率論的な処理——速いが間違いが含まれる。データ基盤は決定論的な処理——正確だが処理に時間がかかる。これは優劣の話ではなく、<strong>適材適所の問題</strong>だ。
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-card-label">確率論的 / AI</div>
+        <div class="feature-card-desc"><strong>速い・スケールしやすい</strong><br>誤りがある / 非決定的<br>→ ラストワンマイルの配信・対話に向く</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-label">決定論的 / データ基盤</div>
+        <div class="feature-card-desc"><strong>正確・再現可能</strong><br>処理が遅い / スケールに制限<br>→ データモデリング・セマンティックレイヤーに向く</div>
+      </div>
+    </div>
+
+    <p class="prose">
+      この整理の中でikki氏が特に強調したのが<strong>セマンティックレイヤー</strong>の役割だ。データモデリングからセマンティックレイヤーまでは決定論的な処理が担い、そこから先のユーザーへの配信・回答生成はAIが高速処理する。境界線を明確にすることで、両者の強みを引き出せる。
+    </p>
+
+    <div class="sub-heading">データエンジニアの役割変化 ― 4つの境界線設計</div>
+
+    <p class="prose">
+      ikki氏は「AIはまだ丸投げできない。境界線を明確にして協働する段階」と述べ、データエンジニアの新しい役割を「ビジネスユーザーとAIの境界線を整える仕事」と定義した。この境界線設計に必要な4つの観点を示した：
+    </p>
+
+    <div class="insight-list">
+      <div class="insight-item">
+        <span class="insight-icon">①</span>
+        <span><strong>得意領域の見極め</strong> — AIに任せるべき処理と、人間・決定論的システムが担うべき処理の峻別</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">②</span>
+        <span><strong>サービスレベル定義</strong> — どこまでの精度・速度・可用性を各処理に求めるかの合意</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">③</span>
+        <span><strong>ガードレール</strong> — AIが踏み越えてはいけない処理の範囲を事前に定義する</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">④</span>
+        <span><strong>メタデータ・コンテキスト</strong> — AIに適切な文脈を与えるための情報整備</span>
+      </div>
+    </div>
+
+    <div class="sub-heading">Q&A ― ROIが高いユースケースは「経営企画・事業計画」</div>
+
+    <p class="prose">
+      質疑応答でROIが高いユースケースを問われたikki氏は「経営企画や事業計画の領域」を挙げた。経営層へのアピールがしやすく、投資対効果が出やすいためだ。また、メタデータをどう収集するかという質問に対しては「事業部の人にいかに入力してもらうかがカギ」と答え、インセンティブ設計の重要性を強調した。「メタデータを入れるとAIがより賢くなる」という動機付けを作ることが、データ品質向上の現実的な手段だという。
+    </p>
+
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 3: Yoshida -->
+  <section class="section fade-in" id="yoshida">
+    <div class="section-number">03 — ADVISOR LT 03</div>
+    <div class="section-tag talk">アドバイザーLT③</div>
+    <h2 class="section-title">データエンジニアがこの先<span class="highlight">生きのこるには...?</span></h2>
+
+    <div class="speaker-card">
+      <div class="speaker-avatar">Y</div>
+      <div class="speaker-info">
+        <div class="speaker-name">吉田 康久（Yoshida / @syou6162）</div>
+        <div class="speaker-org">株式会社10X — プロダクト本部 データエンジニア / datatech-jp運営 / dbt Community Spotlight / Google Developer Expert</div>
+      </div>
+      <a href="https://speakerdeck.com/10xinc/detaenziniagakonoxian-sheng-kinokoruniha-dot-dot-dot" target="_blank" class="speaker-link">Speaker Deck →</a>
+    </div>
+
+    <div class="slide-embed">
+      <iframe class="speakerdeck-iframe" style="border: 0px; background: padding-box padding-box rgba(0, 0, 0, 0.1); margin: 0px; padding: 0px; border-radius: 6px; box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 40px; width: 100%; height: auto; aspect-ratio: 560 / 315;" frameborder="0" src="https://speakerdeck.com/player/1ba826a697e4407284f607963a1e102b" title="データエンジニアがこの先生きのこるには...?" allowfullscreen="true" data-ratio="1.7777777777777777"></iframe>
+    </div>
+
+    <div class="sub-heading">「目の前の仕事は全然減らない」 ― パラドックスの解明</div>
+
+    <p class="prose">
+      吉田氏は10X——ネットスーパーを提供しつつ、近年は価格最適化・発注最適化にも事業を広げている企業——のデータエンジニアだ。LTの導入は、データエンジニアリングが直面するパラドックスの提示から始まった。
+    </p>
+
+    <p class="prose">
+      インフラはHadoopからBigQuery・Snowflake・Databricksへ。変換ツールはEmbulk・DigdagからdbtやDataformへ。マネージドサービスの進化でオペレーション負荷は確実に下がった。さらにLLMエージェントが細かなスクリプト生成まで担ってくれるようになり、「データエンジニアいらんのでは？」という疑念が生まれつつある。しかし現実には、<strong>目の前の仕事は全然減らない</strong>。なぜか？
+    </p>
+
+    <div class="sub-heading">LLMエージェントは「やんちゃ」 ― 具体的な失敗例</div>
+
+    <p class="prose">
+      吉田氏はLLMエージェントの問題点を「やんちゃ」という言葉で表現した。このたとえは的確だ——能力はあるが、文脈を無視して暴走することがある。具体的な失敗例として2つを挙げた：
+    </p>
+
+    <div class="insight-list">
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span><strong>ビジネスロジックの拡散</strong> — マート作成を依頼すると、本来は一元管理すべきビジネスロジックが各マートに染み出し、管理不能になる</span>
+      </div>
+      <div class="insight-item">
+        <span class="insight-icon">▸</span>
+        <span><strong>テーブル削除事故</strong> — テスト失敗に際し「上流テーブルにバグがあるかもしれないので削除して作り直します」と宣言し、インクリメンタルテーブルを消してしまおうとした</span>
+      </div>
+    </div>
+
+    <blockquote>
+      <p>「インクリメンタルテーブルを消すな！ やんちゃすぎる。能力はあるのに文脈を読まない」 — 吉田氏（趣旨）</p>
+    </blockquote>
+
+    <div class="sub-heading">ガードレールとしての agent.md / CLAUDE.md</div>
+
+    <p class="prose">
+      「やんちゃ」なエージェントを管理するために吉田氏が採用しているのが、<code>agent.md</code>や<code>CLAUDE.md</code>と呼ばれる自然言語ガードレールだ。これはエージェントがコードを書く際に守るべきルールを自然言語で記述したドキュメントで、リンターやフォーマッターでは表現しきれない文脈依存のルールを伝えるのに適している。
+    </p>
+
+    <div class="roadmap-list">
+      <div class="roadmap-item">
+        <span class="roadmap-bullet">▸</span>
+        <span><strong>SQLの記述スタイル</strong> — サブクエリは使わず、必ずCTEで書く</span>
+      </div>
+      <div class="roadmap-item">
+        <span class="roadmap-bullet">▸</span>
+        <span><strong>テーブル操作の制約</strong> — インクリメンタルテーブルの削除・再作成は禁止</span>
+      </div>
+      <div class="roadmap-item">
+        <span class="roadmap-bullet">▸</span>
+        <span><strong>ビジネスロジックの所在</strong> — ロジックは必ず指定の中間テーブルに集約し、マートに直接書かない</span>
+      </div>
+    </div>
+
+    <div class="sub-heading">ユビキタス言語 ＝ セマンティックレイヤー</div>
+
+    <p class="prose">
+      吉田氏のLTで特に印象的だったのが、<strong>「同じ概念が技術スタックごとに別名で呼ばれている」</strong>という観察だ。DDDを知っている人には「ユビキタス言語」、dbtを使っている人には「セマンティックレイヤー」——本質は同じでも名前が違うために、チーム間での理解がすれ違う。
+    </p>
+
+    <p class="prose">
+      DAUの定義、解約率の算出期間——こうした言葉の意味は組織によって微妙に異なる。データエンジニアにとって重要な仕事の一つは、これらの定義を明文化し、組織全体に統一的な語彙を普及させることだ。吉田氏はこれを「データ提供者と消費者の合意」として<strong>Data Contract</strong>の概念とも接続しながら、信頼性のティア分けで管理する<strong>Data Reliability Level</strong>という実践的な手法も紹介した。
+    </p>
+
+    <div class="sub-heading">コードを書くことはボトルネックだったことがない</div>
+
+    <p class="prose">
+      吉田氏はソフトウェアエンジニアリングの歴史的な教訓を引いて、LLMエージェント時代の本質的な問いを提示した。コードを書くこと自体は、ソフトウェアエンジニアの歴史を通じてボトルネックになったことがない。真のボトルネックは常に、<strong>知識のトランスファー、コードレビュー、ナレッジ管理</strong>だった。
+    </p>
+
+    <blockquote>
+      <p>「AIに何をやらせるかより、何がボトルネックかを見極めることが重要。コードは書けても、文脈と判断を持つのは人間の役割」 — 吉田氏（趣旨）</p>
+    </blockquote>
+
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 4: Panel -->
+  <section class="section fade-in" id="panel">
+    <div class="section-number">04 — MAIN EVENT</div>
+    <div class="section-tag panel">公開企画会議</div>
+    <h2 class="section-title">アドバイザー3名が本音で語る<br><span class="highlight">公開企画会議</span></h2>
+
+    <p class="prose">
+      このイベントの最大の目玉が「公開企画会議」だ。通常の登壇後Q&Aとは異なり、3名のアドバイザーがMCの北川氏を交えて、データエンジニアリングの現在と未来についてフリーな対話を展開した。ここで語られた内容は、スライドには一切登場しない。
+    </p>
+
+    <div class="sub-heading">Snowflake vs Databricks ― 「どっち選んでも外れない」</div>
+
+    <p class="prose">
+      ikkiからさがらへの問い：「Snowflake vs Databricks、技術選定の相談を受けたらどちらを勧めるか？」
+    </p>
+
+    <div class="panel-highlight">
+      <div class="panel-highlight-label">さがら 回答</div>
+      <div class="panel-highlight-text">
+        「<strong>どっち選んでも外れない</strong>、が正直な答えです。SQLベースで使いたいならDatabricksでも全然問題ないレベルになっています。触ってみて気に入った方、組織に馴染む方を選べばいい。私は両方に習熟しているからこそ言えますが、今はどちらもお互いの強みを取り込んでいて、差は縮まっています」
+      </div>
+    </div>
+
+    <p class="prose">
+      ikkiも同意し、「機能的にどちらも備えている。使っていて気持ちいいとか、組織のカルチャーに合っているかが最終的な決定要因になる」と補足した。ツール選定の話に見えて、実は「文化・習慣との適合性」という柔らかい要素が決め手になるという、現場ならではの知見だ。
+    </p>
+
+    <div class="sub-heading">Yoshidaが問うMDSの現場 ― 「楽できる分野と投資すべき分野」</div>
+
+    <p class="prose">
+      吉田氏からさがらへの問い：「MDS全体を見ているさがらさん的に、現場のデータエンジニアが楽できる分野は？ 逆にリソースを割くべき分野は？」
+    </p>
+
+    <p class="prose">
+      さがら氏の回答は明快だった。クラウドDB導入によってリソース管理は既に「楽になった」領域。Reverse ETLの機能拡充、dbtエコシステムの発展によって、かつては手作業だった多くの処理が自動化できる。<strong>「SaaSで楽できるところは積極的に楽をすべき。その代わり、空いた時間でより本質的な問題に向き合うこと」</strong>というメッセージだった。
+    </p>
+
+    <div class="sub-heading">「基礎をやりましょう」 ― 3者が共鳴した結論</div>
+
+    <p class="prose">
+      最後のテーマ「今からデータエンジニアがやるべきことは？」で、3者の議論は予期せず一点に収束した。
+    </p>
+
+    <div class="closing-quote">
+      <div class="closing-quote-speaker">吉田 康久 — 株式会社10X</div>
+      <div class="closing-quote-text">
+        「<strong>基礎をやりましょう</strong>、に尽きます。データエンジニアである前に、ソフトウェアエンジニアであるべき。冪等性、バージョン管理、CI/CD、そしてディメンショナルモデリング——これらは30年以上前からあるが、今も現役で使われている。賞味期限の長い知識に投資するべきです。Claude 4.5とか、1ヶ月も賞味期限がもたないものを追いかけ続けると疲弊します」
+      </div>
+    </div>
+
+    <p class="prose">
+      さがら氏は吉田氏の言葉に強く同意した。「前職でHadoopを使い、酷いパイプラインを作った反省がある。あれは基礎力がなかったから。冪等性やPythonコーディングの基礎があれば、もっとうまくやれた」。自らの失敗体験を重ねることで、「基礎」の重みに具体的な質感を与えた。
+    </p>
+
+    <div class="closing-quote">
+      <div class="closing-quote-speaker">宮崎 一樹（ikki）— stable株式会社</div>
+      <div class="closing-quote-text">
+        「別の観点を一つ加えると、<strong>課題を見つける力が大事</strong>だと思います。AIはソリューションを提供することを手伝ってくれますが、課題を発見するのは人間の仕事。スプレッドシート1個の自動化でもいい。何が本当に困っているかを見極めて、そこから始める力を磨くことが、AI時代のデータエンジニアにとって差別化になる」
+      </div>
+    </div>
+
+    <div class="sub-heading">ユビキタス言語の普及範囲 ― 「全社で揃える」</div>
+
+    <p class="prose">
+      パネルの後半、吉田氏はユビキタス言語の統一範囲について踏み込んだ発言をした。「データチーム内だけで用語を揃えるのでは狭すぎる。データを生成している側——開発者やプロダクトマネージャー——から活用する側——事業部、経営層——まで、全社で同じ言葉を使うことが理想だ」と述べた。さらに、コンテクストエンジニアリングの観点から「ビジネスの議事録やPDMドキュメントも含めて横断的に同じ用語を使うことが、AIへの適切な文脈提供にもつながる」と続けた。
+    </p>
+
+    <div class="sub-heading">将来のデータエンジニア像 ― 「少人数・広領域・パワースーツ」</div>
+
+    <p class="prose">
+      吉田氏が描いた将来像は示唆に富む。データエンジニアは今後、より少人数でより広い領域を担当するようになる。マネージドSaaSやLLMエージェントが「パワースーツ」のようにデータエンジニアをサポートし、個人の影響範囲を拡大させる。これは職種の消滅ではなく、<strong>一人当たりの生産性と責任範囲が飛躍的に拡大する変化</strong>として捉えるべきだという見立てだ。
+    </p>
+
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section 5: Links -->
+  <section class="section fade-in" id="links">
+    <div class="section-number">05 — RESOURCES</div>
+    <div class="section-tag insights">関連リンク</div>
+    <h2 class="section-title">関連<span class="highlight">リソース</span></h2>
+
+    <p class="prose">
+      イベントのアーカイブ動画、Connpassイベントページ、各スピーカーの資料へのリンクをまとめました。
+    </p>
+
+    <div class="links-grid">
+      <a href="https://www.youtube.com/watch?v=IdZzoBmmowo" target="_blank" class="link-item">
+        <span class="link-icon">YT</span>
+        <span class="link-label">アーカイブ動画（YouTube）— DES#31 フルセッション約64分</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://forkwell.connpass.com/event/363198/" target="_blank" class="link-item">
+        <span class="link-icon">CP</span>
+        <span class="link-label">Connpassイベントページ — Data Engineering Study #31</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://speakerdeck.com/sagara/modern-data-stackzui-xin-dong-xiang-kuizu-mai-shou-ai-ji-dong-no2025nian" target="_blank" class="link-item">
+        <span class="link-icon">SD</span>
+        <span class="link-label">さがら氏 スライド — Modern Data Stack最新動向 ～買収・AI、激動の2025年～</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://dev.classmethod.jp/articles/des31-report-modern-data-stack-2025/" target="_blank" class="link-item">
+        <span class="link-icon">BL</span>
+        <span class="link-label">さがら氏 ブログレポート — クラスメソッド DevelopersIO</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://speakerdeck.com/ikkimiyazaki/imazhu-mu-siteirudetaenziniaringunolun-dian" target="_blank" class="link-item">
+        <span class="link-icon">SD</span>
+        <span class="link-label">ikki氏 スライド — 今注目しているデータエンジニアリングの論点</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://speakerdeck.com/10xinc/detaenziniagakonoxian-sheng-kinokoruniha-dot-dot-dot" target="_blank" class="link-item">
+        <span class="link-icon">SD</span>
+        <span class="link-label">吉田氏 スライド — データエンジニアがこの先生きのこるには...?</span>
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="https://stable.co.jp/" target="_blank" class="link-item">
+        <span class="link-icon">WB</span>
+        <span class="link-label">stable株式会社（ikki氏 所属）</span>
+        <span class="link-arrow">→</span>
+      </a>
+    </div>
+
+    <div class="alert yellow" style="margin-top: 2rem;">
+      <div class="alert-label">Hashtag</div>
+      Twitter / X での議論は <strong>#DataEngineeringStudy</strong> で検索できます。
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div>Data Engineering Study #31 — 公開企画会議 アドバイザーと語る気になる技術</div>
+  <div>2025年9月30日 / Forkwell × primeNumber 共催</div>
+  <div style="margin-top: 0.5rem;">
+    <a href="https://www.youtube.com/watch?v=IdZzoBmmowo">YouTube</a>
+    &nbsp;·&nbsp;
+    <a href="https://forkwell.connpass.com/event/363198/">Connpass</a>
+    &nbsp;·&nbsp;
+    <span style="color: var(--text-muted);">#DataEngineeringStudy</span>
+  </div>
+</footer>
+
+<script>
+// Scroll-triggered fade-in
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
