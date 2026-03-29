@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Mesh — 分散型データアーキテクチャの4原則</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #8B5CF6;
+            --accent-light: #A78BFA;
+            --accent-dim: rgba(139, 92, 246, 0.15);
+            --accent-glow: rgba(139, 92, 246, 0.08);
+            --bg-deep: #07050F;
+            --bg-secondary: #0E0B1A;
+            --bg-tertiary: #191228;
+            --text-primary: #E8EAED;
+            --text-secondary: #A09BB5;
+            --border: #2A2240;
+            --border-accent: rgba(139, 92, 246, 0.3);
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            --indigo: #6366F1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(139, 92, 246, 0.05) 0%, transparent 55%),
+                radial-gradient(circle at 85% 70%, rgba(99, 102, 241, 0.04) 0%, transparent 55%),
+                radial-gradient(circle at 50% 90%, rgba(139, 92, 246, 0.03) 0%, transparent 40%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #0B091A 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        /* ─── Header & Navigation ─── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(7, 5, 15, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 40%, var(--indigo) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .book-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: rgba(25, 18, 40, 0.7);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Table of Contents ─── */
+        .toc-section {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+
+        .toc-box {
+            background: rgba(25, 18, 40, 0.6);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: color 0.2s ease;
+            padding: 0.3rem 0;
+        }
+
+        .toc-list li a:hover {
+            color: var(--accent-light);
+        }
+
+        .toc-num {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 28px;
+        }
+
+        /* ─── Main Content ─── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(25, 18, 40, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--indigo), transparent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 70px;
+            opacity: 0.9;
+        }
+
+        .chapter-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '//';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.4rem;
+            color: var(--text-primary);
+            line-height: 1.85;
+        }
+
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin: 1rem 0 1.5rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        /* ─── Tables ─── */
+        table {
+            width: 100%;
+            margin: 2rem 0;
+            border-collapse: collapse;
+            background: rgba(14, 11, 26, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(139, 92, 246, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(139, 92, 246, 0.04);
+        }
+
+        /* ─── Alert / Callout Boxes ─── */
+        .alert {
+            padding: 1.4rem 1.6rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-info {
+            border-left-color: var(--accent);
+            background: rgba(139, 92, 246, 0.08);
+        }
+
+        .alert-success {
+            border-left-color: var(--success);
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .alert-warning {
+            border-left-color: var(--warning);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-indigo {
+            border-left-color: var(--indigo);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-info .alert-title { color: var(--accent-light); }
+        .alert-success .alert-title { color: var(--success); }
+        .alert-warning .alert-title { color: var(--warning); }
+        .alert-indigo .alert-title { color: var(--indigo); }
+
+        .alert p { margin-bottom: 0.5rem; }
+        .alert p:last-child { margin-bottom: 0; }
+
+        /* ─── Code Blocks ─── */
+        .code-block {
+            background: rgba(7, 5, 15, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.5rem 1.8rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            line-height: 1.7;
+            color: var(--accent-light);
+        }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(14, 11, 26, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: rgba(14, 11, 26, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(139, 92, 246, 0.12);
+        }
+
+        /* ─── Outcome Cards (Chapter 1) ─── */
+        .outcome-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .outcome-card {
+            background: rgba(14, 11, 26, 0.8);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .outcome-card .outcome-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .outcome-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-light);
+        }
+
+        .outcome-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* ─── Generation Timeline (Chapter 1 history) ─── */
+        .timeline {
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 28px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--accent), var(--indigo), var(--border));
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .timeline-dot {
+            min-width: 58px;
+            height: 58px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent);
+            flex-shrink: 0;
+            z-index: 1;
+        }
+
+        .timeline-content {
+            background: rgba(14, 11, 26, 0.8);
+            border: 1px solid var(--border);
+            padding: 1.2rem 1.5rem;
+            border-radius: 8px;
+            flex: 1;
+        }
+
+        .timeline-content h4 {
+            margin-bottom: 0.4rem;
+            color: var(--text-primary);
+        }
+
+        .timeline-content p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* ─── Archetype Cards (Chapter 2) ─── */
+        .archetype-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .archetype-card {
+            background: rgba(14, 11, 26, 0.8);
+            border: 1px solid var(--border);
+            padding: 1.6rem;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .archetype-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+        }
+
+        .archetype-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            display: inline-block;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        /* ─── 8 Characteristics (Chapter 3) ─── */
+        .characteristics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .char-card {
+            background: rgba(14, 11, 26, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.4rem;
+            border-radius: 8px;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            transition: all 0.25s ease;
+        }
+
+        .char-card:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.1);
+        }
+
+        .char-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 36px;
+            opacity: 0.7;
+        }
+
+        .char-body h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.3rem;
+            color: var(--accent-light);
+        }
+
+        .char-body p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* ─── Platform Planes Diagram (Chapter 4) ─── */
+        .planes-diagram {
+            margin: 2rem 0;
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .plane {
+            padding: 2rem 2.5rem;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+        }
+
+        .plane:last-child {
+            border-bottom: none;
+        }
+
+        .plane-top {
+            background: rgba(139, 92, 246, 0.12);
+        }
+
+        .plane-mid {
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .plane-bottom {
+            background: rgba(25, 18, 40, 0.5);
+        }
+
+        .plane-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .plane-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .plane-badge-top {
+            background: rgba(139, 92, 246, 0.3);
+            color: var(--accent-light);
+            border: 1px solid var(--border-accent);
+        }
+
+        .plane-badge-mid {
+            background: rgba(99, 102, 241, 0.25);
+            color: #A5B4FC;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .plane-badge-bottom {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        .plane h4 {
+            font-size: 1.05rem;
+            color: var(--text-primary);
+            margin-bottom: 0.6rem;
+        }
+
+        .plane-users {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .plane-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .feature-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .planes-arrow {
+            text-align: center;
+            padding: 0.5rem;
+            color: var(--accent);
+            font-size: 1.2rem;
+            background: rgba(7, 5, 15, 0.6);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+        }
+
+        /* ─── Governance Comparison Table ─── */
+        .comparison-table thead {
+            background: rgba(139, 92, 246, 0.12);
+        }
+
+        .comparison-table .col-before {
+            color: var(--warning);
+        }
+
+        .comparison-table .col-after {
+            color: var(--success);
+        }
+
+        .comparison-table .col-aspect {
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+        }
+
+        /* ─── Principles Interrelation (Summary) ─── */
+        .principles-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .principle-card {
+            background: rgba(14, 11, 26, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .principle-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.1);
+        }
+
+        .principle-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.2;
+            position: absolute;
+            top: 1rem;
+            right: 1.2rem;
+            line-height: 1;
+        }
+
+        .principle-card h4 {
+            font-size: 1.05rem;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .principle-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .principle-card .dep-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent);
+            margin-top: 0.75rem;
+            display: block;
+        }
+
+        /* ─── Highlight Inline ─── */
+        .highlight {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        /* ─── DPQ Box ─── */
+        .dpq-box {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .dpq-element {
+            background: rgba(14, 11, 26, 0.9);
+            border: 1px solid var(--border-accent);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .dpq-element .dpq-icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .dpq-element h4 {
+            font-size: 0.9rem;
+            color: var(--accent-light);
+            margin-bottom: 0.4rem;
+        }
+
+        .dpq-element p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-source {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(25, 18, 40, 0.8);
+            border: 1px solid var(--border);
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+        }
+
+        .footer-disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0.75rem auto 0;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            section {
+                padding: 2rem 1.5rem;
+            }
+
+            .section-number {
+                font-size: 1.8rem;
+                min-width: 50px;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .principles-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .dpq-box {
+                grid-template-columns: 1fr;
+            }
+
+            .toc-list {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.75rem 0.9rem;
+            }
+
+            .timeline::before {
+                left: 22px;
+            }
+
+            .timeline-dot {
+                min-width: 46px;
+                height: 46px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero {
+                padding: 3rem 1.5rem 2rem;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .characteristics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .planes-diagram .plane {
+                padding: 1.5rem;
+            }
+        }
+
+        /* ─── Utility ─── */
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header>
+        <nav>
+            <a href="../index.html" class="logo">
+                <!-- mesh network SVG logo -->
+                <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Data Mesh logo">
+                    <circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="4" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="11" cy="11" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+                    <line x1="5.8" y1="5.2" x2="9.3" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="5.2" x2="12.7" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="5.8" y1="16.8" x2="9.3" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="16.8" x2="12.7" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+                Data Mesh
+            </a>
+            <ul class="nav-links">
+                <li><a href="#ch1">Ch.1 概要</a></li>
+                <li><a href="#ch2">Ch.2 ドメイン</a></li>
+                <li><a href="#ch3">Ch.3 プロダクト</a></li>
+                <li><a href="#ch4">Ch.4 プラットフォーム</a></li>
+                <li><a href="#ch5">Ch.5 ガバナンス</a></li>
+            </ul>
+            <a href="../index.html" class="back-link">← トップに戻る</a>
+        </nav>
+    </header>
+
+    <!-- ─── Hero ─── -->
+    <div class="hero">
+        <div class="eyebrow">学習ノート / O'REILLY / Part I</div>
+        <h1>Data Mesh</h1>
+        <p class="subtitle">分散型データアーキテクチャの4原則</p>
+        <p class="subtitle" style="font-size:1rem; margin-bottom:1.5rem;">Part I「What Is Data Mesh?」（第1章〜第5章）のサマリー</p>
+        <div class="book-info">
+            <span>Zhamak Dehghani</span>
+            <span style="opacity:0.4;">|</span>
+            <span>O'Reilly Media, 2022</span>
+            <span style="opacity:0.4;">|</span>
+            <span>ISBN: 978-1-492-09239-3</span>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">4</div>
+                <div class="stat-label">相互依存する原則</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">8</div>
+                <div class="stat-label">データプロダクトの品質特性</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div class="stat-label">プラットフォームの機能レイヤー</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">DPQ</div>
+                <div class="stat-label">Data Product Quantum</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2026-03-29</p>
+    </div>
+
+    <!-- ─── Table of Contents ─── -->
+    <div class="toc-section">
+        <div class="toc-box">
+            <div class="toc-title">目次 / Table of Contents</div>
+            <ul class="toc-list">
+                <li>
+                    <a href="#ch1">
+                        <span class="toc-num">Ch.1</span>
+                        Data Mesh とは何か（ナットシェル）
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch2">
+                        <span class="toc-num">Ch.2</span>
+                        ドメインオーナーシップの原則
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch3">
+                        <span class="toc-num">Ch.3</span>
+                        データをプロダクトとして扱う原則
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch4">
+                        <span class="toc-num">Ch.4</span>
+                        セルフサーブ・データプラットフォームの原則
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch5">
+                        <span class="toc-num">Ch.5</span>
+                        連合型計算ガバナンスの原則
+                    </a>
+                </li>
+                <li>
+                    <a href="#summary">
+                        <span class="toc-num">まとめ</span>
+                        4原則の相互関係
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ─── Main Content ─── -->
+    <main>
+
+        <!-- ═══ Chapter 1 ═══ -->
+        <section id="ch1">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <div>
+                    <span class="chapter-tag">Chapter 1</span>
+                    <h2>Data Mesh とは何か（ナットシェル）</h2>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <div class="alert-title">コア定義</div>
+                <p><span class="highlight">Data Mesh</span> = 複雑・大規模環境において、<strong>分析用データ（Analytical Data）</strong>の共有・アクセス・管理を行うための、<strong>分散型ソシオテクニカル（社会技術的）アプローチ</strong>。</p>
+                <p style="margin-bottom:0; font-size:0.9rem; color: var(--text-secondary);">「分析用データ」= レポーティング・診断・機械学習に使われるデータ。運用系（トランザクション）データとは区別される。</p>
+            </div>
+
+            <h3>Data Mesh が目指す3つのアウトカム</h3>
+
+            <div class="outcome-grid">
+                <div class="outcome-card">
+                    <div class="outcome-icon">⚡</div>
+                    <h4>Agility at Scale</h4>
+                    <p>規模でのアジリティ — 大規模環境でもスピードを維持できる俊敏性</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">🔬</div>
+                    <h4>Data-Driven Innovation</h4>
+                    <p>データ駆動のイノベーション — データを活用した継続的な価値創造</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">🌐</div>
+                    <h4>Data Democratization</h4>
+                    <p>データの民主化 — 組織全体でデータにアクセス・活用できる状態</p>
+                </div>
+            </div>
+
+            <h3>3つのパラダイムシフト</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>従来のパラダイム</th>
+                        <th>→</th>
+                        <th>Data Mesh のパラダイム</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>中央集権型データ管理</td>
+                        <td style="text-align:center; color: var(--accent);">→</td>
+                        <td><strong>ドメインオーナーシップへ分散</strong></td>
+                    </tr>
+                    <tr>
+                        <td>データを業務の副産物として扱う</td>
+                        <td style="text-align:center; color: var(--accent);">→</td>
+                        <td><strong>データをプロダクトとして設計・提供</strong></td>
+                    </tr>
+                    <tr>
+                        <td>ビスポーク（一点物）パイプライン</td>
+                        <td style="text-align:center; color: var(--accent);">→</td>
+                        <td><strong>セルフサーブ・プラットフォーム</strong></td>
+                    </tr>
+                    <tr>
+                        <td>アドホックなガバナンス</td>
+                        <td style="text-align:center; color: var(--accent);">→</td>
+                        <td><strong>連合型計算ガバナンス（自動化）</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>4つの相互依存する原則</h3>
+
+            <p>Data Mesh は以下4原則が<span class="highlight">相互依存</span>している。どれか一つを欠いても機能しない。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>① ドメインオーナーシップの原則</h4>
+                    <p>データの責任をそのデータを最もよく知るドメインに分散させる。これが基盤となる原則。</p>
+                </div>
+                <div class="card">
+                    <h4>② データをプロダクトとして扱う原則</h4>
+                    <p>データをプロダクト思考で管理。コンシューマーが顧客であり、品質・発見可能性を保証する。</p>
+                </div>
+                <div class="card">
+                    <h4>③ セルフサーブ・データプラットフォームの原則</h4>
+                    <p>ドメインが自律的にデータプロダクトを構築できるインフラ基盤を提供する。</p>
+                </div>
+                <div class="card">
+                    <h4>④ 連合型計算ガバナンスの原則</h4>
+                    <p>意思決定を連合体が行い、ポリシーをコードとして自動適用する。</p>
+                </div>
+            </div>
+
+            <h3>Data Product Quantum（DPQ）</h3>
+
+            <p>DPQ は Data Mesh における<span class="highlight">最小の独立したデプロイ可能ユニット</span>。3つの要素が三位一体で機能する。</p>
+
+            <div class="dpq-box">
+                <div class="dpq-element">
+                    <div class="dpq-icon">⚙️</div>
+                    <h4>Code</h4>
+                    <p>データプロダクトのロジック・変換処理・ポリシー実装</p>
+                </div>
+                <div class="dpq-element">
+                    <div class="dpq-icon">🗄️</div>
+                    <h4>Data / Metadata</h4>
+                    <p>実際のデータと、その意味・文脈・品質を記述したメタデータ</p>
+                </div>
+                <div class="dpq-element">
+                    <div class="dpq-icon">🏗️</div>
+                    <h4>Infrastructure</h4>
+                    <p>動作に必要なコンピューティング・ストレージ・ネットワーク基盤</p>
+                </div>
+            </div>
+
+            <h3>Data Mesh の起源：3世代の失敗</h3>
+
+            <p>Dehghani は、データアーキテクチャ3世代の失敗パターンから Data Mesh を導出した。<span class="highlight">根本原因は技術的ではなく、組織的なもの</span>だった。</p>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-dot">Gen 1</div>
+                    <div class="timeline-content">
+                        <h4>データウェアハウス（DWH）時代</h4>
+                        <p>中央の DWH チームへのボトルネック。変化への適応が遅く、スケール不可能。ビジネス部門の要望に応えるには中央チームを介す必要があった。</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot">Gen 2</div>
+                    <div class="timeline-content">
+                        <h4>データレイク時代</h4>
+                        <p>ガバナンス欠如による「データの沼（Data Swamp）」化。データは蓄積されたが品質・文脈が失われ、利用価値が低下した。</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot">Gen 3</div>
+                    <div class="timeline-content">
+                        <h4>クラウドプラットフォーム時代</h4>
+                        <p>テクノロジーは進化したが組織構造は変わらなかった。中央集権的なデータチームへの依存が続き、サイロと遅延の問題は解消されなかった。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">ソフトウェアエンジニアリングからの教訓</div>
+                <p>Data Mesh は、マイクロサービスアーキテクチャと DDD（ドメイン駆動設計）が解決した問題を、分析データ領域に適用する。チームの自律性・責任の局所化・明確なインターフェース — これらをデータに持ち込む。</p>
+            </div>
+        </section>
+
+        <!-- ═══ Chapter 2 ═══ -->
+        <section id="ch2">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <div>
+                    <span class="chapter-tag">Chapter 2</span>
+                    <h2>ドメインオーナーシップの原則</h2>
+                </div>
+            </div>
+
+            <p>データの責任を<span class="highlight">そのデータを最もよく知る人たち</span>（= データを生み出すドメイン）へ分散・移譲する。これは Data Mesh の<strong>基盤原則</strong>であり、この原則なしに残りの3つは成立しない。</p>
+
+            <h3>分解の軸：テクノロジーではなくビジネスドメイン</h3>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>従来の分割軸（技術的境界）</h4>
+                    <p>「インジェスチョンチーム」「変換チーム」「BI チーム」など、<strong>技術的な機能</strong>で組織が縦割りされていた。データの意味・文脈はどこにも残らない。</p>
+                </div>
+                <div class="card">
+                    <h4>Data Mesh の分割軸（ドメイン境界）</h4>
+                    <p>DDD の<strong>バウンデッドコンテキスト</strong>に沿って責任を分割。「注文ドメイン」「顧客ドメイン」などビジネスの実体に対応した責任体制。</p>
+                </div>
+            </div>
+
+            <h3>3種類のドメインデータアーキタイプ</h3>
+
+            <div class="archetype-grid">
+                <div class="archetype-card">
+                    <span class="archetype-label">TYPE 01</span>
+                    <h4>Source-Aligned（ソース整合型）</h4>
+                    <p>業務システムの実データに近い形で提供。データの生成元ドメインが責任を持つ。</p>
+                    <p style="font-size:0.85rem; color: var(--text-secondary); margin-bottom:0;">例：注文ドメインの生注文データ、ユーザーイベントログ</p>
+                </div>
+                <div class="archetype-card">
+                    <span class="archetype-label">TYPE 02</span>
+                    <h4>Aggregate（集約型）</h4>
+                    <p>複数のソースドメインから集約・統合したデータ。組織横断的な視点を提供する。</p>
+                    <p style="font-size:0.85rem; color: var(--text-secondary); margin-bottom:0;">例：全社売上サマリー、顧客360ビュー</p>
+                </div>
+                <div class="archetype-card">
+                    <span class="archetype-label">TYPE 03</span>
+                    <h4>Consumer-Aligned（コンシューマー整合型）</h4>
+                    <p>特定のコンシューマー（MLモデル、BI、外部API）のユースケースに特化して設計。</p>
+                    <p style="font-size:0.85rem; color: var(--text-secondary); margin-bottom:0;">例：MLモデル学習用の特徴量データセット</p>
+                </div>
+            </div>
+
+            <h3>データオーナーシップの上流化</h3>
+
+            <p>データオーナーシップを「上流」（= データを生み出す側）に押し上げることが重要。中央のデータチームへの丸投げではなく、<span class="highlight">各ドメインが自分たちのデータに責任を持つ</span>体制を構築する。</p>
+
+            <div class="alert alert-warning">
+                <div class="alert-title">反パターン：データパイプラインの外部公開</div>
+                <p>各ドメインのデータパイプラインは、そのドメインの<strong>内部実装の詳細</strong>として隠蔽すべき。外部（他ドメイン）はパイプラインを意識せず、公開されたデータプロダクトのみを利用する。</p>
+            </div>
+
+            <h3>単一真実源（Single Source of Truth）への執着を捨てる</h3>
+
+            <p>Data Mesh は「唯一の真実」という概念を否定する。代わりに、<span class="highlight">複数のコンテキスト的な真実</span>を受け入れる。異なるドメインが異なる視点から同じ現実を表現することを許容し、それぞれのユースケースに最適化された表現を持つ。</p>
+
+            <div class="alert alert-success">
+                <div class="alert-title">なぜ「基盤原則」なのか</div>
+                <p>ドメインオーナーシップがなければ、「データをプロダクト」にする責任者がいない。セルフサーブプラットフォームを誰も使わない。ガバナンスに参加する主体が存在しない。この原則が他の3つを成立させる土台となる。</p>
+            </div>
+        </section>
+
+        <!-- ═══ Chapter 3 ═══ -->
+        <section id="ch3">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <div>
+                    <span class="chapter-tag">Chapter 3</span>
+                    <h2>データをプロダクトとして扱う原則</h2>
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <div class="alert-title">課題：データフリクション問題</div>
+                <p>Anaconda 2020年レポートによると、データサイエンティストの約<strong>50%の時間</strong>がデータ前処理に費やされている。アクセスが困難、品質が不明確、文書化が不十分 — これらが「データフリクション」を生む。</p>
+                <p style="margin:0;">ドメインオーナーシップだけでは、データサイロをさらに悪化させる可能性がある。そこで必要なのがこの原則。</p>
+            </div>
+
+            <h3>プロダクト思考の適用</h3>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>データコンシューマー = 顧客</h4>
+                    <p>データを利用する人・チーム・システムは「顧客」として扱われる。顧客体験（= データへのアクセスと利用体験）を中心に設計する。</p>
+                </div>
+                <div class="card">
+                    <h4>データプロダクトオーナーの設置</h4>
+                    <p>各ドメインにデータプロダクトオーナーを置く。ライフサイクル全体・品質基準・コンシューマー体験・継続的改善の責任者。</p>
+                </div>
+                <div class="card">
+                    <h4>副産物からプロダクトへ</h4>
+                    <p>データは「業務システムの副産物」から「オーナーシップ・品質基準・継続改善を伴うプロダクト」へと変容する。</p>
+                </div>
+            </div>
+
+            <h3>8つのユーザビリティ特性</h3>
+
+            <p>高品質なデータプロダクトが備えるべき8つの特性。これらすべてを満たすことで「使える」データプロダクトとなる。</p>
+
+            <div class="characteristics-grid">
+                <div class="char-card">
+                    <div class="char-num">01</div>
+                    <div class="char-body">
+                        <h4>Discoverable（発見可能）</h4>
+                        <p>データカタログや検索機能で見つけられる。存在を知らなければ使えない。</p>
+                    </div>
+                </div>
+                <div class="char-card">
+                    <div class="char-num">02</div>
+                    <div class="char-body">
+                        <h4>Addressable（アドレス可能）</h4>
+                        <p>一意のアドレス（URI）でプログラマティックにアクセスできる。</p>
+                    </div>
+                </div>
+                <div class="char-card">
+                    <div class="char-num">03</div>
+                    <div class="char-body">
+                        <h4>Understandable（理解可能）</h4>
+                        <p>データの意味・文脈・ビジネス定義が明確に文書化されている。</p>
+                    </div>
+                </div>
+                <div class="char-card">
+                    <div class="char-num">04</div>
+                    <div class="char-body">
+                        <h4>Trustworthy &amp; Truthful（信頼可能・真実）</h4>
+                        <p>SLO（品質目標）が定義され、品質が継続的に計測・保証されている。</p>
+                    </div>
+                </div>
+                <div class="char-card">
+                    <div class="char-num">05</div>
+                    <div class="char-body">
+                        <h4>Natively Accessible（ネイティブアクセス可能）</h4>
+                        <p>標準的な方法（SQL、API、ファイル）で直接アクセスできる。</p>
+                    </div>
+                </div>
+                <div class="char-card">
+                    <div class="char-num">06</div>
+                    <div class="char-body">
+                        <h4>Interoperable &amp; Composable（相互運用・組み合わせ可能）</h4>
+                        <p>他のデータプロダクトと連携・組み合わせて新しい価値を生み出せる。</p>
+                    </div>
+                </div>
+                <div class="char-card">
+                    <div class="char-num">07</div>
+                    <div class="char-body">
+                        <h4>Valuable on Its Own（単独で価値がある）</h4>
+                        <p>他のプロダクトに依存せず、単体として意味のある価値を提供する。</p>
+                    </div>
+                </div>
+                <div class="char-card">
+                    <div class="char-num">08</div>
+                    <div class="char-body">
+                        <h4>Secure（セキュア）</h4>
+                        <p>アクセス制御が適切に実装され、コンプライアンス要件を満たしている。</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Data Product Quantum（DPQ）の再確認</h3>
+
+            <p>データプロダクトの最小デプロイ可能ユニット。<span class="mono">コード + データ/メタデータ + インフラ</span>の三位一体が揃って、はじめて独立して機能するデータプロダクトとなる。DPQ の境界が、責任の境界でもある。</p>
+
+            <div class="alert alert-info">
+                <div class="alert-title">変容の核心</div>
+                <p>この原則によって、データは「誰かが作った副産物をたまたま使う」から「オーナーが責任を持って提供し、コンシューマーが信頼して使う」へと変容する。これがデータ品質改善の根本的なインセンティブ構造を生む。</p>
+            </div>
+        </section>
+
+        <!-- ═══ Chapter 4 ═══ -->
+        <section id="ch4">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <div>
+                    <span class="chapter-tag">Chapter 4</span>
+                    <h2>セルフサーブ・データプラットフォームの原則</h2>
+                </div>
+            </div>
+
+            <p>ドメインチームが<span class="highlight">自律的に</span>データプロダクトを構築・デプロイ・維持できるよう、インフラの複雑性を抽象化する。プラットフォームなしにドメインオーナーシップを要求することは、ドメインチームに過大な負担を強いる。</p>
+
+            <h3>設計目標</h3>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>ドメインの自律性を実現</h4>
+                    <p>インフラ専門知識がなくてもデータプロダクトを構築・運用できる環境を提供する。</p>
+                </div>
+                <div class="card">
+                    <h4>複雑性の隠蔽</h4>
+                    <p>セキュリティ、スケーリング、モニタリングなどのクロスカッティング関心事を自動的に処理する。</p>
+                </div>
+                <div class="card">
+                    <h4>専門化の障壁を下げる</h4>
+                    <p>分散ストレージやクエリエンジンの専門知識がなくても、宣言的なインターフェースで操作できる。</p>
+                </div>
+                <div class="card">
+                    <h4>ドメイン非依存（汎用）</h4>
+                    <p>どのドメインも同じプラットフォームを使える。特定ドメイン向けのカスタマイズは不要。</p>
+                </div>
+            </div>
+
+            <h3>3層のケイパビリティ構成（マルチプレーンアーキテクチャ）</h3>
+
+            <p>プラットフォームは以下の3層（プレーン）で構成される。上位層ほど抽象度が高く、エンドユーザーに近い。</p>
+
+            <div class="planes-diagram">
+                <!-- Plane 3: Top -->
+                <div class="plane plane-top">
+                    <div class="plane-header">
+                        <span class="plane-badge plane-badge-top">PLANE 3 / TOP</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size:0.75rem; color: var(--text-secondary);">全組織・ガバナンスチームが利用</span>
+                    </div>
+                    <h4>Data Mesh Supervision Plane（メッシュ監視プレーン）</h4>
+                    <p style="font-size:0.9rem; color: var(--text-secondary); margin-bottom:0.75rem;">グローバルなメッシュレベルのケイパビリティを提供。組織全体にわたる横断的な機能。</p>
+                    <div class="plane-features">
+                        <span class="feature-tag">データ発見（Discovery）</span>
+                        <span class="feature-tag">セマンティッククエリ</span>
+                        <span class="feature-tag">データカタログ</span>
+                        <span class="feature-tag">グローバルセキュリティ</span>
+                        <span class="feature-tag">監視・アラート</span>
+                        <span class="feature-tag">SLO モニタリング</span>
+                    </div>
+                </div>
+
+                <div class="planes-arrow">↕ 機能の依存・呼び出し</div>
+
+                <!-- Plane 2: Middle -->
+                <div class="plane plane-mid">
+                    <div class="plane-header">
+                        <span class="plane-badge plane-badge-mid">PLANE 2 / MIDDLE</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size:0.75rem; color: var(--text-secondary);">ドメインチームの開発者が日常的に利用</span>
+                    </div>
+                    <h4>Data Product Developer Experience Plane（DX プレーン）</h4>
+                    <p style="font-size:0.9rem; color: var(--text-secondary); margin-bottom:0.75rem;">ドメインチームがデータプロダクトのライフサイクルを宣言的に管理できるインターフェース。クロスカッティング関心事を自動実装。</p>
+                    <div class="plane-features">
+                        <span class="feature-tag">宣言的インターフェース</span>
+                        <span class="feature-tag">スキーマレジストリ</span>
+                        <span class="feature-tag">パイプラインオーケストレーション</span>
+                        <span class="feature-tag">データリネージュ</span>
+                        <span class="feature-tag">テスト自動化</span>
+                        <span class="feature-tag">デプロイメント管理</span>
+                    </div>
+                </div>
+
+                <div class="planes-arrow">↕ 機能の依存・呼び出し</div>
+
+                <!-- Plane 1: Bottom -->
+                <div class="plane plane-bottom">
+                    <div class="plane-header">
+                        <span class="plane-badge plane-badge-bottom">PLANE 1 / BOTTOM</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size:0.75rem; color: var(--text-secondary);">他プレーンまたは上級開発者が利用</span>
+                    </div>
+                    <h4>Data Infrastructure Provisioning Plane（インフラプレーン）</h4>
+                    <p style="font-size:0.9rem; color: var(--text-secondary); margin-bottom:0.75rem;">最下位の基盤層。分散処理・ストレージ・アクセス制御の実装を担う。他のプレーンの動作を支える土台。</p>
+                    <div class="plane-features">
+                        <span class="feature-tag">分散ストレージ</span>
+                        <span class="feature-tag">ACL（アクセス制御）</span>
+                        <span class="feature-tag">オーケストレーション基盤</span>
+                        <span class="feature-tag">クエリエンジン</span>
+                        <span class="feature-tag">コンピューティング</span>
+                        <span class="feature-tag">ネットワーク</span>
+                    </div>
+                </div>
+            </div>
+
+            <h3>プラットフォームチームの役割</h3>
+
+            <p>プラットフォームチームは<span class="highlight">プロダクトチームとして運営</span>する。ドメインチームが「顧客」であり、プラットフォームの開発優先順位はドメインのニーズに基づいて決定される。</p>
+
+            <div class="alert alert-warning">
+                <div class="alert-title">現状の技術的課題</div>
+                <p>運用系テックスタック（Docker / Kubernetes）とデータ系テックスタック（Spark / Databricks）の<strong>乖離</strong>が現在の主要な課題。この2つの世界をシームレスに統合することが、真のセルフサーブ実現の鍵となる。</p>
+            </div>
+        </section>
+
+        <!-- ═══ Chapter 5 ═══ -->
+        <section id="ch5">
+            <div class="section-header">
+                <div class="section-number">05</div>
+                <div>
+                    <span class="chapter-tag">Chapter 5</span>
+                    <h2>連合型計算ガバナンスの原則</h2>
+                </div>
+            </div>
+
+            <p>この原則は、データガバナンスの二項対立を解消する。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>❌ 中央集権型ガバナンス</h4>
+                    <p>1つの中央チームが全ポリシーを決定・適用。スピードが遅く、スケールしない。ボトルネックになる。</p>
+                </div>
+                <div class="card">
+                    <h4>❌ 無政府状態（データアナーキー）</h4>
+                    <p>各ドメインが好き勝手にやる。互換性なし、コンプライアンス違反、セキュリティ崩壊。</p>
+                </div>
+                <div class="card">
+                    <h4>✅ 連合型計算ガバナンス</h4>
+                    <p>各ドメインの代表者が連合体を形成し、グローバル基準を合意・コードで実装・自動適用する。</p>
+                </div>
+            </div>
+
+            <h3>「連合型（Federated）」の意味</h3>
+
+            <p>意思決定を<span class="highlight">ドメインのデータプロダクトオーナーとプラットフォームプロダクトオーナーの連合体</span>が行う。各ドメインの代表者が集まって決定する<strong>ギルドモデル</strong>。中央チームの独裁でも、各ドメインの独走でもない。</p>
+
+            <h3>「計算型（Computational）」の意味</h3>
+
+            <p>ポリシーを<span class="highlight">コードとして実装</span>し、プラットフォームが自動的に適用・強制する。人手による文書ベースのガバナンスではなく、機械が実行可能なポリシーとして表現する。</p>
+
+            <div class="code-block">// ポリシーの例（概念的表現）
+policy "data-product-security" {
+  require: encryption_at_rest = true
+  require: access_control = role_based
+  require: pii_fields.masked = true
+  slo: freshness_sla &lt;= 24h
+  slo: availability >= 99.9%
+}
+
+// → プラットフォームが自動的にすべてのDPQに適用・検証
+            </div>
+
+            <h3>グローバル基準 vs ローカル決定</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>種別</th>
+                        <th>決定主体</th>
+                        <th>内容例</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong style="color: var(--accent-light);">グローバル基準</strong><br><small>全ドメイン共通</small></td>
+                        <td>連合体（全ドメイン合意）</td>
+                        <td>相互運用性規格、セキュリティポリシー、コンプライアンス、SLO定義の枠組み、識別子体系</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color: var(--success);">ローカル決定</strong><br><small>各ドメイン自律</small></td>
+                        <td>各ドメインのDPO</td>
+                        <td>ドメインデータモデル、内部ビジネスロジック、スキーマ設計、ドメイン固有のSLO値</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>成功指標：ネットワーク効果</h3>
+
+            <p>ガバナンスの成功は「管理されたデータの量」ではなく、<span class="highlight">データ消費の接続数（ネットワーク効果）</span>で測定する。データプロダクトが広く使われ、組織全体でデータの流れが増えているかが真の指標。</p>
+
+            <div class="alert alert-info">
+                <div class="alert-title">エラー対応の哲学転換</div>
+                <p><strong>旧来（予防主義）：</strong> 事前の手動チェック・承認プロセスでエラーを防ぐ → 遅く、スケールしない</p>
+                <p style="margin-bottom:0;"><strong>Data Mesh（検出と回復）：</strong> 自動化された検知・修正で素早く対応 → 速く、スケール可能</p>
+            </div>
+
+            <h3>ポリシーの Git 管理</h3>
+
+            <p>ガバナンスポリシーはコードとして、Gitで管理する。これにより：</p>
+
+            <ul>
+                <li><strong>バージョン管理：</strong> ポリシーの変更履歴を追跡可能</li>
+                <li><strong>コードレビュー：</strong> Pull Request で変更の審査プロセスを実施</li>
+                <li><strong>テスト：</strong> ポリシーの自動検証・CI/CD パイプラインで品質保証</li>
+                <li><strong>ロールバック：</strong> 問題があれば即座に以前のバージョンに戻せる</li>
+            </ul>
+
+            <h3>Pre-Data-Mesh vs Data Mesh：ガバナンス比較</h3>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>観点</th>
+                        <th class="col-before">従来（Pre-Data-Mesh）</th>
+                        <th class="col-after">Data Mesh</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="col-aspect">チーム構成</td>
+                        <td>中央集権チーム（専任ガバナンスチーム）</td>
+                        <td>連合型チーム（各ドメイン代表 = ギルド）</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">適用方法</td>
+                        <td>手動（文書レビュー・承認プロセス）</td>
+                        <td>自動化（コードとしてプラットフォームが強制）</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">ポリシー形態</td>
+                        <td>静的ドキュメント（PDF・Wiki）</td>
+                        <td>動的コード（Git管理・CI/CD対応）</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">意思決定</td>
+                        <td>トップダウン（中央が一方的に決定）</td>
+                        <td>ボトムアップ＋合意形成（ドメイン参加型）</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">エラー対応</td>
+                        <td>予防重視（事前チェック・ゲートキーパー）</td>
+                        <td>検出と回復（自動検知・自動修正）</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">スケーラビリティ</td>
+                        <td>スケールしない（中央チームがボトルネック）</td>
+                        <td>スケール可能（自動化 + 分散意思決定）</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">変更速度</td>
+                        <td>遅い（承認待ち、会議依存）</td>
+                        <td>速い（コードレビュー + 自動デプロイ）</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">成功指標</td>
+                        <td>管理されたデータ量、コンプライアンス率</td>
+                        <td>データ消費接続数（ネットワーク効果）</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ═══ Summary ═══ -->
+        <section id="summary">
+            <div class="section-header">
+                <div class="section-number">∑</div>
+                <div>
+                    <span class="chapter-tag">Summary</span>
+                    <h2>4原則の相互関係と学習から得た洞察</h2>
+                </div>
+            </div>
+
+            <p>Data Mesh の4原則は独立した施策ではなく、<span class="highlight">相互依存する一つのシステム</span>を形成している。どれか一つを欠いても全体が機能しない。</p>
+
+            <div class="principles-grid">
+                <div class="principle-card">
+                    <div class="principle-number">①</div>
+                    <h4>ドメインオーナーシップの原則</h4>
+                    <p>基盤原則。データの責任とオーナーシップをドメインへ分散させる。これなしに残りの3原則は成立しない。</p>
+                    <span class="dep-label">→ ②のオーナーを生み出す / ③の利用者を定義する</span>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">②</div>
+                    <h4>データをプロダクトとして扱う原則</h4>
+                    <p>ドメインオーナーシップだけでは生まれるサイロを解消。データに品質・発見可能性・継続改善を組み込む。</p>
+                    <span class="dep-label">→ ④のガバナンス対象となるプロダクトを定義する</span>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">③</div>
+                    <h4>セルフサーブ・データプラットフォームの原則</h4>
+                    <p>ドメインチームに自律性を与える基盤。これなしにドメインへの責任移譲は過大な負担になる。</p>
+                    <span class="dep-label">→ ④のポリシーを「計算的」に実行する手段を提供する</span>
+                </div>
+                <div class="principle-card">
+                    <div class="principle-number">④</div>
+                    <h4>連合型計算ガバナンスの原則</h4>
+                    <p>中央集権とアナーキーの間の均衡点。グローバル基準を保ちながらドメインの自律性を尊重する。</p>
+                    <span class="dep-label">→ ①②③が揃って初めて意味を持つ統治機構</span>
+                </div>
+            </div>
+
+            <h3>依存関係の整理</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>依存関係</th>
+                        <th>なぜ依存するか</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>① → ②</strong></td>
+                        <td>ドメインが責任を持つことで、はじめてデータをプロダクトとして設計・維持するインセンティブが生まれる</td>
+                    </tr>
+                    <tr>
+                        <td><strong>① → ③</strong></td>
+                        <td>プラットフォームなしにドメインに責任を持たせるのは無理。自律性を与えるためのインフラが不可欠</td>
+                    </tr>
+                    <tr>
+                        <td><strong>② → ④</strong></td>
+                        <td>データプロダクトが存在してはじめてガバナンスの対象が明確になる。ガバナンスはプロダクトの品質を保証する仕組み</td>
+                    </tr>
+                    <tr>
+                        <td><strong>③ → ④</strong></td>
+                        <td>プラットフォームがガバナンスポリシーの「計算的」な実行（自動適用）を担保する。プラットフォームなしにポリシーの自動化は不可能</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">本質的な洞察</div>
+                <p>Data Mesh の革新性は<strong>技術アーキテクチャではなく、組織・カルチャーの設計</strong>にある。3世代のデータアーキテクチャが失敗した根本原因（中央集権的な組織構造）に対して、ソフトウェアエンジニアリングで実証済みの知見（DDD・マイクロサービス）を援用して解決しようとしている。</p>
+                <p style="margin-bottom:0;">テクノロジーを変えるだけでは問題は解消されない。<strong>誰がデータに責任を持つか</strong>という組織設計こそが、データアーキテクチャの本質的な問いとなる。</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ─── Footer ─── -->
+    <footer>
+        <div class="footer-source">
+            出典：Zhamak Dehghani,『Data Mesh』, O'Reilly Media, 2022 — ISBN 978-1-492-09239-3
+        </div>
+        <p>学習日：2026-03-29 &nbsp;|&nbsp; Part I（第1章〜第5章）個人学習ノート</p>
+        <p class="footer-disclaimer">
+            本記事は個人の学習目的で作成されたサマリーです。原著の内容を正確に伝えることを目指していますが、
+            完全性・正確性を保証するものではありません。詳細は原著をご参照ください。
+        </p>
+    </footer>
+
+</body>
+</html>
