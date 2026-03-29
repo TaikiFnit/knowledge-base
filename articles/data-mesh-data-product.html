@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Mesh — データプロダクトアーキテクチャの設計</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #EC4899;
+            --accent-light: #F472B6;
+            --accent-dim: rgba(236, 72, 153, 0.15);
+            --accent-glow: rgba(236, 72, 153, 0.08);
+            --bg-deep: #0C070A;
+            --bg-secondary: #110A0E;
+            --bg-tertiary: #1C1018;
+            --text-primary: #E8EAED;
+            --text-secondary: #A08C96;
+            --border: #2A1520;
+            --border-accent: rgba(236, 72, 153, 0.3);
+            --danger: #EF4444;
+            --indigo: #6366F1;
+            --amber: #F59E0B;
+            --rose-deep: #BE185D;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(236, 72, 153, 0.05) 0%, transparent 55%),
+                radial-gradient(circle at 85% 70%, rgba(190, 24, 93, 0.04) 0%, transparent 55%),
+                radial-gradient(circle at 50% 90%, rgba(236, 72, 153, 0.03) 0%, transparent 40%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #0E0810 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        /* ─── Header & Navigation ─── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(12, 7, 10, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 40%, var(--rose-deep) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .book-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: rgba(28, 16, 24, 0.7);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Table of Contents ─── */
+        .toc-section {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+
+        .toc-box {
+            background: rgba(28, 16, 24, 0.6);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: color 0.2s ease;
+            padding: 0.3rem 0;
+        }
+
+        .toc-list li a:hover {
+            color: var(--accent-light);
+        }
+
+        .toc-num {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 34px;
+        }
+
+        /* ─── Main Content ─── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(28, 16, 24, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--rose-deep), transparent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 70px;
+            opacity: 0.9;
+        }
+
+        .chapter-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '//';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.4rem;
+            color: var(--text-primary);
+            line-height: 1.85;
+        }
+
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin: 1rem 0 1.5rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        /* ─── Tables ─── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(17, 10, 14, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(236, 72, 153, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(236, 72, 153, 0.04);
+        }
+
+        /* ─── Alert / Callout Boxes ─── */
+        .alert {
+            padding: 1.4rem 1.6rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-rose {
+            border-left-color: var(--accent);
+            background: rgba(236, 72, 153, 0.08);
+        }
+
+        .alert-success {
+            border-left-color: var(--accent-light);
+            background: rgba(244, 114, 182, 0.08);
+        }
+
+        .alert-danger {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-indigo {
+            border-left-color: var(--indigo);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .alert-amber {
+            border-left-color: var(--amber);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-rose .alert-title { color: var(--accent-light); }
+        .alert-success .alert-title { color: var(--accent-light); }
+        .alert-danger .alert-title { color: var(--danger); }
+        .alert-indigo .alert-title { color: var(--indigo); }
+        .alert-amber .alert-title { color: var(--amber); }
+
+        .alert p { margin-bottom: 0.5rem; }
+        .alert p:last-child { margin-bottom: 0; }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(17, 10, 14, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: rgba(17, 10, 14, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(236, 72, 153, 0.12);
+        }
+
+        /* ─── Char3 Cards (3-column feature blocks) ─── */
+        .char3-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .char3-card {
+            background: rgba(17, 10, 14, 0.9);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.8rem;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .char3-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(236, 72, 153, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .char3-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.12;
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            line-height: 1;
+        }
+
+        .char3-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .char3-card h4 {
+            font-size: 1.15rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        .char3-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+
+        .char3-impact {
+            font-size: 0.82rem;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid var(--border);
+            padding-top: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ─── SVG Diagram Containers ─── */
+        .diagram-wrap {
+            margin: 2.5rem 0;
+            background: rgba(17, 10, 14, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .diagram-inner {
+            padding: 2rem 2.5rem;
+            position: relative;
+        }
+
+        .diagram-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* ─── Highlight Inline ─── */
+        .highlight {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 0.8rem 1.5rem;
+            margin: 1.5rem 0;
+            background: rgba(236, 72, 153, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        blockquote cite {
+            display: block;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-style: normal;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Stat Callout ─── */
+        .stat-callout {
+            background: rgba(17, 10, 14, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-callout-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-row-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-big {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ─── Part Link Banner ─── */
+        .part-link-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(17, 10, 14, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem 1.8rem;
+            margin: 3rem 0;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .part-link-banner .part-info {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .part-link-banner .part-info strong {
+            color: var(--text-primary);
+        }
+
+        .part-link-btn {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-light);
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .part-link-btn:hover {
+            background: rgba(236, 72, 153, 0.25);
+            text-decoration: none;
+            opacity: 1;
+        }
+
+        /* ─── Usability Grid ─── */
+        .usability-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .usability-card {
+            background: rgba(17, 10, 14, 0.85);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            padding: 1.4rem 1.6rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .usability-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 4px 20px rgba(236, 72, 153, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .usability-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 0.4rem;
+        }
+
+        .usability-card h4 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.4rem;
+        }
+
+        .usability-card p {
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        /* ─── Sources Section ─── */
+        .sources-list {
+            list-style: none;
+            margin: 0;
+        }
+
+        .sources-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .sources-list li:last-child {
+            border-bottom: none;
+        }
+
+        .source-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 28px;
+            margin-top: 0.1rem;
+        }
+
+        .source-text {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .source-text a {
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            word-break: break-all;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-source {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(28, 16, 24, 0.8);
+            border: 1px solid var(--border);
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+        }
+
+        .footer-disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0.75rem auto 0;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .nav-links { display: none; }
+            section { padding: 2rem 1.5rem; }
+            .section-number { font-size: 1.8rem; min-width: 50px; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .toc-list { grid-template-columns: 1fr; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 0.75rem 0.9rem; }
+            .char3-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .hero { padding: 3rem 1.5rem 2rem; }
+            .hero-stats { grid-template-columns: 1fr; }
+            .stat-row-grid { grid-template-columns: 1fr; }
+            .usability-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ─── Utility ─── */
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header>
+        <nav>
+            <a href="../index.html" class="logo">
+                <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Data Mesh logo">
+                    <circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="4" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="11" cy="11" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+                    <line x1="5.8" y1="5.2" x2="9.3" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="5.2" x2="12.7" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="5.8" y1="16.8" x2="9.3" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="16.8" x2="12.7" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+                Data Mesh
+            </a>
+            <ul class="nav-links">
+                <li><a href="#overview">Part IV 概要</a></li>
+                <li><a href="#ch11">第11章 アフォーダンス</a></li>
+                <li><a href="#ch12">第12章 取得・変換・提供</a></li>
+                <li><a href="#ch13">第13章 発見・理解・合成</a></li>
+                <li><a href="#ch14">第14章 管理・ガバナンス・観測</a></li>
+                <li><a href="#summary">まとめ</a></li>
+            </ul>
+            <a href="../index.html" class="back-link">← トップに戻る</a>
+        </nav>
+    </header>
+
+    <!-- ─── Hero ─── -->
+    <div class="hero">
+        <div class="eyebrow">学習ノート / O'REILLY / Part IV</div>
+        <h1>Data Mesh — データプロダクトアーキテクチャの設計</h1>
+        <p class="subtitle">Part IV: How to Design the Data Product Architecture — 学習ノート</p>
+        <p class="subtitle" style="font-size:1rem; margin-bottom:1.5rem;">Zhamak Dehghani著『Data Mesh』（O'Reilly, 2022）Part IV「How to Design the Data Product Architecture」第11〜14章の要約</p>
+        <div class="book-info">
+            <span>Zhamak Dehghani</span>
+            <span style="opacity:0.4;">|</span>
+            <span>O'Reilly Media, 2022</span>
+            <span style="opacity:0.4;">|</span>
+            <span>ISBN: 978-1-492-09239-3</span>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">4</div>
+                <div class="stat-label">対象章（第11〜14章）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">8</div>
+                <div class="stat-label">データプロダクトのユーザビリティ属性</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div class="stat-label">可観測性の柱（メトリクス・ログ・トレース）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">5</div>
+                <div class="stat-label">Serve Dataの設計プロパティ</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2026-03-30 &nbsp;|&nbsp; 読了目安: ~20分</p>
+    </div>
+
+    <!-- ─── Table of Contents ─── -->
+    <div class="toc-section">
+        <div class="toc-box">
+            <div class="toc-title">// Table of Contents</div>
+            <ul class="toc-list">
+                <li><a href="#overview"><span class="toc-num">00</span>Part IV 概要</a></li>
+                <li><a href="#ch11"><span class="toc-num">01</span>第11章：アフォーダンスによるデータプロダクト設計</a></li>
+                <li><a href="#affordances"><span class="toc-num">02</span>データプロダクトのアフォーダンス一覧</a></li>
+                <li><a href="#cas"><span class="toc-num">03</span>複雑適応系から学ぶ設計哲学</a></li>
+                <li><a href="#ch12"><span class="toc-num">04</span>第12章：データの取得・変換・提供の設計</a></li>
+                <li><a href="#serve"><span class="toc-num">05</span>Serve Data — ポリグロットアクセス設計</a></li>
+                <li><a href="#consume"><span class="toc-num">06</span>Consume Data — 3つのソースアーキタイプ</a></li>
+                <li><a href="#transform"><span class="toc-num">07</span>Transform Data — 変換設計</a></li>
+                <li><a href="#ch13"><span class="toc-num">08</span>第13章：データの発見・理解・合成の設計</a></li>
+                <li><a href="#compose"><span class="toc-num">09</span>データの合成 — ポリセームとスキーマリンク</a></li>
+                <li><a href="#ch14"><span class="toc-num">10</span>第14章：データの管理・ガバナンス・監視の設計</a></li>
+                <li><a href="#usability"><span class="toc-num">11</span>8つのユーザビリティ属性まとめ</a></li>
+                <li><a href="#summary"><span class="toc-num">12</span>まとめ — Part IVの要点</a></li>
+                <li><a href="#sources"><span class="toc-num">13</span>参考文献</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ─── Part Series Banner ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Data Mesh 学習ノート
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="data-mesh-principles.html" class="part-link-btn" style="border-color:rgba(139,92,246,0.4); color:#C4B5FD; background:rgba(139,92,246,0.1);">Part I — 4原則</a>
+                <a href="data-mesh-why.html" class="part-link-btn" style="border-color:rgba(245,158,11,0.4); color:#FCD34D; background:rgba(245,158,11,0.1);">Part II — なぜ今？</a>
+                <a href="data-mesh-architecture.html" class="part-link-btn" style="border-color:rgba(16,185,129,0.4); color:#34D399; background:rgba(16,185,129,0.1);">Part III — アーキテクチャ設計</a>
+                <a href="#" class="part-link-btn">Part IV — データプロダクト設計 ◀</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Main Content ─── -->
+    <main>
+
+        <!-- Section 0: Overview -->
+        <section id="overview">
+            <div class="section-header">
+                <div class="section-number">00</div>
+                <div>
+                    <span class="chapter-tag">Part IV Overview</span>
+                    <h2>Part IV 概要</h2>
+                </div>
+            </div>
+
+            <p>Part IVは、Data Meshの<span class="highlight">「データプロダクトをどう設計するか」</span>という実装レベルの問いに答える。Part III（アーキテクチャ論理設計・マルチプレーンプラットフォーム）を受けて、本パートでは個々のデータプロダクトが持つべき機能（アフォーダンス）と、その設計プロパティを章ごとに詳述する。</p>
+
+            <div class="alert alert-rose">
+                <div class="alert-title">Part IV のスコープ</div>
+                <p>第11章「アフォーダンスによる設計」では、データプロダクトが提供すべき能力を列挙し、複雑適応系の哲学を導入する。第12〜14章では、各アフォーダンスの具体的な設計プロパティ（Serve・Consume・Transform・Discover・Understand・Compose・Manage・Govern・Observe）を掘り下げる。</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Chapter 11</div>
+                    <h4>アフォーダンスによる設計</h4>
+                    <p>データプロダクトが提供すべき能力（アフォーダンス）を定義する。複雑適応系からの設計インサイトを通じ、シンプルなローカルルールがメッシュ全体の複雑な振る舞いを生み出す設計哲学を説く。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 12</div>
+                    <h4>取得・変換・提供の設計</h4>
+                    <p>データをどう受け取り（Consume）、どう変換し（Transform）、どう提供するか（Serve）の設計プロパティ。ポリグロットアクセス、バイテンポラル、MLとしての変換などを扱う。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 13</div>
+                    <h4>発見・理解・合成の設計</h4>
+                    <p>自己登録によるDiscovery、グローバルURI、セマンティックモデル、SLOによる信頼構築、そしてポリセームとスキーマリンクによるCompose設計。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 14</div>
+                    <h4>管理・ガバナンス・監視の設計</h4>
+                    <p>ライフサイクル管理とマニフェスト、ポリシーコードとしてのガバナンス、そしてメトリクス・ログ・トレースという可観測性の3つの柱。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: Ch.11 Affordances -->
+        <section id="ch11">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <div>
+                    <span class="chapter-tag">Chapter 11</span>
+                    <h2>第11章：アフォーダンスによるデータプロダクト設計</h2>
+                </div>
+            </div>
+
+            <p>第11章では、データプロダクトを設計する際の出発点として<span class="highlight">「アフォーダンス（affordance）」</span>という概念を導入する。アフォーダンスとは、HCI（ヒューマン・コンピュータ・インタラクション）の理論家Don Normanが提唱した概念で、「あるオブジェクトがユーザーに対して提供する行為の可能性・能力」を指す。</p>
+
+            <blockquote>
+                "Design a data product by what it enables its users to do — its affordances."
+                <cite>— Zhamak Dehghani, Data Mesh (O'Reilly, 2022)</cite>
+            </blockquote>
+
+            <p>データプロダクトのアフォーダンス設計とは、<strong>データプロダクトが利用者に対して何を可能にするか</strong>から出発する設計アプローチだ。実装技術ではなく、ユーザーの行為能力を最初に定義する。</p>
+        </section>
+
+        <!-- Section 2: Affordances Detail -->
+        <section id="affordances">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <div>
+                    <span class="chapter-tag">Ch.11 — Affordances</span>
+                    <h2>データプロダクトのアフォーダンス</h2>
+                </div>
+            </div>
+
+            <p>Dehghaniは、データプロダクトが持つべきアフォーダンスを8つに分類する。これらは「8つのユーザビリティ属性」とも対応し、各アフォーダンスが後の章での設計の章立てとなる。</p>
+
+            <!-- SVG Diagram: Data Product Affordances Radial -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// DATA PRODUCT AFFORDANCES — 8つのアフォーダンス構造</div>
+                    <svg viewBox="0 0 700 420" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <!-- Background -->
+                        <rect width="700" height="420" fill="transparent"/>
+
+                        <!-- Center data product -->
+                        <circle cx="350" cy="210" r="68" fill="rgba(236,72,153,0.12)" stroke="rgba(236,72,153,0.5)" stroke-width="2"/>
+                        <text x="350" y="203" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1">DATA</text>
+                        <text x="350" y="218" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1">PRODUCT</text>
+                        <text x="350" y="233" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="9">データプロダクト</text>
+
+                        <!-- Orbit ring -->
+                        <circle cx="350" cy="210" r="140" fill="none" stroke="rgba(236,72,153,0.12)" stroke-width="1" stroke-dasharray="4,4"/>
+
+                        <!-- Affordance 1: Serve (top) -->
+                        <line x1="350" y1="140" x2="350" y2="68" stroke="rgba(236,72,153,0.4)" stroke-width="1.2"/>
+                        <rect x="298" y="22" width="104" height="44" rx="8" fill="rgba(236,72,153,0.15)" stroke="rgba(236,72,153,0.5)" stroke-width="1.5"/>
+                        <text x="350" y="41" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="9.5" font-weight="700">SERVE DATA</text>
+                        <text x="350" y="56" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">データの提供</text>
+
+                        <!-- Affordance 2: Consume (top-right) -->
+                        <line x1="399" y1="162" x2="462" y2="104" stroke="rgba(236,72,153,0.4)" stroke-width="1.2"/>
+                        <rect x="448" y="68" width="110" height="44" rx="8" fill="rgba(244,114,182,0.12)" stroke="rgba(244,114,182,0.4)" stroke-width="1.5"/>
+                        <text x="503" y="87" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="9.5" font-weight="700">CONSUME</text>
+                        <text x="503" y="102" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">データの取得</text>
+
+                        <!-- Affordance 3: Transform (right) -->
+                        <line x1="418" y1="210" x2="492" y2="210" stroke="rgba(236,72,153,0.4)" stroke-width="1.2"/>
+                        <rect x="490" y="188" width="110" height="44" rx="8" fill="rgba(190,24,93,0.12)" stroke="rgba(190,24,93,0.4)" stroke-width="1.5"/>
+                        <text x="545" y="207" text-anchor="middle" fill="#FB7185" font-family="JetBrains Mono" font-size="9.5" font-weight="700">TRANSFORM</text>
+                        <text x="545" y="222" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">データの変換</text>
+
+                        <!-- Affordance 4: Compose (bottom-right) -->
+                        <line x1="399" y1="258" x2="462" y2="316" stroke="rgba(236,72,153,0.4)" stroke-width="1.2"/>
+                        <rect x="448" y="308" width="110" height="44" rx="8" fill="rgba(244,114,182,0.12)" stroke="rgba(244,114,182,0.4)" stroke-width="1.5"/>
+                        <text x="503" y="327" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="9.5" font-weight="700">COMPOSE</text>
+                        <text x="503" y="342" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">データの合成</text>
+
+                        <!-- Affordance 5: Discover (bottom) -->
+                        <line x1="350" y1="278" x2="350" y2="352" stroke="rgba(236,72,153,0.4)" stroke-width="1.2"/>
+                        <rect x="288" y="350" width="124" height="44" rx="8" fill="rgba(236,72,153,0.15)" stroke="rgba(236,72,153,0.5)" stroke-width="1.5"/>
+                        <text x="350" y="369" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="9.5" font-weight="700">DISCOVER</text>
+                        <text x="350" y="384" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">データの発見</text>
+
+                        <!-- Affordance 6: Understand (bottom-left) -->
+                        <line x1="301" y1="258" x2="238" y2="316" stroke="rgba(236,72,153,0.4)" stroke-width="1.2"/>
+                        <rect x="128" y="308" width="120" height="44" rx="8" fill="rgba(190,24,93,0.12)" stroke="rgba(190,24,93,0.4)" stroke-width="1.5"/>
+                        <text x="188" y="327" text-anchor="middle" fill="#FB7185" font-family="JetBrains Mono" font-size="9.5" font-weight="700">UNDERSTAND</text>
+                        <text x="188" y="342" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">データの理解</text>
+
+                        <!-- Affordance 7: Manage (left) -->
+                        <line x1="282" y1="210" x2="208" y2="210" stroke="rgba(236,72,153,0.4)" stroke-width="1.2"/>
+                        <rect x="100" y="188" width="110" height="44" rx="8" fill="rgba(236,72,153,0.12)" stroke="rgba(236,72,153,0.4)" stroke-width="1.5"/>
+                        <text x="155" y="207" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="9.5" font-weight="700">MANAGE</text>
+                        <text x="155" y="222" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">ライフサイクル管理</text>
+
+                        <!-- Affordance 8: Govern+Observe (top-left) -->
+                        <line x1="301" y1="162" x2="238" y2="104" stroke="rgba(236,72,153,0.4)" stroke-width="1.2"/>
+                        <rect x="118" y="62" width="130" height="50" rx="8" fill="rgba(244,114,182,0.12)" stroke="rgba(244,114,182,0.4)" stroke-width="1.5"/>
+                        <text x="183" y="81" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="9.5" font-weight="700">GOVERN /</text>
+                        <text x="183" y="95" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="9.5" font-weight="700">OBSERVE</text>
+                        <text x="183" y="107" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">ガバナンス・監視</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Affordance 01</div>
+                    <h4>Serve Data — データの提供</h4>
+                    <p>複数モードでデータコンシューマーに分析データを提供する能力。SQL、API、ファイル、イベントストリームなど複数のアクセス形式（ポリグロット）をサポートする。</p>
+                    <div class="char3-impact">→ 第12章で詳述</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Affordance 02</div>
+                    <h4>Consume Data — データの取得</h4>
+                    <p>上流ソース（運用システム、他のデータプロダクト、外部ソース）からデータを受け取る能力。入力ポートを通じてプッシュまたはプル方式で取得する。</p>
+                    <div class="char3-impact">→ 第12章で詳述</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Affordance 03</div>
+                    <h4>Transform Data — データの変換</h4>
+                    <p>データを処理・クレンジング・集計・整形する能力。プログラマティック（Python/Spark）または宣言的（dbt）なアプローチで実装される内部ロジック。</p>
+                    <div class="char3-impact">→ 第12章で詳述</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">4</div>
+                    <div class="char3-label">Affordance 04</div>
+                    <h4>Discover, Understand, Trust</h4>
+                    <p>データプロダクトを発見可能にし、セマンティック・構文モデルで理解を促し、SLOと透明性でコンシューマーの信頼を獲得する能力。</p>
+                    <div class="char3-impact">→ 第13章で詳述</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">5</div>
+                    <div class="char3-label">Affordance 05</div>
+                    <h4>Compose — データの合成</h4>
+                    <p>他のデータプロダクトとデータを組み合わせ・結合できる能力。ポリセーム（標準識別子）とスキーマリンクにより、分散した状態でも相互運用性を確保する。</p>
+                    <div class="char3-impact">→ 第13章で詳述</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">6</div>
+                    <div class="char3-label">Affordance 06</div>
+                    <h4>Manage Lifecycle — ライフサイクル管理</h4>
+                    <p>ブートストラップ・ビルド・デプロイ・実行・保守・進化・リタイアというフルライフサイクルを自律的に管理する能力。マニフェストにより宣言的に定義する。</p>
+                    <div class="char3-impact">→ 第14章で詳述</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">7</div>
+                    <div class="char3-label">Affordance 07</div>
+                    <h4>Govern — ガバナンス</h4>
+                    <p>アクセス制御・暗号化・データ分類・保持ポリシー・プライバシー（GDPR/CCPA）などのポリシーをデータプロダクト自身が埋め込み、ローカルで強制する能力。</p>
+                    <div class="char3-impact">→ 第14章で詳述</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">8</div>
+                    <div class="char3-label">Affordance 08</div>
+                    <h4>Observe — 可観測性</h4>
+                    <p>メトリクス・ログ・トレースという3つの観点からデータプロダクトの動作を監視・デバッグ・監査する能力。SLIによるSLO達成度の継続的な可視化を含む。</p>
+                    <div class="char3-impact">→ 第14章で詳述</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Complex Adaptive Systems -->
+        <section id="cas">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <div>
+                    <span class="chapter-tag">Ch.11 — Design Philosophy</span>
+                    <h2>複雑適応系から学ぶ設計哲学</h2>
+                </div>
+            </div>
+
+            <p>第11章のもう一つの重要な貢献は、<span class="highlight">複雑適応系（Complex Adaptive Systems / CAS）</span>の原理をData Meshの設計哲学に取り込んだ点だ。CASとは、鳥の群れや生態系のように、個々のエージェントがシンプルなローカルルールに従うだけで、全体として複雑で適応的な振る舞いが創発するシステムを指す。</p>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// 複雑適応系とData Meshの対応</div>
+                <p><strong>CASの原理：</strong> シンプルなローカルルール → 複雑な創発的振る舞い → 中央オーケストレーター不要</p>
+                <p><strong>Data Meshへの適用：</strong> 各データプロダクトが同じアフォーダンスセット（ローカルルール）に従うだけで、メッシュ全体の価値（グローバルな振る舞い）が創発する。誰も「全体を管理」しなくてよい。</p>
+            </div>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// CAS設計原理のData Meshへの適用</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big">自律</div>
+                        <div class="stat-desc">各データプロダクトは自律的に動作する独立ユニット</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">創発</div>
+                        <div class="stat-desc">シンプルなルール（アフォーダンス）から複雑な価値が生まれる</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">適応</div>
+                        <div class="stat-desc">中央制御なしに変化する環境へ個別に適応できる</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>設計の実践的含意</h3>
+            <ul>
+                <li><strong>シンプルさを優先：</strong> ドメインチーム（データ専門家でない汎用エンジニア）でも構築・維持できる設計シンプルさを維持する</li>
+                <li><strong>プラットフォームが複雑さを吸収：</strong> 各データプロダクトが複雑な実装を担うのではなく、プラットフォームが共通の複雑さを抽象化する</li>
+                <li><strong>中央オーケストレーターの排除：</strong> データプロダクトは自律的に動作し、プラットフォームはツールを提供するが中央制御はしない</li>
+            </ul>
+        </section>
+
+        <!-- Section 4: Ch.12 -->
+        <section id="ch12">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <div>
+                    <span class="chapter-tag">Chapter 12</span>
+                    <h2>第12章：データの取得・変換・提供の設計</h2>
+                </div>
+            </div>
+
+            <p>第12章は最もボリュームのある章で（p.201–231）、データプロダクトの中核的な機能である「Serve（提供）」「Consume（取得）」「Transform（変換）」の3つについて、具体的な設計プロパティと実装アプローチを詳述する。</p>
+
+            <div class="alert alert-rose">
+                <div class="alert-title">// 第12章の構成</div>
+                <p>Dehghaniはあえて「Serve → Consume → Transform」の順で議論する。まず<strong>出力（何を提供するか）</strong>を定義し、次に<strong>入力（何を受け取るか）</strong>を決め、最後に<strong>変換（どう処理するか）</strong>を設計する。この「出力優先」の思考順序は、ユーザー価値からの逆算設計を体現している。</p>
+            </div>
+        </section>
+
+        <!-- Section 5: Serve Data -->
+        <section id="serve">
+            <div class="section-header">
+                <div class="section-number">05</div>
+                <div>
+                    <span class="chapter-tag">Ch.12 — Serve Data</span>
+                    <h2>Serve Data — ポリグロットアクセス設計</h2>
+                </div>
+            </div>
+
+            <h3>ユーザーペルソナ別のアクセスニーズ</h3>
+            <p>データプロダクトを「使う」ペルソナはひとりではない。異なるペルソナが異なる形式でデータを必要とするため、データプロダクトは単一の形式を強要するのではなく、同一のセマンティックデータを複数の形式で提供する必要がある。</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ペルソナ</th>
+                            <th>必要なアクセス形式</th>
+                            <th>ユースケース</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="highlight">データアナリスト</span></td>
+                            <td>SQLクエリ、BIツール、スプレッドシート</td>
+                            <td>ダッシュボード作成、アドホック分析</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">データサイエンティスト</span></td>
+                            <td>カラムナーファイル（Parquet）、Notebookアクセス</td>
+                            <td>探索的分析、特徴量エンジニアリング</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">MLエンジニア</span></td>
+                            <td>Feature Store、ストリーミング、トレーニングデータセット</td>
+                            <td>モデルトレーニング、オンライン推論</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">アプリ開発者</span></td>
+                            <td>REST API、イベントストリーム、Pub/Sub</td>
+                            <td>アプリケーション統合、リアルタイム処理</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">ビジネスユーザー</span></td>
+                            <td>レポート、ダッシュボード、集計ビュー</td>
+                            <td>KPI監視、意思決定サポート</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- SVG Diagram: Serve Data Polyglot -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// SERVE DATA — ポリグロットアクセス設計</div>
+                    <svg viewBox="0 0 700 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <!-- Background -->
+                        <rect width="700" height="300" fill="transparent"/>
+
+                        <!-- Data Product center box -->
+                        <rect x="250" y="80" width="200" height="140" rx="12" fill="rgba(28,10,18,0.95)" stroke="rgba(236,72,153,0.5)" stroke-width="2"/>
+                        <text x="350" y="108" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="10" font-weight="700" letter-spacing="1">DATA PRODUCT</text>
+                        <text x="350" y="124" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="9">同一セマンティックデータ</text>
+                        <text x="350" y="148" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8.5">OUTPUT PORTS</text>
+                        <rect x="274" y="156" width="152" height="48" rx="6" fill="rgba(236,72,153,0.08)" stroke="rgba(236,72,153,0.25)" stroke-width="1"/>
+                        <text x="350" y="172" text-anchor="middle" fill="#A08C96" font-family="JetBrains Mono" font-size="8">SQL | API | Files</text>
+                        <text x="350" y="187" text-anchor="middle" fill="#A08C96" font-family="JetBrains Mono" font-size="8">Events | Columnar</text>
+                        <text x="350" y="210" text-anchor="middle" fill="#EC4899" font-family="JetBrains Mono" font-size="8" font-weight="600">READ-ONLY · IMMUTABLE</text>
+
+                        <!-- Left side: Input -->
+                        <rect x="18" y="118" width="120" height="44" rx="6" fill="rgba(99,102,241,0.1)" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+                        <text x="78" y="136" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="8.5">Upstream Data</text>
+                        <text x="78" y="152" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">上流データプロダクト</text>
+                        <line x1="140" y1="140" x2="248" y2="150" stroke="rgba(99,102,241,0.5)" stroke-width="1.5" marker-end="url(#arrow-indigo)"/>
+
+                        <!-- Right side: Consumers -->
+                        <!-- SQL → Analyst -->
+                        <rect x="562" y="18" width="124" height="44" rx="6" fill="rgba(236,72,153,0.1)" stroke="rgba(236,72,153,0.3)" stroke-width="1"/>
+                        <text x="624" y="36" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="8.5">SQL Interface</text>
+                        <text x="624" y="52" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">アナリスト / BI</text>
+                        <line x1="450" y1="115" x2="560" y2="40" stroke="rgba(236,72,153,0.4)" stroke-width="1.5"/>
+
+                        <!-- API → Devs -->
+                        <rect x="562" y="82" width="124" height="44" rx="6" fill="rgba(244,114,182,0.1)" stroke="rgba(244,114,182,0.3)" stroke-width="1"/>
+                        <text x="624" y="100" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">REST / gRPC API</text>
+                        <text x="624" y="116" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">アプリ開発者</text>
+                        <line x1="450" y1="140" x2="560" y2="104" stroke="rgba(244,114,182,0.4)" stroke-width="1.5"/>
+
+                        <!-- Columnar → Data Scientists -->
+                        <rect x="562" y="148" width="124" height="44" rx="6" fill="rgba(190,24,93,0.1)" stroke="rgba(190,24,93,0.3)" stroke-width="1"/>
+                        <text x="624" y="166" text-anchor="middle" fill="#FB7185" font-family="JetBrains Mono" font-size="8.5">Columnar Files</text>
+                        <text x="624" y="182" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">データサイエンティスト</text>
+                        <line x1="450" y1="165" x2="560" y2="170" stroke="rgba(190,24,93,0.4)" stroke-width="1.5"/>
+
+                        <!-- Events → Apps -->
+                        <rect x="562" y="214" width="124" height="44" rx="6" fill="rgba(236,72,153,0.1)" stroke="rgba(236,72,153,0.3)" stroke-width="1"/>
+                        <text x="624" y="232" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="8.5">Event Streams</text>
+                        <text x="624" y="248" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">MLエンジニア / アプリ</text>
+                        <line x1="450" y1="190" x2="560" y2="236" stroke="rgba(236,72,153,0.4)" stroke-width="1.5"/>
+
+                        <!-- Bitemporal note -->
+                        <rect x="18" y="218" width="174" height="56" rx="6" fill="rgba(236,72,153,0.07)" stroke="rgba(236,72,153,0.2)" stroke-width="1"/>
+                        <text x="105" y="236" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="8.5" font-weight="600">BITEMPORAL</text>
+                        <text x="105" y="251" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">ビジネス時間 + 処理時間</text>
+                        <text x="105" y="265" text-anchor="middle" fill="#A08C96" font-family="JetBrains Mono" font-size="7.5">f(from_time, to_time)</text>
+
+                        <!-- Arrow defs -->
+                        <defs>
+                            <marker id="arrow-indigo" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L8,3 z" fill="rgba(99,102,241,0.7)"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+
+            <h3>Serve Data の5つの設計プロパティ</h3>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Property 01</div>
+                    <h4>ポリグロットデータアクセス</h4>
+                    <p>同一セマンティックデータを複数形式（SQL、ファイル、イベント、API）で提供する。異なるペルソナが異なるインターフェースで同じデータにアクセスできる。</p>
+                    <div class="char3-impact">→ 8属性の「ネイティブアクセス可能（Natively Accessible）」を実現</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Property 02</div>
+                    <h4>時間変異（Time-Variant）</h4>
+                    <p>データは常に時間の関数として提供される。すべての読み取り関数は<span class="mono">f(from_time, to_time)</span>として定義され、任意の時点のデータにアクセスできる。</p>
+                    <div class="char3-impact">→ 正確な履歴分析・イベント時間処理を可能にする</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Property 03</div>
+                    <h4>イミュータブル（Immutable）</h4>
+                    <p>スナップショットは遡及的に変更されない。データはイミュータブルに保持され、過去に遡った修正は新しいバージョンとして追記される。カスケードエラーを防止する。</p>
+                    <div class="char3-impact">→ 分析結果の再現性と信頼性を確保</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">4</div>
+                    <div class="char3-label">Property 04</div>
+                    <h4>読み取り専用（Read-Only）</h4>
+                    <p>出力ポートは読み取り専用インターフェース。コンシューマーはデータを読むことはできるが、直接書き込むことはできない。データプロダクトの整合性を保護する。</p>
+                    <div class="char3-impact">→ データ品質の一元管理とセキュリティの強化</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">5</div>
+                    <div class="char3-label">Property 05</div>
+                    <h4>バイテンポラル（Bitemporal）</h4>
+                    <p><strong>ビジネス時間</strong>（イベントが実際に発生した時間）と<strong>処理時間</strong>（データが処理・記録された時間）の両方を軸にデータをクエリできる。遅延到着データの正確な処理に不可欠。</p>
+                    <div class="char3-impact">→ 「いつ発生したか」と「いつ記録されたか」を区別した正確な分析</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Consume Data -->
+        <section id="consume">
+            <div class="section-header">
+                <div class="section-number">06</div>
+                <div>
+                    <span class="chapter-tag">Ch.12 — Consume Data</span>
+                    <h2>Consume Data — 3つのソースアーキタイプ</h2>
+                </div>
+            </div>
+
+            <p>データプロダクトが受け取るデータのソースには3つのアーキタイプがある。各アーキタイプは結合度（カップリング）の強度が異なり、適切な入力ポート設計を要する。</p>
+
+            <div class="char3-grid">
+                <div class="char3-card" style="border-top-color:#6366F1;">
+                    <div class="char3-num">①</div>
+                    <div class="char3-label" style="background:rgba(99,102,241,0.15); color:#818CF8;">Archetype 01</div>
+                    <h4>同ドメインの運用システム</h4>
+                    <p>ドメイン内の自分自身の運用データベース・サービス。最も密結合で、しばしば同期的。同一チームが管理するため、スキーマ変更への対応が比較的容易。</p>
+                    <div class="char3-impact" style="color:#818CF8;">→ ローカル消費（Local Consumption）</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">②</div>
+                    <div class="char3-label">Archetype 02</div>
+                    <h4>上流データプロダクト</h4>
+                    <p>他のドメインが提供するデータプロダクトの出力ポートから消費。疎結合で、標準インターフェース（SQL・API・イベント）を介してリモートで取得する。</p>
+                    <div class="char3-impact">→ リモート消費（Remote Consumption）</div>
+                </div>
+                <div class="char3-card" style="border-top-color:#F59E0B;">
+                    <div class="char3-num">③</div>
+                    <div class="char3-label" style="background:rgba(245,158,11,0.15); color:#F59E0B;">Archetype 03</div>
+                    <h4>外部ソース</h4>
+                    <p>サードパーティデータフィード、パートナーデータ、公開データセット。最も疎結合で、フォーマット変換・スキーママッピングが必要になることが多い。</p>
+                    <div class="char3-impact" style="color:#F59E0B;">→ 外部データの内部化とスキーマ正規化が重要</div>
+                </div>
+            </div>
+
+            <h3>Push vs. Pull とストリーミング vs. バッチ</h3>
+            <div class="alert alert-rose">
+                <div class="alert-title">// 入力ポートの設計決定</div>
+                <p><strong>プッシュ vs. プル：</strong> 上流が変化をプッシュ（イベントドリブン）するか、データプロダクトが定期的にプル（ポーリング）するかはソースのアーキタイプと変更頻度で決まる。</p>
+                <p><strong>ストリーミング vs. バッチ：</strong> リアルタイム性が必要な場合はストリーミング（Kafka、Pub/Sub）、定期的な大量処理はバッチ（Spark、dbt）。混合アーキテクチャも一般的。</p>
+            </div>
+        </section>
+
+        <!-- Section 7: Transform Data -->
+        <section id="transform">
+            <div class="section-header">
+                <div class="section-number">07</div>
+                <div>
+                    <span class="chapter-tag">Ch.12 — Transform Data</span>
+                    <h2>Transform Data — データ変換設計</h2>
+                </div>
+            </div>
+
+            <p>データ変換は、データプロダクトの<span class="highlight">内部実装詳細</span>だ。コンシューマーは「どう変換されているか」を知る必要はなく、クリーンな出力ポートだけを見る。変換ロジックはデータプロダクトの境界内に完全にカプセル化される。</p>
+
+            <h3>プログラマティック vs. 宣言的（Nonprogrammatic）変換</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>アプローチ</th>
+                            <th>特徴</th>
+                            <th>例</th>
+                            <th>適したユースケース</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="highlight">プログラマティック</span></td>
+                            <td>コードベース。柔軟性が高い</td>
+                            <td>Python、Spark、Flink</td>
+                            <td>複雑な変換、ML前処理、カスタムロジック</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">宣言的（Nonprogrammatic）</span></td>
+                            <td>SQL・設定ベース。読みやすく保守しやすい</td>
+                            <td>dbt、SQLビュー、ストアドプロシージャ</td>
+                            <td>集計、結合、定型的なデータ整形</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>MLとしての変換（ML as Transformation）</h3>
+            <p>機械学習モデルはデータプロダクト内の変換の一種として扱える。<span class="highlight">入力ポートからトレーニングデータを受け取り、出力ポートから推論・予測・特徴量を提供する</span>という構造は、通常のデータ変換と同じパターンに当てはまる。</p>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// MLモデルの2つの統合パターン</div>
+                <p><strong>マイクロサービスとしてのML：</strong> モデルはオンライン推論のためのAPIサービス。出力ポートはRESTエンドポイント。リアルタイム予測に適する。</p>
+                <p><strong>トランスフォーマーとしてのML：</strong> モデルはバッチ変換パイプラインの一部。大量のデータに対してオフラインで推論し、特徴量テーブルを出力。Feature Store等を介してデータプロダクトとして公開する。</p>
+            </div>
+
+            <h3>DAGベースの変換パイプライン</h3>
+            <p>変換はDAG（有向非巡回グラフ）ベースのパイプラインとして実装される。これはデータプロダクト<strong>内部</strong>のパイプラインであり、プロダクトをまたぐクロスパイプラインとは区別される。内部パイプラインは外部に露出せず、インターフェースのみが公開される。</p>
+        </section>
+
+        <!-- Section 8: Ch.13 Discovery -->
+        <section id="ch13">
+            <div class="section-header">
+                <div class="section-number">08</div>
+                <div>
+                    <span class="chapter-tag">Chapter 13</span>
+                    <h2>第13章：データの発見・理解・合成の設計</h2>
+                </div>
+            </div>
+
+            <p>第13章は（p.233–252）、コンシューマーがデータプロダクトを<span class="highlight">「見つけ、理解し、信頼し、活用する」</span>ためのアフォーダンス設計を扱う。データがいかに良質でも、発見できなければ価値はゼロに等しい。</p>
+
+            <h3>自己登録による発見（Self-Registration）</h3>
+            <p>各データプロダクトはデプロイ時に自動的にメッシュのディスカバリー層（カタログ・レジストリ）に自身を<span class="highlight">自己登録</span>する。手動登録ではなく、デプロイパイプラインの一部として自動化される。</p>
+
+            <div class="alert alert-rose">
+                <div class="alert-title">// 自己登録の情報コンポーネント</div>
+                <p>登録情報には以下が含まれる：データプロダクト名・所属ドメイン・オーナー・説明・出力ポート情報・SLO定義・ドキュメントURL・タグ・バージョン情報。これらはメタデータとして機械可読形式で公開される。</p>
+            </div>
+
+            <h3>グローバルURI</h3>
+            <p>すべてのデータプロダクトは<span class="highlight">グローバルに一意で永続的なURI（Uniform Resource Identifier）</span>を持つ。このURIがデータプロダクトに関するすべての情報へのエントリーポイントとなる。内部実装が変わっても、URIは安定していなければならない。</p>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// グローバルURIの要件</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big">一意</div>
+                        <div class="stat-desc">組織全体でグローバルに一意なアドレス</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">永続</div>
+                        <div class="stat-desc">実装変更後も安定して変わらない</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">網羅</div>
+                        <div class="stat-desc">そこから全情報（ポート・SLO・ドキュメント）へアクセスできる</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>セマンティック・シンタックスモデル</h3>
+            <p>コンシューマーがデータを理解するには2種類のモデルが必要だ：</p>
+            <ul>
+                <li><strong>セマンティックモデル（Semantic Model）：</strong>「このデータが何を意味するか」。エンティティ、関係、ビジネスコンセプトの定義。例：「customer_id は顧客の一意識別子で、CRMシステムと一致する」</li>
+                <li><strong>シンタックスモデル（Syntax Model）：</strong>「このデータがどう構造化されているか」。スキーマ、データ型、フォーマット定義。標準スキーマ言語（JSON Schema、Avro、Protobuf）で記述し、機械可読にする。</li>
+            </ul>
+
+            <h3>SLOによる信頼構築（Establish Trust with Data Guarantees）</h3>
+            <p>信頼はドキュメントでなく<span class="highlight">数値化された約束（SLO）</span>で構築される。SLOとSLIの透明な公開により、コンシューマーはデータプロダクトの品質を客観的に評価できる。</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SLOの種別</th>
+                            <th>内容</th>
+                            <th>例</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="highlight">変更間隔（Freshness）</span></td>
+                            <td>データの鮮度・更新頻度</td>
+                            <td>「毎時更新、最大1時間の遅延」</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">完全性（Completeness）</span></td>
+                            <td>欠損値・レコード欠落の保証</td>
+                            <td>「全トランザクションの99.9%を含む」</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">統計的形状（Statistical Shape）</span></td>
+                            <td>データ分布・カーディナリティの特性</td>
+                            <td>「アクティブユーザー数は10万〜500万の範囲」</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">リネージ・プロベナンス</span></td>
+                            <td>データの出所・加工履歴</td>
+                            <td>「OrderServiceのDB →集計→ このプロダクト」</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">精度・正確性（Precision）</span></td>
+                            <td>値の精度と正確性の保証</td>
+                            <td>「金額は小数点2桁まで正確」</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">運用品質（Availability）</span></td>
+                            <td>可用性・レイテンシの保証</td>
+                            <td>「99.5% SLA、クエリ応答5秒以内」</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 9: Compose Data -->
+        <section id="compose">
+            <div class="section-header">
+                <div class="section-number">09</div>
+                <div>
+                    <span class="chapter-tag">Ch.13 — Compose Data</span>
+                    <h2>データの合成 — ポリセームとスキーマリンク</h2>
+                </div>
+            </div>
+
+            <p><span class="highlight">コンポーザビリティ（Composability）</span>とは、複数のデータプロダクトのデータを組み合わせられる能力だ。従来の中央集権的アプローチ（正規データモデル、スターデータウェアハウス）は柔軟性・スケーラビリティに限界があった。Data Meshはフェデレーション型の標準ベースのアプローチで解決する。</p>
+
+            <h3>従来アプローチの問題点</h3>
+            <div class="alert alert-danger">
+                <div class="alert-title">// 中央集権的コンポーザビリティの限界</div>
+                <p><strong>カノニカルデータモデル（Traditional）：</strong> 単一の正規化スキーマを強制 → ボトルネック化、変更が遅い、各ドメインの自律性を損なう</p>
+                <p><strong>データウェアハウス スタースキーマ：</strong> 中央管理で整合性は高いが、ドメイン指向ではなく、リアルタイム性に欠ける</p>
+            </div>
+
+            <h3>ポリセーム（Polysemes）— グローバル標準識別子</h3>
+            <p><span class="highlight">ポリセーム</span>とは、複数のデータプロダクトをまたいで共通に使われるビジネスキー（識別子）だ。組織全体で標準化されることで、JOINが可能になる。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Polyseme例 01</div>
+                    <h4>customer_id</h4>
+                    <p>全ドメインで統一された顧客識別子。Salesforce CRMの顧客IDと一致し、注文ドメイン・マーケティングドメイン・カスタマーサポートドメインが同一キーで参照できる。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Polyseme例 02</div>
+                    <h4>product_id</h4>
+                    <p>全ドメインで統一された製品識別子。在庫ドメイン・販売ドメイン・物流ドメインが同一キーで参照。SKUや内部コードとのマッピングを一元管理する。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Polyseme例 03</div>
+                    <h4>order_id</h4>
+                    <p>注文の一意識別子。決済ドメイン・在庫ドメイン・配送ドメインが同一キーを参照することで、注文の全ライフサイクルをまたいだ分析が可能になる。</p>
+                </div>
+            </div>
+
+            <h3>スキーマリンク（Schema Linking）</h3>
+            <p>各データプロダクトは、自身のスキーマ内で他のデータプロダクトとのセマンティック接続（スキーマリンク）を宣言する。これにより、コンシューマーはどのプロダクトが結合可能かを机上で発見できる。メッシュ経験プレーン（Mesh Experience Plane）は複数プロダクトをまたぐクエリを実行する。</p>
+
+            <div class="alert alert-rose">
+                <div class="alert-title">// コンポーザビリティは標準から、中央制御からではない</div>
+                <p>Data Meshのコンポーザビリティは、グローバルに標準化されたポリセームとスキーマリンクという規約から自然に創発する。中央の統合レイヤーがデータを統合するのではなく、<strong>各データプロダクトが自ら他プロダクトとの接続可能性を宣言する</strong>。</p>
+            </div>
+        </section>
+
+        <!-- Section 10: Ch.14 -->
+        <section id="ch14">
+            <div class="section-header">
+                <div class="section-number">10</div>
+                <div>
+                    <span class="chapter-tag">Chapter 14</span>
+                    <h2>第14章：データの管理・ガバナンス・監視の設計</h2>
+                </div>
+            </div>
+
+            <p>第14章（p.255–267）は、データプロダクトの持続的な運用を支える3つの側面：<span class="highlight">ライフサイクル管理（Manage）・ガバナンス（Govern）・可観測性（Observe）</span>の設計を扱う。</p>
+
+            <h3>ライフサイクル管理とマニフェスト</h3>
+            <p>データプロダクトは誕生から廃止まで明確なライフサイクルを持つ。このライフサイクルは<span class="highlight">マニフェスト（Manifest）</span>と呼ばれる宣言的な設定ファイルで定義され、プラットフォームが自動的に各フェーズをサポートする。</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ライフサイクルフェーズ</th>
+                            <th>内容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="highlight">Bootstrap（ブートストラップ）</span></td>
+                            <td>プロジェクト初期化、テンプレート適用、インフラ初期設定</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">Build（ビルド）</span></td>
+                            <td>コード・設定のビルド、テスト、コンテナ化</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">Deploy（デプロイ）</span></td>
+                            <td>インフラプロビジョニング、カタログへの自己登録、サービス起動</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">Run（実行）</span></td>
+                            <td>定常運用、データ更新、SLI計測、ポリシー適用</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">Evolve（進化）</span></td>
+                            <td>スキーマ更新（後方互換）、ロジック改善、バージョン管理</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">Retire（廃止）</span></td>
+                            <td>コンシューマーへの通知、段階的廃止、アーカイブ</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>データプロダクト マニフェストの構成要素</h3>
+            <div class="alert alert-rose">
+                <div class="alert-title">// Manifest — データプロダクトの宣言的定義</div>
+                <p>マニフェストはデータプロダクトの<strong>すべての設定を宣言的に記述する仕様ファイル</strong>であり、コードとして管理（バージョン管理・テスト・デプロイ）される。含む情報：入力ポート定義・出力ポート定義（スキーマ・アクセス方式）・変換ロジック参照・ポリシー設定・SLO定義・インフラ要件・メタデータ（オーナー・ドメイン・説明・タグ）・バージョン情報。</p>
+            </div>
+
+            <h3>ガバナンス設計 — ポリシーはコードとして</h3>
+            <p>Data Meshのガバナンスは「<span class="highlight">外部から課せられるルール</span>」ではなく、<span class="highlight">データプロダクト自身に埋め込まれたコード</span>だ。ポリシーはデータプロダクトの境界でローカルに強制される。</p>
+
+            <div class="char3-grid">
+                <div class="char3-card" style="border-top-color:#6366F1;">
+                    <div class="char3-num">A</div>
+                    <div class="char3-label" style="background:rgba(99,102,241,0.15); color:#818CF8;">Policy Type A</div>
+                    <h4>アクセス制御（Access Control）</h4>
+                    <p>RBAC（ロールベース）またはABAC（属性ベース）でデータへのアクセスを制御。「誰がどのデータを読めるか」をローカルに定義・強制する。</p>
+                    <div class="char3-impact" style="color:#818CF8;">→ コントロールポートでポリシーを受信・適用</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">B</div>
+                    <div class="char3-label">Policy Type B</div>
+                    <h4>暗号化・データ分類</h4>
+                    <p>保存時・転送時の暗号化。データの機密レベル分類（PII・機密・公開）を定義し、分類に応じたアクセス制限と匿名化処理を自動適用する。</p>
+                    <div class="char3-impact">→ 機密レベルに応じた自動処理の標準化</div>
+                </div>
+                <div class="char3-card" style="border-top-color:#F59E0B;">
+                    <div class="char3-num">C</div>
+                    <div class="char3-label" style="background:rgba(245,158,11,0.15); color:#F59E0B;">Policy Type C</div>
+                    <h4>プライバシー（GDPR/CCPA）</h4>
+                    <p>個人データの取り扱いに関するコンプライアンス。匿名化・仮名化・差分プライバシー・合成データ生成などをプログラマティックに実装する。</p>
+                    <div class="char3-impact" style="color:#F59E0B;">→ ポリシーエンジンによる動的評価・適用</div>
+                </div>
+                <div class="char3-card" style="border-top-color:#EF4444;">
+                    <div class="char3-num">D</div>
+                    <div class="char3-label" style="background:rgba(239,68,68,0.12); color:#EF4444;">Policy Type D</div>
+                    <h4>保持・品質ポリシー</h4>
+                    <p>データの保持期間（いつ削除するか）と最低品質基準の定義。品質閾値を下回ったデータは出力ポートから自動的に除外される。</p>
+                    <div class="char3-impact" style="color:#EF4444;">→ サイドカーパターンで各データプロダクトに埋め込まれる</div>
+                </div>
+            </div>
+
+            <h3>可観測性の3つの柱</h3>
+            <p>各データプロダクトはデフォルトで可観測性を持つように設計される。マイクロサービスの可観測性理論に倣い、Data Meshはデータプロダクトに3つの観測軸を要求する。</p>
+
+            <!-- SVG Diagram: Observability Three Pillars -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// OBSERVABILITY — 可観測性の3つの柱</div>
+                    <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <!-- Background -->
+                        <rect width="700" height="280" fill="transparent"/>
+
+                        <!-- Data Product outer box -->
+                        <rect x="18" y="20" width="664" height="240" rx="12" fill="rgba(28,10,18,0.5)" stroke="rgba(236,72,153,0.25)" stroke-width="1.5" stroke-dasharray="6,3"/>
+                        <text x="350" y="44" text-anchor="middle" fill="#A08C96" font-family="JetBrains Mono" font-size="10" letter-spacing="1">DATA PRODUCT — 可観測性レイヤー</text>
+
+                        <!-- Pillar 1: Metrics -->
+                        <rect x="38" y="58" width="190" height="182" rx="10" fill="rgba(236,72,153,0.1)" stroke="rgba(236,72,153,0.45)" stroke-width="1.5"/>
+                        <text x="133" y="82" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1">METRICS</text>
+                        <text x="133" y="97" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="9">メトリクス</text>
+
+                        <rect x="55" y="108" width="157" height="30" rx="5" fill="rgba(236,72,153,0.07)" stroke="rgba(236,72,153,0.2)" stroke-width="1"/>
+                        <text x="133" y="127" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">SLI / SLO達成度</text>
+
+                        <rect x="55" y="144" width="157" height="30" rx="5" fill="rgba(236,72,153,0.07)" stroke="rgba(236,72,153,0.2)" stroke-width="1"/>
+                        <text x="133" y="163" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">データ品質スコア</text>
+
+                        <rect x="55" y="180" width="157" height="30" rx="5" fill="rgba(236,72,153,0.07)" stroke="rgba(236,72,153,0.2)" stroke-width="1"/>
+                        <text x="133" y="199" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">使用統計・レイテンシ</text>
+
+                        <text x="133" y="230" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">→ アラートのトリガー</text>
+
+                        <!-- Pillar 2: Logs -->
+                        <rect x="255" y="58" width="190" height="182" rx="10" fill="rgba(244,114,182,0.09)" stroke="rgba(244,114,182,0.4)" stroke-width="1.5"/>
+                        <text x="350" y="82" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1">LOGS</text>
+                        <text x="350" y="97" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="9">ログ</text>
+
+                        <rect x="272" y="108" width="157" height="30" rx="5" fill="rgba(244,114,182,0.07)" stroke="rgba(244,114,182,0.2)" stroke-width="1"/>
+                        <text x="350" y="127" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">処理ログ</text>
+
+                        <rect x="272" y="144" width="157" height="30" rx="5" fill="rgba(244,114,182,0.07)" stroke="rgba(244,114,182,0.2)" stroke-width="1"/>
+                        <text x="350" y="163" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">アクセスログ</text>
+
+                        <rect x="272" y="180" width="157" height="30" rx="5" fill="rgba(244,114,182,0.07)" stroke="rgba(244,114,182,0.2)" stroke-width="1"/>
+                        <text x="350" y="199" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">エラーログ</text>
+
+                        <text x="350" y="230" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">→ デバッグ・トラブルシューティング</text>
+
+                        <!-- Pillar 3: Traces -->
+                        <rect x="472" y="58" width="190" height="182" rx="10" fill="rgba(190,24,93,0.1)" stroke="rgba(190,24,93,0.4)" stroke-width="1.5"/>
+                        <text x="567" y="82" text-anchor="middle" fill="#FB7185" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="1">TRACES</text>
+                        <text x="567" y="97" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="9">トレース</text>
+
+                        <rect x="489" y="108" width="157" height="30" rx="5" fill="rgba(190,24,93,0.07)" stroke="rgba(190,24,93,0.2)" stroke-width="1"/>
+                        <text x="567" y="127" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">データリネージ</text>
+
+                        <rect x="489" y="144" width="157" height="30" rx="5" fill="rgba(190,24,93,0.07)" stroke="rgba(190,24,93,0.2)" stroke-width="1"/>
+                        <text x="567" y="163" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">変換トレース</text>
+
+                        <rect x="489" y="180" width="157" height="30" rx="5" fill="rgba(190,24,93,0.07)" stroke="rgba(190,24,93,0.2)" stroke-width="1"/>
+                        <text x="567" y="199" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8.5">プロベナンスチェーン</text>
+
+                        <text x="567" y="230" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">→ 監査・コンプライアンス</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Observability 01</div>
+                    <h4>デバッグ（Debug）</h4>
+                    <p>データ問題を変換パイプライン全体を通じてトレースできる能力。「どのステップで値が変わったか」を特定できる。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Observability 02</div>
+                    <h4>監査（Audit）</h4>
+                    <p>誰がいつどのデータにアクセスし、何をしたかを記録・照会できる。コンプライアンス要件（GDPR・SOX等）への対応に不可欠。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Observability 03</div>
+                    <h4>アラーティング（Alerting）</h4>
+                    <p>SLIがSLOから逸脱した際に自動アラートを発報。データ品質の劣化を早期に検知し、コンシューマーへの影響を最小化する。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 11: 8 Usability Attributes -->
+        <section id="usability">
+            <div class="section-header">
+                <div class="section-number">11</div>
+                <div>
+                    <span class="chapter-tag">Ch.3 / Part IV 統合</span>
+                    <h2>8つのユーザビリティ属性まとめ</h2>
+                </div>
+            </div>
+
+            <p>Part IVで設計されたアフォーダンスは、書籍第3章で定義された<span class="highlight">8つのベースラインユーザビリティ属性</span>と直接対応する。すべてのデータプロダクトがこれら8属性を満たすことが、メッシュのネットワーク効果の前提条件となる。</p>
+
+            <!-- SVG Diagram: 8 Usability Attributes Grid -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// 8 USABILITY ATTRIBUTES — データプロダクトの必須属性</div>
+                    <svg viewBox="0 0 700 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <!-- Row 1 -->
+                        <rect x="18" y="20" width="152" height="160" rx="10" fill="rgba(236,72,153,0.1)" stroke="rgba(236,72,153,0.4)" stroke-width="1.5"/>
+                        <text x="94" y="52" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="9" font-weight="700">DISCOVERABLE</text>
+                        <text x="94" y="67" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8.5">発見可能</text>
+                        <text x="94" y="100" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8" dominant-baseline="middle" text-decoration="">自己登録により</text>
+                        <text x="94" y="116" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">カタログ・検索で</text>
+                        <text x="94" y="132" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">容易に見つけられる</text>
+                        <text x="94" y="166" text-anchor="middle" fill="#EC4899" font-family="JetBrains Mono" font-size="7.5">→ Ch.13 Discover</text>
+
+                        <rect x="188" y="20" width="152" height="160" rx="10" fill="rgba(244,114,182,0.09)" stroke="rgba(244,114,182,0.35)" stroke-width="1.5"/>
+                        <text x="264" y="52" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="9" font-weight="700">ADDRESSABLE</text>
+                        <text x="264" y="67" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8.5">アドレス可能</text>
+                        <text x="264" y="100" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">グローバルで</text>
+                        <text x="264" y="116" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">永続的なURIを持ち</text>
+                        <text x="264" y="132" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">全情報へのEntryPoint</text>
+                        <text x="264" y="166" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="7.5">→ Ch.13 Global URI</text>
+
+                        <rect x="358" y="20" width="152" height="160" rx="10" fill="rgba(236,72,153,0.1)" stroke="rgba(236,72,153,0.4)" stroke-width="1.5"/>
+                        <text x="434" y="52" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="9" font-weight="700">UNDERSTANDABLE</text>
+                        <text x="434" y="67" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8.5">理解可能</text>
+                        <text x="434" y="100" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">セマンティック・構文</text>
+                        <text x="434" y="116" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">モデルとドキュメント</text>
+                        <text x="434" y="132" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">サンプルデータ提供</text>
+                        <text x="434" y="166" text-anchor="middle" fill="#EC4899" font-family="JetBrains Mono" font-size="7.5">→ Ch.13 Understand</text>
+
+                        <rect x="528" y="20" width="154" height="160" rx="10" fill="rgba(190,24,93,0.1)" stroke="rgba(190,24,93,0.35)" stroke-width="1.5"/>
+                        <text x="605" y="44" text-anchor="middle" fill="#FB7185" font-family="JetBrains Mono" font-size="9" font-weight="700">TRUSTWORTHY</text>
+                        <text x="605" y="58" text-anchor="middle" fill="#FB7185" font-family="JetBrains Mono" font-size="9" font-weight="700">&amp; TRUTHFUL</text>
+                        <text x="605" y="73" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8.5">信頼性・正確性</text>
+                        <text x="605" y="106" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">SLOによる約束と</text>
+                        <text x="605" y="122" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">SLIによる透明な</text>
+                        <text x="605" y="138" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">達成度の公開</text>
+                        <text x="605" y="166" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="7.5">→ Ch.13 SLO</text>
+
+                        <!-- Row 2 -->
+                        <rect x="18" y="200" width="152" height="160" rx="10" fill="rgba(244,114,182,0.09)" stroke="rgba(244,114,182,0.35)" stroke-width="1.5"/>
+                        <text x="94" y="224" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8" font-weight="700">NATIVELY</text>
+                        <text x="94" y="237" text-anchor="middle" fill="#F9A8D4" font-family="JetBrains Mono" font-size="8" font-weight="700">ACCESSIBLE</text>
+                        <text x="94" y="250" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8.5">ネイティブアクセス可能</text>
+                        <text x="94" y="282" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">ペルソナに合わせた</text>
+                        <text x="94" y="298" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">ポリグロットアクセス</text>
+                        <text x="94" y="314" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">（SQL/API/Files）</text>
+                        <text x="94" y="348" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="7.5">→ Ch.12 Serve Data</text>
+
+                        <rect x="188" y="200" width="152" height="160" rx="10" fill="rgba(236,72,153,0.1)" stroke="rgba(236,72,153,0.4)" stroke-width="1.5"/>
+                        <text x="264" y="224" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="8" font-weight="700">INTEROPERABLE</text>
+                        <text x="264" y="237" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="8" font-weight="700">&amp; COMPOSABLE</text>
+                        <text x="264" y="252" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">相互運用・合成可能</text>
+                        <text x="264" y="284" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">ポリセームと</text>
+                        <text x="264" y="300" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">スキーマリンクで</text>
+                        <text x="264" y="316" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">他プロダクトと結合</text>
+                        <text x="264" y="348" text-anchor="middle" fill="#EC4899" font-family="JetBrains Mono" font-size="7.5">→ Ch.13 Compose</text>
+
+                        <rect x="358" y="200" width="152" height="160" rx="10" fill="rgba(190,24,93,0.1)" stroke="rgba(190,24,93,0.35)" stroke-width="1.5"/>
+                        <text x="434" y="224" text-anchor="middle" fill="#FB7185" font-family="JetBrains Mono" font-size="8" font-weight="700">VALUABLE ON</text>
+                        <text x="434" y="237" text-anchor="middle" fill="#FB7185" font-family="JetBrains Mono" font-size="8" font-weight="700">ITS OWN</text>
+                        <text x="434" y="252" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8.5">独自の価値を持つ</text>
+                        <text x="434" y="284" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">結合なしで単独で</text>
+                        <text x="434" y="300" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">価値を提供できる</text>
+                        <text x="434" y="316" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">凝集ドメイン概念</text>
+                        <text x="434" y="348" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="7.5">→ Ch.11 Affordance設計</text>
+
+                        <rect x="528" y="200" width="154" height="160" rx="10" fill="rgba(236,72,153,0.1)" stroke="rgba(236,72,153,0.4)" stroke-width="1.5"/>
+                        <text x="605" y="224" text-anchor="middle" fill="#F472B6" font-family="JetBrains Mono" font-size="9" font-weight="700">SECURE</text>
+                        <text x="605" y="239" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8.5">セキュア</text>
+                        <text x="605" y="270" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">アクセス制御・暗号化・</text>
+                        <text x="605" y="286" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">プライバシーポリシーを</text>
+                        <text x="605" y="302" text-anchor="middle" fill="#A08C96" font-family="Noto Sans JP" font-size="8">ローカルに強制する</text>
+                        <text x="605" y="348" text-anchor="middle" fill="#EC4899" font-family="JetBrains Mono" font-size="7.5">→ Ch.14 Govern</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="usability-grid">
+                <div class="usability-card">
+                    <div class="usability-num">ATTR 01 / DISCOVERABLE</div>
+                    <h4>発見可能（Discoverable）</h4>
+                    <p>カタログ・検索で容易に見つけられる。デプロイ時の自己登録によって実現。</p>
+                </div>
+                <div class="usability-card">
+                    <div class="usability-num">ATTR 02 / ADDRESSABLE</div>
+                    <h4>アドレス可能（Addressable）</h4>
+                    <p>グローバルに一意で永続的なURIを持つ。全ての情報へのエントリーポイント。</p>
+                </div>
+                <div class="usability-card">
+                    <div class="usability-num">ATTR 03 / UNDERSTANDABLE</div>
+                    <h4>理解可能（Understandable）</h4>
+                    <p>自己記述的なセマンティック・構文モデル、ドキュメント、サンプルデータを提供。</p>
+                </div>
+                <div class="usability-card">
+                    <div class="usability-num">ATTR 04 / TRUSTWORTHY</div>
+                    <h4>信頼性・正確性（Trustworthy & Truthful）</h4>
+                    <p>SLOによる数値化された約束と、SLIによる透明な達成度の継続的公開。</p>
+                </div>
+                <div class="usability-card">
+                    <div class="usability-num">ATTR 05 / NATIVELY ACCESSIBLE</div>
+                    <h4>ネイティブアクセス可能（Natively Accessible）</h4>
+                    <p>ペルソナに合わせたポリグロットアクセス。SQL・API・ファイル・イベント等の複数形式。</p>
+                </div>
+                <div class="usability-card">
+                    <div class="usability-num">ATTR 06 / INTEROPERABLE</div>
+                    <h4>相互運用・合成可能（Interoperable & Composable）</h4>
+                    <p>標準ポリセームとスキーマリンクにより、他のデータプロダクトと容易に結合できる。</p>
+                </div>
+                <div class="usability-card">
+                    <div class="usability-num">ATTR 07 / VALUABLE ON ITS OWN</div>
+                    <h4>単独での価値（Valuable on Its Own）</h4>
+                    <p>結合なしで単独でビジネス価値を提供できる凝集したドメインコンセプト。</p>
+                </div>
+                <div class="usability-card">
+                    <div class="usability-num">ATTR 08 / SECURE</div>
+                    <h4>セキュア（Secure）</h4>
+                    <p>アクセス制御・暗号化・プライバシーポリシーをデータプロダクト自身がローカルに強制。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 12: Summary -->
+        <section id="summary">
+            <div class="section-header">
+                <div class="section-number">12</div>
+                <div>
+                    <span class="chapter-tag">Part IV Summary</span>
+                    <h2>まとめ — Part IVの要点</h2>
+                </div>
+            </div>
+
+            <p>Part IV（第11〜14章）は、個々のデータプロダクトをどう設計するかという実装設計のハンドブックだ。以下の7つのテーマが中心を成す。</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Key Theme 01</div>
+                    <h4>アフォーダンス駆動設計</h4>
+                    <p>「何ができるか（アフォーダンス）」からデータプロダクトを設計する。実装技術ではなくユーザーの行為可能性を起点に置くことで、ドメインチームでも構築・維持できる設計が実現する。</p>
+                    <div class="char3-impact">→ 第11章のコア</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Key Theme 02</div>
+                    <h4>ポリグロットサービング</h4>
+                    <p>同一セマンティックデータを複数形式（SQL・API・ファイル・イベント）で提供する。アナリスト・データサイエンティスト・ML・アプリ開発者・ビジネスユーザーがそれぞれ適した形式でアクセスできる。</p>
+                    <div class="char3-impact">→ 第12章 Serve Data</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Key Theme 03</div>
+                    <h4>自己登録と発見</h4>
+                    <p>デプロイ時に自動的にメッシュカタログに自己登録することで、グローバルURIとメタデータが常に最新状態に保たれる。手動カタログ更新の廃止が運用コストを削減する。</p>
+                    <div class="char3-impact">→ 第13章 Discover</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">4</div>
+                    <div class="char3-label">Key Theme 04</div>
+                    <h4>標準ベースのコンポーザビリティ</h4>
+                    <p>ポリセーム（標準識別子）とスキーマリンクによって、中央制御なしに分散したデータプロダクト間の結合を可能にする。中央データモデルの代わりに、標準という約束でメッシュをつなぐ。</p>
+                    <div class="char3-impact">→ 第13章 Compose</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">5</div>
+                    <div class="char3-label">Key Theme 05</div>
+                    <h4>ガバナンスはコード</h4>
+                    <p>ポリシーはデータプロダクトに埋め込まれたコードとして実装される。バージョン管理・テスト・デプロイされるコードとして扱うことで、ポリシーの一貫した適用と自動化が可能になる。</p>
+                    <div class="char3-impact">→ 第14章 Govern</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">6</div>
+                    <div class="char3-label">Key Theme 06</div>
+                    <h4>フルライフサイクル管理</h4>
+                    <p>マニフェストによる宣言的定義で、ブートストラップからリタイアまでのフルライフサイクルを自律的に管理できる。プラットフォームが各フェーズを自動サポートする。</p>
+                    <div class="char3-impact">→ 第14章 Manage</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">7</div>
+                    <div class="char3-label">Key Theme 07</div>
+                    <h4>デフォルトの可観測性</h4>
+                    <p>メトリクス・ログ・トレースの3つの柱を標準実装することで、すべてのデータプロダクトがデフォルトで監視・デバッグ・監査可能になる。SLIによるSLO達成度の継続的な可視化が信頼を構築する。</p>
+                    <div class="char3-impact">→ 第14章 Observe</div>
+                </div>
+            </div>
+
+            <div class="alert alert-rose">
+                <div class="alert-title">// Part IV の本質的なメッセージ</div>
+                <p>Part IVは単なる技術仕様集ではない。<strong>「データプロダクトを設計するとは、使う人の可能性（アフォーダンス）を設計することだ」</strong>というDehghaniのビジョンが貫かれている。CASの原理に倣い、シンプルで一貫したアフォーダンスセットが各データプロダクトに実装されることで、Data Meshというシステム全体の複雑な価値が創発する。技術選択（Spark？dbt？Kafka？）はアフォーダンスの後で決まる、実装の詳細に過ぎない。</p>
+            </div>
+        </section>
+
+        <!-- Section 13: Sources -->
+        <section id="sources">
+            <div class="section-header">
+                <div class="section-number">13</div>
+                <div>
+                    <span class="chapter-tag">References</span>
+                    <h2>参考文献</h2>
+                </div>
+            </div>
+
+            <ul class="sources-list">
+                <li>
+                    <span class="source-num">[1]</span>
+                    <div class="source-text">
+                        Zhamak Dehghani, <em>Data Mesh: Delivering Data-Driven Value at Scale</em>, O'Reilly Media, 2022. ISBN: 978-1-492-09239-3. 本記事の一次資料。（Part IV: Ch.11–14, p.193–267）
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[2]</span>
+                    <div class="source-text">
+                        Zhamak Dehghani, "Data Mesh Principles and Logical Architecture", martinfowler.com, 2020.<br>
+                        <a href="https://martinfowler.com/articles/data-mesh-principles.html">https://martinfowler.com/articles/data-mesh-principles.html</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[3]</span>
+                    <div class="source-text">
+                        Scott Prugh, Prakash Gurbani, "Designing Data Products", martinfowler.com, 2022.<br>
+                        <a href="https://martinfowler.com/articles/designing-data-products.html">https://martinfowler.com/articles/designing-data-products.html</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[4]</span>
+                    <div class="source-text">
+                        Zhamak Dehghani, "Data Mesh Concepts" (presentation), InfoQ, 2021.<br>
+                        <a href="https://www.infoq.com/presentations/data-mesh-concepts/">https://www.infoq.com/presentations/data-mesh-concepts/</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[5]</span>
+                    <div class="source-text">
+                        ThoughtWorks, "Developer Experience for Data Mesh Product", ThoughtWorks Insights Blog.<br>
+                        <a href="https://www.thoughtworks.com/insights/blog/data-strategy/dev-experience-data-mesh-product">https://www.thoughtworks.com/insights/blog/data-strategy/dev-experience-data-mesh-product</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[6]</span>
+                    <div class="source-text">
+                        dbt Labs, "Key Components of Data Mesh: Creating and Managing Data Products".<br>
+                        <a href="https://www.getdbt.com/blog/key-components-of-data-mesh-creating-and-managing-data-products">https://www.getdbt.com/blog/key-components-of-data-mesh-creating-and-managing-data-products</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[7]</span>
+                    <div class="source-text">
+                        datamesh-architecture.com, "Data Product Canvas" — コミュニティリソース.<br>
+                        <a href="https://www.datamesh-architecture.com/data-product-canvas">https://www.datamesh-architecture.com/data-product-canvas</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[8]</span>
+                    <div class="source-text">
+                        datamesh-governance.com, "Data Product Governance Policies".<br>
+                        <a href="https://www.datamesh-governance.com/policies/definitions/data-product/data-product.html">https://www.datamesh-governance.com/policies/definitions/data-product/data-product.html</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[9]</span>
+                    <div class="source-text">
+                        Barnes &amp; Noble, Data Mesh (Zhamak Dehghani) — Table of Contents.<br>
+                        <a href="https://www.barnesandnoble.com/w/data-mesh-zhamak-dehghani/1139568993">https://www.barnesandnoble.com/w/data-mesh-zhamak-dehghani/1139568993</a>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- ─── Footer ─── -->
+    <footer>
+        <div class="footer-source">
+            Zhamak Dehghani — Data Mesh (O'Reilly, 2022) Part IV Ch.11–14 学習ノート
+        </div>
+        <p>
+            <a href="../index.html" style="color:var(--accent-light); font-family:'JetBrains Mono',monospace; font-size:0.85rem;">← トップに戻る</a>
+        </p>
+        <p class="footer-disclaimer">
+            本記事はZhamak Dehghani著『Data Mesh』（O'Reilly Media, 2022）の個人学習ノートです。書籍の内容を要約・解説したものであり、著作権は原著者およびO'Reilly Mediaに帰属します。
+        </p>
+    </footer>
+
+    <script>
+        // ─── Smooth scroll for TOC ───
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // ─── Active nav link highlighting ───
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-links a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.style.color = '';
+                        if (link.getAttribute('href') === '#' + entry.target.id) {
+                            link.style.color = 'var(--accent)';
+                        }
+                    });
+                }
+            });
+        }, { rootMargin: '-20% 0px -60% 0px' });
+
+        sections.forEach(section => observer.observe(section));
+
+        // ─── Subtle card entrance animation ───
+        const cards = document.querySelectorAll('.char3-card, .usability-card, .card, .outcome-card');
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        cards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(16px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            cardObserver.observe(card);
+        });
+    </script>
+
+</body>
+</html>
