@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Mesh — Data Meshアーキテクチャの設計</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #10B981;
+            --accent-light: #34D399;
+            --accent-dim: rgba(16, 185, 129, 0.15);
+            --accent-glow: rgba(16, 185, 129, 0.08);
+            --bg-deep: #070C0A;
+            --bg-secondary: #0A110E;
+            --bg-tertiary: #101C17;
+            --text-primary: #E8EAED;
+            --text-secondary: #8CA09A;
+            --border: #152A22;
+            --border-accent: rgba(16, 185, 129, 0.3);
+            --danger: #EF4444;
+            --indigo: #6366F1;
+            --amber: #F59E0B;
+            --emerald-deep: #059669;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(16, 185, 129, 0.05) 0%, transparent 55%),
+                radial-gradient(circle at 85% 70%, rgba(5, 150, 105, 0.04) 0%, transparent 55%),
+                radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.03) 0%, transparent 40%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #080E0B 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        /* ─── Header & Navigation ─── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(7, 12, 10, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 40%, var(--emerald-deep) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .book-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: rgba(16, 28, 23, 0.7);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Table of Contents ─── */
+        .toc-section {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+
+        .toc-box {
+            background: rgba(16, 28, 23, 0.6);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: color 0.2s ease;
+            padding: 0.3rem 0;
+        }
+
+        .toc-list li a:hover {
+            color: var(--accent-light);
+        }
+
+        .toc-num {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 34px;
+        }
+
+        /* ─── Main Content ─── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(16, 28, 23, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--emerald-deep), transparent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 70px;
+            opacity: 0.9;
+        }
+
+        .chapter-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '//';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.4rem;
+            color: var(--text-primary);
+            line-height: 1.85;
+        }
+
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin: 1rem 0 1.5rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        /* ─── Tables ─── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(10, 17, 14, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(16, 185, 129, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(16, 185, 129, 0.04);
+        }
+
+        /* ─── Alert / Callout Boxes ─── */
+        .alert {
+            padding: 1.4rem 1.6rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-emerald {
+            border-left-color: var(--accent);
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .alert-success {
+            border-left-color: var(--accent-light);
+            background: rgba(52, 211, 153, 0.08);
+        }
+
+        .alert-danger {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-indigo {
+            border-left-color: var(--indigo);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .alert-amber {
+            border-left-color: var(--amber);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-emerald .alert-title { color: var(--accent-light); }
+        .alert-success .alert-title { color: var(--accent-light); }
+        .alert-danger .alert-title { color: var(--danger); }
+        .alert-indigo .alert-title { color: var(--indigo); }
+        .alert-amber .alert-title { color: var(--amber); }
+
+        .alert p { margin-bottom: 0.5rem; }
+        .alert p:last-child { margin-bottom: 0; }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(10, 17, 14, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: rgba(10, 17, 14, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.12);
+        }
+
+        /* ─── Char3 Cards (3-column feature blocks) ─── */
+        .char3-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .char3-card {
+            background: rgba(10, 17, 14, 0.9);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.8rem;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .char3-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .char3-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.12;
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            line-height: 1;
+        }
+
+        .char3-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .char3-card h4 {
+            font-size: 1.15rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        .char3-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+
+        .char3-impact {
+            font-size: 0.82rem;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid var(--border);
+            padding-top: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ─── SVG Diagram Containers ─── */
+        .diagram-wrap {
+            margin: 2.5rem 0;
+            background: rgba(10, 17, 14, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .diagram-inner {
+            padding: 2rem 2.5rem;
+            position: relative;
+        }
+
+        .diagram-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* ─── Comparison Table ─── */
+        .col-old {
+            color: #EF4444;
+        }
+
+        .col-new {
+            color: var(--accent-light);
+        }
+
+        .col-aspect {
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+        }
+
+        /* ─── Highlight Inline ─── */
+        .highlight {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 0.8rem 1.5rem;
+            margin: 1.5rem 0;
+            background: rgba(16, 185, 129, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        blockquote cite {
+            display: block;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-style: normal;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Port Tags ─── */
+        .port-tag {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 4px;
+            margin: 0.2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .port-input {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            color: #818CF8;
+        }
+
+        .port-output {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: var(--accent-light);
+        }
+
+        .port-control {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            color: #FCD34D;
+        }
+
+        .port-discovery {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #FCA5A5;
+        }
+
+        /* ─── Plane Cards ─── */
+        .plane-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .plane-card {
+            background: rgba(10, 17, 14, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.8rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .plane-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 6px 24px rgba(16, 185, 129, 0.1);
+        }
+
+        .plane-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.08;
+            position: absolute;
+            top: 0.5rem;
+            right: 1.5rem;
+            line-height: 1;
+        }
+
+        .plane-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            margin-bottom: 0.6rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .plane-card h4 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .plane-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+
+        .plane-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .plane-feature-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        /* ─── Journey Timeline ─── */
+        .journey-timeline {
+            margin: 2rem 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+
+        .journey-step {
+            background: rgba(10, 17, 14, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.1rem;
+            text-align: center;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .journey-step:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+        }
+
+        .journey-step-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+
+        .journey-step-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--accent-light);
+            margin-bottom: 0.3rem;
+        }
+
+        .journey-step-desc {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* ─── Stat Callout ─── */
+        .stat-callout {
+            background: rgba(10, 17, 14, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-callout-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-row-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-big {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ─── Part Link Banner ─── */
+        .part-link-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(10, 17, 14, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem 1.8rem;
+            margin: 3rem 0;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .part-link-banner .part-info {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .part-link-banner .part-info strong {
+            color: var(--text-primary);
+        }
+
+        .part-link-btn {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-light);
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .part-link-btn:hover {
+            background: rgba(16, 185, 129, 0.25);
+            text-decoration: none;
+            opacity: 1;
+        }
+
+        /* ─── Outcome Cards ─── */
+        .outcome-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .outcome-card {
+            background: rgba(10, 17, 14, 0.8);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.6rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .outcome-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 6px 24px rgba(16, 185, 129, 0.1);
+        }
+
+        .outcome-icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .outcome-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .outcome-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* ─── Sources Section ─── */
+        .sources-list {
+            list-style: none;
+            margin: 0;
+        }
+
+        .sources-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .sources-list li:last-child {
+            border-bottom: none;
+        }
+
+        .source-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 28px;
+            margin-top: 0.1rem;
+        }
+
+        .source-text {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .source-text a {
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            word-break: break-all;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-source {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(16, 28, 23, 0.8);
+            border: 1px solid var(--border);
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+        }
+
+        .footer-disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0.75rem auto 0;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .nav-links { display: none; }
+            section { padding: 2rem 1.5rem; }
+            .section-number { font-size: 1.8rem; min-width: 50px; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .toc-list { grid-template-columns: 1fr; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 0.75rem 0.9rem; }
+            .char3-grid { grid-template-columns: 1fr; }
+            .journey-timeline { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 480px) {
+            .hero { padding: 3rem 1.5rem 2rem; }
+            .hero-stats { grid-template-columns: 1fr; }
+            .stat-row-grid { grid-template-columns: 1fr; }
+            .journey-timeline { grid-template-columns: 1fr; }
+        }
+
+        /* ─── Utility ─── */
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header>
+        <nav>
+            <a href="../index.html" class="logo">
+                <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Data Mesh logo">
+                    <circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="4" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="11" cy="11" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+                    <line x1="5.8" y1="5.2" x2="9.3" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="5.2" x2="12.7" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="5.8" y1="16.8" x2="9.3" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="16.8" x2="12.7" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+                Data Mesh
+            </a>
+            <ul class="nav-links">
+                <li><a href="#overview">Part III 概要</a></li>
+                <li><a href="#ch9">第9章 論理アーキテクチャ</a></li>
+                <li><a href="#ch10">第10章 マルチプレーン</a></li>
+                <li><a href="#summary">まとめ</a></li>
+            </ul>
+            <a href="../index.html" class="back-link">← トップに戻る</a>
+        </nav>
+    </header>
+
+    <!-- ─── Hero ─── -->
+    <div class="hero">
+        <div class="eyebrow">学習ノート / O'REILLY / Part III</div>
+        <h1>Data Mesh — Data Meshアーキテクチャの設計</h1>
+        <p class="subtitle">Part III: How to Design the Data Mesh Architecture — 学習ノート</p>
+        <p class="subtitle" style="font-size:1rem; margin-bottom:1.5rem;">Zhamak Dehghani著『Data Mesh』（O'Reilly, 2022）Part III「How to Design the Data Mesh Architecture」第9〜10章の要約</p>
+        <div class="book-info">
+            <span>Zhamak Dehghani</span>
+            <span style="opacity:0.4;">|</span>
+            <span>O'Reilly Media, 2022</span>
+            <span style="opacity:0.4;">|</span>
+            <span>ISBN: 978-1-492-09239-3</span>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">2</div>
+                <div class="stat-label">対象章（第9章・第10章）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div class="stat-label">Data Product Quantumの構造コンポーネント</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">4</div>
+                <div class="stat-label">データプロダクトのポート種別</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div class="stat-label">マルチプレーンプラットフォームのプレーン数</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2026-03-30 &nbsp;|&nbsp; 読了目安: ~18分</p>
+    </div>
+
+    <!-- ─── Table of Contents ─── -->
+    <div class="toc-section">
+        <div class="toc-box">
+            <div class="toc-title">// Table of Contents</div>
+            <ul class="toc-list">
+                <li><a href="#overview"><span class="toc-num">00</span>Part III 概要</a></li>
+                <li><a href="#ch9"><span class="toc-num">01</span>第9章：論理アーキテクチャ</a></li>
+                <li><a href="#great-divide"><span class="toc-num">02</span>データの大分裂</a></li>
+                <li><a href="#dpq"><span class="toc-num">03</span>Data Product Quantum</a></li>
+                <li><a href="#ports"><span class="toc-num">04</span>データプロダクトのポート</a></li>
+                <li><a href="#governance"><span class="toc-num">05</span>埋め込み型コンピュテーショナルポリシー</a></li>
+                <li><a href="#ch10"><span class="toc-num">06</span>第10章：マルチプレーンデータプラットフォーム</a></li>
+                <li><a href="#three-planes"><span class="toc-num">07</span>3つのプレーン</a></li>
+                <li><a href="#developer-journey"><span class="toc-num">08</span>開発者ジャーニー</a></li>
+                <li><a href="#affordances"><span class="toc-num">09</span>データプロダクトのアフォーダンス</a></li>
+                <li><a href="#summary"><span class="toc-num">10</span>まとめ</a></li>
+                <li><a href="#sources"><span class="toc-num">11</span>参考文献</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ─── Part Banner ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Data Mesh 学習ノート
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="data-mesh-principles.html" class="part-link-btn" style="border-color:rgba(139,92,246,0.4); color:#C4B5FD; background:rgba(139,92,246,0.1);">Part I — 4原則</a>
+                <a href="data-mesh-why.html" class="part-link-btn" style="border-color:rgba(245,158,11,0.4); color:#FCD34D; background:rgba(245,158,11,0.1);">Part II — なぜ今？</a>
+                <a href="#" class="part-link-btn">Part III — アーキテクチャ設計 ◀</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Main Content ─── -->
+    <main>
+
+        <!-- Section 0: Overview -->
+        <section id="overview">
+            <div class="section-header">
+                <div class="section-number">00</div>
+                <div>
+                    <span class="chapter-tag">Part III Overview</span>
+                    <h2>Part III 概要</h2>
+                </div>
+            </div>
+
+            <p>Part IIIは、Data Meshの「<span class="highlight">どう設計するか</span>」を扱う。Part I（4原則）・Part II（なぜ今？）を受けて、本パートでは原則を具体的なアーキテクチャ構造に落とし込む方法を提示する。</p>
+
+            <div class="alert alert-emerald">
+                <div class="alert-title">Part III のスコープ</div>
+                <p>第9章「The Logical Architecture」では、4原則それぞれをアーキテクチャコンポーネントに対応させた技術中立な論理設計を解説。第10章「The Multiplane Data Platform Architecture」では、ドメインが自律的にデータプロダクトをビルド・デプロイ・発見・消費できるようにするプラットフォームの3プレーン構造を詳述する。</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Chapter 9</div>
+                    <h4>論理アーキテクチャ</h4>
+                    <p>技術非依存のブループリント。Data Product Quantum、ポート設計、埋め込み型ガバナンスを定義する。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 10</div>
+                    <h4>マルチプレーンデータプラットフォーム</h4>
+                    <p>セルフサーブを実現する3層プラットフォームアーキテクチャ。開発者・コンシューマーそれぞれのジャーニーを設計ドライバーとする。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Design Philosophy</div>
+                    <h4>「プロダクト→API→実装」の順序</h4>
+                    <p>まずデータプロダクトを設計し、次にプラットフォームAPIを考え、実装は最後に決める。過度なツール依存を避けるための原則。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: Ch.9 Logical Architecture -->
+        <section id="ch9">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <div>
+                    <span class="chapter-tag">Chapter 9</span>
+                    <h2>第9章：論理アーキテクチャ</h2>
+                </div>
+            </div>
+
+            <p>第9章は、Data Meshの技術非依存な論理アーキテクチャのブループリントを提示する。Dehghaniはあえて特定ツール・実装を規定せず、設計の自由度を保つ。各アーキテクチャコンポーネントはData Meshの4原則のいずれかに対応している。</p>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// 設計哲学</div>
+                <p>Dehghaniが繰り返し強調するのは、「<span class="highlight">このアーキテクチャは特定の技術スタックを強制しない</span>」という点。論理設計として読み、実装時にチームが創造性を発揮できる余地を意図的に残している。</p>
+            </div>
+        </section>
+
+        <!-- Section 2: Great Divide -->
+        <section id="great-divide">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <div>
+                    <span class="chapter-tag">Ch.9 — The Great Divide</span>
+                    <h2>データの大分裂（The Great Divide of Data）</h2>
+                </div>
+            </div>
+
+            <p>現代の組織データは大きく2つの面に分裂している：<span class="highlight">オペレーショナルプレーン</span>（トランザクション処理）と<span class="highlight">アナリティカルプレーン</span>（ウェアハウジング・BI・ML）だ。この2プレーンはテクノロジー・組織・トポロジーすべての面で乖離してきた。</p>
+
+            <!-- SVG Diagram: The Great Divide -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// THE GREAT DIVIDE — データの2プレーン構造</div>
+                    <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <!-- Background -->
+                        <rect width="700" height="280" fill="transparent"/>
+
+                        <!-- Left: Operational Plane -->
+                        <rect x="20" y="30" width="280" height="220" rx="10" fill="rgba(99,102,241,0.08)" stroke="rgba(99,102,241,0.35)" stroke-width="1.5"/>
+                        <text x="160" y="58" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="11" font-weight="600" letter-spacing="1">OPERATIONAL PLANE</text>
+                        <text x="160" y="73" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="10">オペレーショナルプレーン</text>
+
+                        <!-- Operational boxes -->
+                        <rect x="50" y="90" width="100" height="42" rx="6" fill="rgba(99,102,241,0.12)" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+                        <text x="100" y="114" text-anchor="middle" fill="#C4B5FD" font-family="JetBrains Mono" font-size="9.5">Domain App</text>
+
+                        <rect x="170" y="90" width="100" height="42" rx="6" fill="rgba(99,102,241,0.12)" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+                        <text x="220" y="114" text-anchor="middle" fill="#C4B5FD" font-family="JetBrains Mono" font-size="9.5">Domain App</text>
+
+                        <rect x="50" y="155" width="100" height="42" rx="6" fill="rgba(99,102,241,0.12)" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+                        <text x="100" y="179" text-anchor="middle" fill="#C4B5FD" font-family="JetBrains Mono" font-size="9.5">Domain App</text>
+
+                        <rect x="170" y="155" width="100" height="42" rx="6" fill="rgba(99,102,241,0.12)" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+                        <text x="220" y="179" text-anchor="middle" fill="#C4B5FD" font-family="JetBrains Mono" font-size="9.5">Domain App</text>
+
+                        <!-- Fragile ETL Arrow -->
+                        <line x1="302" y1="140" x2="398" y2="140" stroke="#EF4444" stroke-width="2" stroke-dasharray="6,4"/>
+                        <polygon points="392,134 402,140 392,146" fill="#EF4444"/>
+                        <text x="350" y="128" text-anchor="middle" fill="#FCA5A5" font-family="JetBrains Mono" font-size="9" font-weight="600">Fragile ETL</text>
+                        <text x="350" y="160" text-anchor="middle" fill="#8CA09A" font-family="JetBrains Mono" font-size="8">↑ 複雑さ増大</text>
+
+                        <!-- Right: Analytical Plane -->
+                        <rect x="400" y="30" width="280" height="220" rx="10" fill="rgba(16,185,129,0.07)" stroke="rgba(16,185,129,0.3)" stroke-width="1.5"/>
+                        <text x="540" y="58" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="11" font-weight="600" letter-spacing="1">ANALYTICAL PLANE</text>
+                        <text x="540" y="73" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="10">アナリティカルプレーン</text>
+
+                        <!-- Analytical sub-planes -->
+                        <rect x="420" y="88" width="115" height="70" rx="6" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
+                        <text x="477" y="116" text-anchor="middle" fill="#FCD34D" font-family="JetBrains Mono" font-size="9.5">Data</text>
+                        <text x="477" y="130" text-anchor="middle" fill="#FCD34D" font-family="JetBrains Mono" font-size="9.5">Warehouse</text>
+                        <text x="477" y="148" text-anchor="middle" fill="#8CA09A" font-family="JetBrains Mono" font-size="8">BI / Reporting</text>
+
+                        <rect x="545" y="88" width="115" height="70" rx="6" fill="rgba(99,102,241,0.08)" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+                        <text x="602" y="116" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="9.5">Data</text>
+                        <text x="602" y="130" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="9.5">Lake</text>
+                        <text x="602" y="148" text-anchor="middle" fill="#8CA09A" font-family="JetBrains Mono" font-size="8">Data Science</text>
+
+                        <text x="540" y="195" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="10">さらに内部で分裂</text>
+
+                        <!-- Solution label -->
+                        <text x="350" y="268" text-anchor="middle" fill="#34D399" font-family="Noto Sans JP" font-size="10" font-weight="600">→ Data Meshはドメイン指向の逆転トポロジーでこの分裂を解消する</text>
+                    </svg>
+                </div>
+            </div>
+
+            <p>アナリティカルプレーン自体もさらに内部で分裂している。<span class="highlight">データウェアハウス</span>（BI/レポーティング向け）と<span class="highlight">データレイク</span>（データサイエンス向け）という2系統がそれぞれ独自進化し、ETLパイプラインが両者と運用システムをつなぎ続けている。</p>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">// ETLパイプラインの脆弱性</div>
+                <p>組織が成長するにつれて、ETLパイプラインは「<span class="highlight">継続的に壊れ、複雑さが際限なく増大する</span>」構造となる。Data Meshはこの問題を技術的パッチで解決するのではなく、<strong>ドメインベースの逆転トポロジー</strong>という根本的なアーキテクチャ変更で対応する。</p>
+            </div>
+
+            <h3>ドメイン指向の分析データ共有</h3>
+
+            <p>Data Meshの論理アーキテクチャは、データをテクノロジースタックではなく<span class="highlight">ビジネスドメイン</span>を基準に配置する。各ドメインは<strong>オペレーショナルAPI</strong>（「新しいエピソードを作成する」）と<strong>アナリティカルデータエンドポイント</strong>（「過去N月のエピソードデータ」）の両方を公開する。</p>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// ドメイン指向アーキテクチャの特徴</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big">双方向</div>
+                        <div class="stat-desc">各ドメインが運用データも分析データも両方公開する</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">自律</div>
+                        <div class="stat-desc">運用系・分析系を独立してリリース・デプロイ可能</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">消費</div>
+                        <div class="stat-desc">一つのドメインが別ドメインの分析データを消費できる</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Data Product Quantum -->
+        <section id="dpq">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <div>
+                    <span class="chapter-tag">Ch.9 — Architectural Quantum</span>
+                    <h2>Data Product Quantum — アーキテクチャの量子</h2>
+                </div>
+            </div>
+
+            <p>Data Meshの中核アーキテクチャ概念が<span class="highlight">Data Product Quantum（DPQ）</span>だ。「Quantum」という言葉は進化的アーキテクチャから借用したもので、<strong>高い機能凝集性を持ちながら独立してデプロイ可能な最小アーキテクチャ単位</strong>を意味する。データプロダクトはメッシュ上の1つのノードであり、その機能に必要なすべての構造要素を内包する。</p>
+
+            <blockquote>
+                "The data product is the architectural quantum of the data mesh — the smallest unit of architecture that can be independently deployed with high functional cohesion."
+                <cite>— Zhamak Dehghani, Data Mesh (O'Reilly, 2022)</cite>
+            </blockquote>
+
+            <h3>3つの構造コンポーネント</h3>
+
+            <!-- SVG Diagram: DPQ Structure -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// DATA PRODUCT QUANTUM — 3つの構造コンポーネント</div>
+                    <svg viewBox="0 0 700 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <!-- Outer container -->
+                        <rect x="20" y="20" width="660" height="300" rx="14" fill="rgba(16,28,23,0.9)" stroke="rgba(16,185,129,0.4)" stroke-width="1.5" stroke-dasharray="6,3"/>
+                        <text x="350" y="44" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="11" font-weight="700" letter-spacing="2">DATA PRODUCT QUANTUM (DPQ)</text>
+                        <text x="350" y="58" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="9">アーキテクチャの量子 — 独立デプロイ可能な最小単位</text>
+
+                        <!-- Component 1: Code -->
+                        <rect x="40" y="72" width="190" height="228" rx="10" fill="rgba(99,102,241,0.1)" stroke="rgba(99,102,241,0.4)" stroke-width="1.5"/>
+                        <text x="135" y="95" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="10" font-weight="600" letter-spacing="1">CODE</text>
+                        <text x="135" y="110" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="9">コード</text>
+                        <!-- Code sub-items -->
+                        <rect x="55" y="120" width="160" height="38" rx="5" fill="rgba(99,102,241,0.08)" stroke="rgba(99,102,241,0.25)" stroke-width="1"/>
+                        <text x="135" y="136" text-anchor="middle" fill="#A5B4FC" font-family="JetBrains Mono" font-size="8.5">a) Data Pipelines</text>
+                        <text x="135" y="150" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">変換・サービング</text>
+
+                        <rect x="55" y="163" width="160" height="38" rx="5" fill="rgba(99,102,241,0.08)" stroke="rgba(99,102,241,0.25)" stroke-width="1"/>
+                        <text x="135" y="179" text-anchor="middle" fill="#A5B4FC" font-family="JetBrains Mono" font-size="8.5">b) APIs</text>
+                        <text x="135" y="193" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">アクセス・スキーマ・可観測性</text>
+
+                        <rect x="55" y="206" width="160" height="38" rx="5" fill="rgba(99,102,241,0.08)" stroke="rgba(99,102,241,0.25)" stroke-width="1"/>
+                        <text x="135" y="222" text-anchor="middle" fill="#A5B4FC" font-family="JetBrains Mono" font-size="8.5">c) Policy Enforcement</text>
+                        <text x="135" y="236" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">アクセス制御・コンプライアンス</text>
+
+                        <text x="135" y="275" text-anchor="middle" fill="#6366F1" font-family="Noto Sans JP" font-size="8">←「どう動くか」を定義</text>
+
+                        <!-- Component 2: Data & Metadata -->
+                        <rect x="255" y="72" width="190" height="228" rx="10" fill="rgba(16,185,129,0.1)" stroke="rgba(16,185,129,0.4)" stroke-width="1.5"/>
+                        <text x="350" y="95" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="10" font-weight="600" letter-spacing="1">DATA &amp; METADATA</text>
+                        <text x="350" y="110" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="9">データ・メタデータ</text>
+
+                        <rect x="270" y="120" width="160" height="52" rx="5" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+                        <text x="350" y="138" text-anchor="middle" fill="#6EE7B7" font-family="JetBrains Mono" font-size="8.5">Analytical Data</text>
+                        <text x="350" y="152" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">ポリグロット形式</text>
+                        <text x="350" y="164" text-anchor="middle" fill="#8CA09A" font-family="JetBrains Mono" font-size="7">(events / batch / tables / graphs)</text>
+
+                        <rect x="270" y="178" width="160" height="38" rx="5" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+                        <text x="350" y="194" text-anchor="middle" fill="#6EE7B7" font-family="JetBrains Mono" font-size="8.5">Intrinsic Metadata</text>
+                        <text x="350" y="208" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">セマンティック定義・品質メトリクス</text>
+
+                        <rect x="270" y="221" width="160" height="34" rx="5" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+                        <text x="350" y="237" text-anchor="middle" fill="#6EE7B7" font-family="JetBrains Mono" font-size="8.5">Governance Metadata</text>
+                        <text x="350" y="249" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">アクセス制御ポリシー</text>
+
+                        <text x="350" y="278" text-anchor="middle" fill="#10B981" font-family="Noto Sans JP" font-size="8">←「何を持つか」を定義</text>
+
+                        <!-- Component 3: Infrastructure -->
+                        <rect x="470" y="72" width="190" height="228" rx="10" fill="rgba(245,158,11,0.09)" stroke="rgba(245,158,11,0.35)" stroke-width="1.5"/>
+                        <text x="565" y="95" text-anchor="middle" fill="#FCD34D" font-family="JetBrains Mono" font-size="10" font-weight="600" letter-spacing="1">INFRASTRUCTURE</text>
+                        <text x="565" y="110" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="9">インフラストラクチャ</text>
+
+                        <rect x="485" y="120" width="160" height="38" rx="5" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+                        <text x="565" y="136" text-anchor="middle" fill="#FDE68A" font-family="JetBrains Mono" font-size="8.5">Compute + Storage</text>
+                        <text x="565" y="150" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">コード実行・データ保存</text>
+
+                        <rect x="485" y="163" width="160" height="38" rx="5" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+                        <text x="565" y="179" text-anchor="middle" fill="#FDE68A" font-family="JetBrains Mono" font-size="8.5">Access Management</text>
+                        <text x="565" y="193" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">アクセス管理</text>
+
+                        <rect x="485" y="206" width="160" height="38" rx="5" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+                        <text x="565" y="222" text-anchor="middle" fill="#FDE68A" font-family="JetBrains Mono" font-size="8.5">Independent Segment</text>
+                        <text x="565" y="236" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">論理的独立セグメント</text>
+
+                        <text x="565" y="278" text-anchor="middle" fill="#F59E0B" font-family="Noto Sans JP" font-size="8">←「どこで動くか」を定義</text>
+
+                        <!-- Bottom note -->
+                        <text x="350" y="313" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="9">過去：パイプライン・データ・インフラが独立管理 → Data Mesh：3要素をドメイン境界で一体化</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Component 01</div>
+                    <h4>コード（Code）</h4>
+                    <p>データパイプラインのコード（上流データの消費・変換・サービング）、APIのコード（データアクセス・スキーマ・可観測性メトリクス）、そしてトレイト強制のコード（アクセス制御・コンプライアンス・プロベナンス）の3つから構成される。</p>
+                    <div class="char3-impact">→ 4原則の「ドメインオーナーシップ」と「データプロダクト」を実装</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Component 02</div>
+                    <h4>データ・メタデータ</h4>
+                    <p>分析データはポリグロット形式（イベント・バッチファイル・リレーショナル・グラフ — 同一セマンティクス）で格納。メタデータには計算ドキュメント、セマンティック/構文宣言、品質メトリクスが含まれる。</p>
+                    <div class="char3-impact">→ 4原則の「セルフサーブ」と「連合ガバナンス」を実装</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Component 03</div>
+                    <h4>インフラストラクチャ</h4>
+                    <p>コードのビルド・デプロイ・実行を可能にする基盤。ビッグデータとメタデータへのストレージとアクセスを提供する。他のデータプロダクトへの影響なしに独立セグメント（論理的分離）で動作する。</p>
+                    <div class="char3-impact">→ 4原則の「セルフサーブプラットフォーム」を実装</div>
+                </div>
+            </div>
+
+            <div class="alert alert-emerald">
+                <div class="alert-title">// 過去のパラダイムとの根本的な違い</div>
+                <p><strong>過去：</strong> パイプラインはデータから独立して管理。インフラ（ウェアハウス・レイクのストレージ）は共有。</p>
+                <p><strong>Data Mesh：</strong> データプロダクト = コード ＋ データ ＋ インフラ の合成物。ドメインの境界コンテキストの粒度で一体化される。</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Ports -->
+        <section id="ports">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <div>
+                    <span class="chapter-tag">Ch.9 — Ports & Interfaces</span>
+                    <h2>データプロダクトのポート</h2>
+                </div>
+            </div>
+
+            <p>データプロダクトは外部と通信するための標準化されたインターフェース「<span class="highlight">ポート</span>」を持つ。ポートは4種類あり、それぞれ明確な役割を持つ。</p>
+
+            <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem;">
+                <span class="port-tag port-input">INPUT DATA PORT</span>
+                <span class="port-tag port-output">OUTPUT DATA PORT</span>
+                <span class="port-tag port-control">CONTROL PORT</span>
+                <span class="port-tag port-discovery">DISCOVERY PORT</span>
+            </div>
+
+            <!-- SVG Diagram: Ports -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// DATA PRODUCT QUANTUM — ポート構造とメッシュ接続</div>
+                    <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+
+                        <!-- Upstream sources on left -->
+                        <rect x="10" y="80" width="110" height="44" rx="6" fill="rgba(99,102,241,0.1)" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+                        <text x="65" y="97" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="8.5">Upstream</text>
+                        <text x="65" y="112" text-anchor="middle" fill="#8CA09A" font-family="JetBrains Mono" font-size="8">Data Product</text>
+
+                        <rect x="10" y="140" width="110" height="44" rx="6" fill="rgba(99,102,241,0.1)" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+                        <text x="65" y="157" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="8.5">Operational</text>
+                        <text x="65" y="172" text-anchor="middle" fill="#8CA09A" font-family="JetBrains Mono" font-size="8">System</text>
+
+                        <!-- Arrows into input port -->
+                        <line x1="122" y1="102" x2="195" y2="130" stroke="#6366F1" stroke-width="1.5"/>
+                        <line x1="122" y1="162" x2="195" y2="155" stroke="#6366F1" stroke-width="1.5"/>
+
+                        <!-- Main DPQ box -->
+                        <rect x="195" y="60" width="310" height="200" rx="12" fill="rgba(10,17,14,0.95)" stroke="rgba(16,185,129,0.5)" stroke-width="2"/>
+                        <text x="350" y="82" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="10" font-weight="700" letter-spacing="1">DATA PRODUCT QUANTUM</text>
+
+                        <!-- Input Port on left side of DPQ -->
+                        <rect x="183" y="118" width="28" height="64" rx="4" fill="rgba(99,102,241,0.2)" stroke="rgba(99,102,241,0.5)" stroke-width="1"/>
+                        <text x="197" y="145" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="7" transform="rotate(-90,197,145)">INPUT</text>
+
+                        <!-- Output Port on right side -->
+                        <rect x="489" y="118" width="28" height="64" rx="4" fill="rgba(16,185,129,0.2)" stroke="rgba(16,185,129,0.5)" stroke-width="1"/>
+                        <text x="503" y="150" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="7" transform="rotate(-90,503,150)">OUTPUT</text>
+
+                        <!-- Control Port on top -->
+                        <rect x="310" y="48" width="80" height="24" rx="4" fill="rgba(245,158,11,0.2)" stroke="rgba(245,158,11,0.5)" stroke-width="1"/>
+                        <text x="350" y="64" text-anchor="middle" fill="#FCD34D" font-family="JetBrains Mono" font-size="8" font-weight="600">CONTROL PORT</text>
+                        <line x1="350" y1="72" x2="350" y2="60" stroke="rgba(245,158,11,0.5)" stroke-width="1"/>
+
+                        <!-- Discovery Port on bottom -->
+                        <rect x="280" y="248" width="140" height="24" rx="4" fill="rgba(239,68,68,0.15)" stroke="rgba(239,68,68,0.4)" stroke-width="1"/>
+                        <text x="350" y="264" text-anchor="middle" fill="#FCA5A5" font-family="JetBrains Mono" font-size="8" font-weight="600">DISCOVERY PORT</text>
+                        <line x1="350" y1="260" x2="350" y2="248" stroke="rgba(239,68,68,0.4)" stroke-width="1"/>
+
+                        <!-- Inner components -->
+                        <rect x="215" y="100" width="90" height="50" rx="5" fill="rgba(99,102,241,0.07)" stroke="rgba(99,102,241,0.2)" stroke-width="1"/>
+                        <text x="260" y="121" text-anchor="middle" fill="#A5B4FC" font-family="JetBrains Mono" font-size="8">Pipeline</text>
+                        <text x="260" y="135" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7">変換ロジック</text>
+
+                        <rect x="305" y="100" width="90" height="50" rx="5" fill="rgba(16,185,129,0.07)" stroke="rgba(16,185,129,0.2)" stroke-width="1"/>
+                        <text x="350" y="121" text-anchor="middle" fill="#6EE7B7" font-family="JetBrains Mono" font-size="8">Data Store</text>
+                        <text x="350" y="135" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7">ポリグロット形式</text>
+
+                        <rect x="395" y="100" width="88" height="50" rx="5" fill="rgba(245,158,11,0.07)" stroke="rgba(245,158,11,0.2)" stroke-width="1"/>
+                        <text x="439" y="121" text-anchor="middle" fill="#FDE68A" font-family="JetBrains Mono" font-size="8">Policy</text>
+                        <text x="439" y="135" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7">ポリシーエンジン</text>
+
+                        <rect x="215" y="165" width="268" height="40" rx="5" fill="rgba(16,185,129,0.05)" stroke="rgba(16,185,129,0.15)" stroke-width="1"/>
+                        <text x="349" y="182" text-anchor="middle" fill="#8CA09A" font-family="JetBrains Mono" font-size="8">Infrastructure (Compute + Storage + Access)</text>
+                        <text x="349" y="196" text-anchor="middle" fill="#6CA09A" font-family="Noto Sans JP" font-size="7">独立インフラセグメント</text>
+
+                        <!-- Downstream consumers -->
+                        <rect x="580" y="80" width="110" height="44" rx="6" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+                        <text x="635" y="97" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="8.5">SQL Client</text>
+                        <text x="635" y="112" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">BI / アナリスト</text>
+
+                        <rect x="580" y="140" width="110" height="44" rx="6" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+                        <text x="635" y="157" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="8.5">Pub/Sub</text>
+                        <text x="635" y="172" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">アプリ開発者</text>
+
+                        <!-- Arrows from output port -->
+                        <line x1="519" y1="133" x2="578" y2="102" stroke="#10B981" stroke-width="1.5"/>
+                        <line x1="519" y1="155" x2="578" y2="162" stroke="#10B981" stroke-width="1.5"/>
+
+                        <!-- Governance admin at top -->
+                        <rect x="280" y="6" width="140" height="34" rx="6" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.25)" stroke-width="1"/>
+                        <text x="350" y="20" text-anchor="middle" fill="#FCD34D" font-family="JetBrains Mono" font-size="8">Governance Plane</text>
+                        <text x="350" y="33" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">ポリシー設定（管理者）</text>
+                        <line x1="350" y1="40" x2="350" y2="48" stroke="rgba(245,158,11,0.4)" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+                        <!-- Mesh catalog at bottom -->
+                        <rect x="490" y="270" width="130" height="34" rx="6" fill="rgba(239,68,68,0.08)" stroke="rgba(239,68,68,0.25)" stroke-width="1"/>
+                        <text x="555" y="284" text-anchor="middle" fill="#FCA5A5" font-family="JetBrains Mono" font-size="8">Mesh Catalog</text>
+                        <text x="555" y="298" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">発見・検索</text>
+                        <line x1="422" y1="272" x2="490" y2="285" stroke="rgba(239,68,68,0.3)" stroke-width="1" stroke-dasharray="3,2"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="char3-grid">
+                <div class="char3-card" style="border-top-color:#6366F1;">
+                    <div class="char3-num">①</div>
+                    <div class="char3-label" style="background:rgba(99,102,241,0.15); color:#818CF8;">Input Data Port</div>
+                    <h4>入力データポート</h4>
+                    <p>上流データ（他のデータプロダクトまたはドメインの運用システム）を受信・プル取得するためのAPI/メカニズムのセット。</p>
+                    <div class="char3-impact" style="color:#818CF8;">データフローの入口 → リネージを形成</div>
+                </div>
+                <div class="char3-card" style="border-top-color:#10B981;">
+                    <div class="char3-num">②</div>
+                    <div class="char3-label">Output Data Port</div>
+                    <h4>出力データポート</h4>
+                    <p>分析データとメタデータを提供するインターフェース。読み取り専用・時間軸変異型・イミュータブル。SQL・Blob・イベント・グラフ・カラムナーファイルのポリグロット対応。読み取り関数は常に時間の関数（from-toウィンドウ）として定義される。</p>
+                    <div class="char3-impact">マルチモーダル: BI用SQL / データサイエンス用カラムナー / アプリ用Pub/Sub</div>
+                </div>
+                <div class="char3-card" style="border-top-color:#F59E0B;">
+                    <div class="char3-num">③</div>
+                    <div class="char3-label" style="background:rgba(245,158,11,0.15); color:#F59E0B;">Control Port</div>
+                    <h4>コントロールポート</h4>
+                    <p>ガバナンスポリシーを設定するための特権APIセット。ポリシーは集中的にプッシュされるか、ローカルで作成される。受信・変更・実行はすべてローカルで行われる。</p>
+                    <div class="char3-impact" style="color:#F59E0B;">→ 連合ガバナンスモデルの実行点</div>
+                </div>
+                <div class="char3-card" style="border-top-color:#EF4444;">
+                    <div class="char3-num">④</div>
+                    <div class="char3-label" style="background:rgba(239,68,68,0.12); color:#EF4444;">Discovery Port</div>
+                    <h4>ディスカバリーポート</h4>
+                    <p>出力ポート情報・SLO・ドキュメント・データアクセス・認可情報を提供するルートAPI（アグリゲート）。コンシューマーがデータプロダクトを発見・理解するための入口となる。</p>
+                    <div class="char3-impact" style="color:#EF4444;">→ メッシュカタログとの接続点</div>
+                </div>
+            </div>
+
+            <h3>メッシュの3層相互接続</h3>
+            <p>データプロダクト間の接続は3つの層から成る：</p>
+            <ol>
+                <li><strong>データフロー層（Data Flow Layer）</strong>：入力ポート⇔出力ポート間のデータの流れ。これがリネージになる。</li>
+                <li><strong>スキーマセマンティックリンク（Schema Semantic Links）</strong>：標準スキーマ言語によりプロダクト横断でのJOINを可能にする。</li>
+                <li><strong>データリンク（Data Links）</strong>：実際のデータ関係（例：「このリスナーはこのユーザーと同一人物である」）。</li>
+            </ol>
+        </section>
+
+        <!-- Section 5: Governance -->
+        <section id="governance">
+            <div class="section-header">
+                <div class="section-number">05</div>
+                <div>
+                    <span class="chapter-tag">Ch.9 — Federated Governance</span>
+                    <h2>埋め込み型コンピュテーショナルポリシー</h2>
+                </div>
+            </div>
+
+            <p>第9章はガバナンスのアーキテクチャも扱う。Data Meshのガバナンスモデルは<span class="highlight">連合型コンピュテーショナルガバナンス</span>と呼ばれ、中央集権と分散のバランスを取る。</p>
+
+            <h3>連合ガバナンスモデル</h3>
+
+            <div class="alert alert-emerald">
+                <div class="alert-title">// 連合ガバナンスの核心</div>
+                <p>意思決定は<strong>ドメインデータプロダクトオーナー ＋ データプラットフォームプロダクトオーナーの連合体</strong>が行う。自律性・ドメインローカルの意思決定と、健全で相互運用可能なエコシステムのためのグローバルルールのバランスをとる。</p>
+                <p>グローバル決定の目的：<span class="highlight">相互運用性</span>の実現 ＋ 発見と組み合わせを通じた<span class="highlight">複合的ネットワーク効果</span>の創出。</p>
+            </div>
+
+            <h3>サイドカーパターンによるポリシー実行</h3>
+
+            <p>ポリシーはサービスメッシュのサイドカーと類比して、<span class="highlight">各データプロダクトにサイドカーまたはライブラリとして埋め込まれる</span>。アクセス制御・匿名化・暗号化・差分プライバシー・合成データなどの機能をプログラマティックに構築し、プラットフォームに自動化する。コントロールポートを通じてポリシーを設定する。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Policy Type</div>
+                    <h4>アクセス制御</h4>
+                    <p>誰がどのデータにアクセスできるかをデータプロダクト自身がローカルに強制する。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Policy Type</div>
+                    <h4>匿名化・暗号化</h4>
+                    <p>個人情報保護のため、データプロダクトが自律的に匿名化・暗号化処理を適用する。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Policy Type</div>
+                    <h4>合成データ・差分プライバシー</h4>
+                    <p>センシティブデータへのアクセスを合成データや差分プライバシーで代替する。</p>
+                </div>
+            </div>
+
+            <h3>ガバナンス対比表：従来 vs Data Mesh</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>観点</th>
+                            <th class="col-old">従来のデータガバナンス</th>
+                            <th class="col-new">Data Mesh ガバナンス</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="col-aspect">チーム構成</td>
+                            <td class="col-old">集中型チーム</td>
+                            <td class="col-new">連合型チーム（ドメイン代表で構成）</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">データ品質</td>
+                            <td class="col-old">データ品質に責任を持つ</td>
+                            <td class="col-new">「品質とは何か」のモデリング方法を定義（プラットフォームが実行）</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">データセキュリティ</td>
+                            <td class="col-old">データセキュリティに責任を持つ</td>
+                            <td class="col-new">機密レベルを定義し、プラットフォームがビルド・監視</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">規制遵守</td>
+                            <td class="col-old">規制遵守に責任を持つ</td>
+                            <td class="col-new">規制要件を定義し、プラットフォームが自動化</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">データ管理</td>
+                            <td class="col-old">集中型データ管理人</td>
+                            <td class="col-new">ドメインによる連合型管理人制度</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">データモデリング</td>
+                            <td class="col-old">グローバル標準データモデル</td>
+                            <td class="col-new">ポリセム（クロスドメインデータ要素）のモデリング</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">ドメイン関係</td>
+                            <td class="col-old">ドメインから独立したチーム</td>
+                            <td class="col-new">ドメイン代表で構成されるチーム</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">データ構造</td>
+                            <td class="col-old">静的データ構造</td>
+                            <td class="col-new">変化を受け入れるダイナミックなトポロジー</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">テクノロジー</td>
+                            <td class="col-old">集中型テクノロジー（モノリシック）</td>
+                            <td class="col-new">ドメインごとのセルフサーブプラットフォーム技術</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">成功指標</td>
+                            <td class="col-old">管理データ量の最大化</td>
+                            <td class="col-new">ネットワーク効果（消費接続数）の最大化</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">プロセス</td>
+                            <td class="col-old">手動プロセス、人的介入</td>
+                            <td class="col-new">プラットフォームによる自動化プロセス</td>
+                        </tr>
+                        <tr>
+                            <td class="col-aspect">エラー対応</td>
+                            <td class="col-old">エラーを防止する</td>
+                            <td class="col-new">エラーを検知 ＋ 自動処理で回復する</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 6: Ch.10 -->
+        <section id="ch10">
+            <div class="section-header">
+                <div class="section-number">06</div>
+                <div>
+                    <span class="chapter-tag">Chapter 10</span>
+                    <h2>第10章：マルチプレーンデータプラットフォーム</h2>
+                </div>
+            </div>
+
+            <p>第10章はData Meshの<span class="highlight">セルフサーブデータプラットフォームアーキテクチャ</span>を詳細に解説する。ドメインが自律的にデータプロダクトをビルド・デプロイ・発見・消費できるインフラが本章のテーマだ。</p>
+
+            <h3>なぜマルチプレーン？</h3>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// 「プレーン」の概念</div>
+                <p>「プレーン」とはネットワーキングのコントロールプレーン・データプレーンのように、<strong>統合されているが独立した存在の層</strong>を意味する。階層的なアクセスモデルではなく、<span class="highlight">異なるユーザープロファイル/ペルソナにそれぞれ対応する</span>別個の存在として設計する。</p>
+            </div>
+
+            <p>マルチプレーンモデルの目的は、<span class="highlight">高レベルの抽象化によって複雑さとフリクションを除去する</span>ことにある。各プレーンは異なるユーザーペルソナに対して、それぞれ適切な抽象レベルでインタラクションを提供する。</p>
+        </section>
+
+        <!-- Section 7: Three Planes -->
+        <section id="three-planes">
+            <div class="section-header">
+                <div class="section-number">07</div>
+                <div>
+                    <span class="chapter-tag">Ch.10 — Three Planes</span>
+                    <h2>3つのプレーン</h2>
+                </div>
+            </div>
+
+            <!-- SVG Diagram: Three Planes -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// MULTIPLANE DATA PLATFORM — 3プレーン構造</div>
+                    <svg viewBox="0 0 700 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+
+                        <!-- Plane 3: Mesh Supervision (top) -->
+                        <rect x="30" y="20" width="640" height="90" rx="10" fill="rgba(239,68,68,0.06)" stroke="rgba(239,68,68,0.3)" stroke-width="1.5"/>
+                        <rect x="30" y="20" width="8" height="90" rx="4" fill="rgba(239,68,68,0.5)"/>
+                        <text x="56" y="48" fill="#FCA5A5" font-family="JetBrains Mono" font-size="10" font-weight="700">PLANE 3: DATA MESH SUPERVISION PLANE</text>
+                        <text x="56" y="62" fill="#8CA09A" font-family="Noto Sans JP" font-size="9">メッシュ監督プレーン（メッシュ体験プレーン）</text>
+                        <text x="56" y="78" fill="#8CA09A" font-family="JetBrains Mono" font-size="8">Search/Browse  │  Semantic Query  │  Knowledge Graph  │  Cross-product Discovery</text>
+                        <text x="56" y="94" fill="#6CA09A" font-family="Noto Sans JP" font-size="8">← コンシューマー向け：メッシュ全体でデータプロダクトを発見・横断クエリ</text>
+
+                        <!-- Plane 2: Developer Experience (middle) -->
+                        <rect x="30" y="128" width="640" height="110" rx="10" fill="rgba(16,185,129,0.06)" stroke="rgba(16,185,129,0.3)" stroke-width="1.5"/>
+                        <rect x="30" y="128" width="8" height="110" rx="4" fill="rgba(16,185,129,0.5)"/>
+                        <text x="56" y="154" fill="#34D399" font-family="JetBrains Mono" font-size="10" font-weight="700">PLANE 2: DATA PRODUCT DEVELOPER EXPERIENCE PLANE</text>
+                        <text x="56" y="168" fill="#8CA09A" font-family="Noto Sans JP" font-size="9">データプロダクト開発者体験プレーン</text>
+
+                        <!-- Spec file box -->
+                        <rect x="56" y="177" width="140" height="42" rx="6" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+                        <text x="126" y="194" text-anchor="middle" fill="#6EE7B7" font-family="JetBrains Mono" font-size="8">spec file</text>
+                        <text x="126" y="208" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">宣言的スペック記述</text>
+
+                        <text x="200" y="202" fill="#34D399" font-family="JetBrains Mono" font-size="14">→</text>
+
+                        <rect x="218" y="177" width="140" height="42" rx="6" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+                        <text x="288" y="194" text-anchor="middle" fill="#6EE7B7" font-family="JetBrains Mono" font-size="8">Lifecycle Mgmt</text>
+                        <text x="288" y="208" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">全ライフサイクル管理</text>
+
+                        <text x="362" y="202" fill="#34D399" font-family="JetBrains Mono" font-size="14">→</text>
+
+                        <rect x="380" y="177" width="140" height="42" rx="6" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+                        <text x="450" y="194" text-anchor="middle" fill="#6EE7B7" font-family="JetBrains Mono" font-size="8">Cross-cutting</text>
+                        <text x="450" y="208" text-anchor="middle" fill="#8CA09A" font-family="Noto Sans JP" font-size="7.5">標準・規約の自動適用</text>
+
+                        <text x="56" y="232" fill="#6CA09A" font-family="Noto Sans JP" font-size="8">← 開発者向け：複雑さを抽象化し、データプロダクト開発に専念させる</text>
+
+                        <!-- Plane 1: Infrastructure Provisioning (bottom) -->
+                        <rect x="30" y="256" width="640" height="90" rx="10" fill="rgba(99,102,241,0.06)" stroke="rgba(99,102,241,0.3)" stroke-width="1.5"/>
+                        <rect x="30" y="256" width="8" height="90" rx="4" fill="rgba(99,102,241,0.5)"/>
+                        <text x="56" y="280" fill="#818CF8" font-family="JetBrains Mono" font-size="10" font-weight="700">PLANE 1: INFRASTRUCTURE PROVISIONING PLANE</text>
+                        <text x="56" y="294" fill="#8CA09A" font-family="Noto Sans JP" font-size="9">インフラプロビジョニングプレーン（ユーティリティプレーン）</text>
+                        <text x="56" y="310" fill="#8CA09A" font-family="JetBrains Mono" font-size="8">File Storage  │  Kafka Topics  │  Spark Jobs  │  RBAC  │  Query Engine  │  Orchestration</text>
+                        <text x="56" y="328" fill="#6CA09A" font-family="Noto Sans JP" font-size="8">← 他プレーンまたは上級開発者が直接利用。IaC APIによる仕様/API/コマンドでプロビジョニング</text>
+
+                        <!-- Vertical arrows between planes -->
+                        <text x="350" y="120" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="18">↕</text>
+                        <text x="350" y="250" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="18">↕</text>
+
+                        <text x="620" y="70" text-anchor="middle" fill="#FCA5A5" font-family="JetBrains Mono" font-size="8">Consumer</text>
+                        <text x="620" y="185" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="8">Developer</text>
+                        <text x="620" y="305" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="8">Advanced / Infra</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="plane-grid">
+                <div class="plane-card">
+                    <div class="plane-num">1</div>
+                    <div class="plane-label" style="background:rgba(99,102,241,0.15); color:#818CF8;">Plane 01 — Utility Plane</div>
+                    <h4>インフラプロビジョニングプレーン（ユーティリティプレーン）</h4>
+                    <p>最も低レベルの層。生インフラのライフサイクル管理を担う。分散ファイルストレージ、ストレージアカウント、アクセス制御管理、データプロダクトの内部コードのオーケストレーション、データプロダクトのグラフ上の分散クエリエンジンをプロビジョニングする。</p>
+                    <p>インフラアズコード（IaC）のAPIを提供し、スペック/API/コマンドでプロビジョニングする。他のプレーンや高度な開発者が直接使用する。</p>
+                    <div class="plane-features">
+                        <span class="plane-feature-tag">Spark Jobs</span>
+                        <span class="plane-feature-tag">Kafka Topics</span>
+                        <span class="plane-feature-tag">Storage Accounts</span>
+                        <span class="plane-feature-tag">RBAC</span>
+                        <span class="plane-feature-tag">Query Engine</span>
+                        <span class="plane-feature-tag">Orchestration</span>
+                    </div>
+                </div>
+                <div class="plane-card" style="border-color:rgba(16,185,129,0.3);">
+                    <div class="plane-num">2</div>
+                    <div class="plane-label">Plane 02 — Developer Experience</div>
+                    <h4>データプロダクト開発者体験プレーン</h4>
+                    <p>典型的なデータプロダクト開発者のための<span class="highlight">メインインターフェース</span>。データプロダクトワークフローの複雑さを抽象化する。プロビジョニングプレーンより高い抽象レベルで、ライフサイクル管理のためのシンプルな<span class="highlight">宣言的インターフェース</span>を提供する。</p>
+                    <p>開発者は<strong>スペックファイル</strong>（入力/出力・ポリシー・モデルを宣言的に記述）を提供するだけでよい。リポジトリにチェックイン → API/コマンドに渡す → プラットフォームがテクノロジーを自動的に連結する。</p>
+                    <div class="plane-features">
+                        <span class="plane-feature-tag">Declarative Spec</span>
+                        <span class="plane-feature-tag">CI/CD Pipeline</span>
+                        <span class="plane-feature-tag">Auto Standards</span>
+                        <span class="plane-feature-tag">Full Lifecycle</span>
+                        <span class="plane-feature-tag">OAM Support</span>
+                    </div>
+                </div>
+                <div class="plane-card" style="border-color:rgba(239,68,68,0.3);">
+                    <div class="plane-num">3</div>
+                    <div class="plane-label" style="background:rgba(239,68,68,0.1); color:#EF4444;">Plane 03 — Mesh Experience</div>
+                    <h4>メッシュ監督プレーン（メッシュ体験プレーン）</h4>
+                    <p>メッシュレベルで提供されるグローバルな能力。接続されたデータプロダクトのグラフを扱う。<span class="highlight">検索・ブラウズ</span>（ユースケースに合ったデータプロダクトを発見）、<span class="highlight">セマンティッククエリ</span>（メッシュを横断した複数データプロダクトの相関）、<span class="highlight">ナレッジグラフ</span>（セマンティックリンク付きのスキーマシステム）を提供する。</p>
+                    <p>集中化を避けながら、ローカル定義のスキーマからグローバル標準モデルとして出現する。主にデータコンシューマー向けのインターフェース。</p>
+                    <div class="plane-features">
+                        <span class="plane-feature-tag">Search & Browse</span>
+                        <span class="plane-feature-tag">Semantic Query</span>
+                        <span class="plane-feature-tag">Knowledge Graph</span>
+                        <span class="plane-feature-tag">Cross-product Join</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 8: Developer Journey -->
+        <section id="developer-journey">
+            <div class="section-header">
+                <div class="section-number">08</div>
+                <div>
+                    <span class="chapter-tag">Ch.10 — User Journeys</span>
+                    <h2>開発者ジャーニーフェーズ</h2>
+                </div>
+            </div>
+
+            <p>第10章は<span class="highlight">ユーザージャーニー</span>を設計ドライバーとすることを強調する。データプロダクト開発者体験プレーンは、データプロダクトの全ライフサイクルフェーズを支援するよう設計される。</p>
+
+            <div class="journey-timeline">
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 01</div>
+                    <div class="journey-step-name">Incept</div>
+                    <div class="journey-step-desc">どんなデータプロダクトが必要かを考える</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 02</div>
+                    <div class="journey-step-name">Explore</div>
+                    <div class="journey-step-desc">既存データプロダクトを発見・理解する</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 03</div>
+                    <div class="journey-step-name">Bootstrap</div>
+                    <div class="journey-step-desc">プラットフォームがインフラを自動プロビジョニング</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 04</div>
+                    <div class="journey-step-name">Source</div>
+                    <div class="journey-step-desc">上流データソース・入力ポートへ接続</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 05</div>
+                    <div class="journey-step-name">Build</div>
+                    <div class="journey-step-desc">変換ロジック・データモデルを開発</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 06</div>
+                    <div class="journey-step-name">Test</div>
+                    <div class="journey-step-desc">データ品質・スキーマ・SLOを検証</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 07</div>
+                    <div class="journey-step-name">Deploy</div>
+                    <div class="journey-step-desc">独立したユニットとして宣言的にデプロイ</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 08</div>
+                    <div class="journey-step-name">Run</div>
+                    <div class="journey-step-desc">パイプライン実行・データサービング</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 09</div>
+                    <div class="journey-step-name">Maintain</div>
+                    <div class="journey-step-desc">監視・インシデント対応・更新</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 10</div>
+                    <div class="journey-step-name">Evolve</div>
+                    <div class="journey-step-desc">バージョニング・出力ポート追加・スキーマ変更</div>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-step-num">PHASE 11</div>
+                    <div class="journey-step-name">Retire</div>
+                    <div class="journey-step-desc">不要になったデータプロダクトを削除</div>
+                </div>
+            </div>
+
+            <h3>ThoughtWorksの実装例</h3>
+            <div class="alert alert-indigo">
+                <div class="alert-title">// OAM (Open Application Model) による実装</div>
+                <p><strong>スペックファイル：</strong> <span class="mono">data_product_spec.yml</span> + <span class="mono">data_product_deploy.yml</span> としてリポジトリにスキャフォールド。</p>
+                <p><strong>Bootstrap：</strong> ドメインごとにSnowflakeウェアハウスをプロビジョニング、データプロダクトごとにスキーマ作成、モニタリング名前空間・カタログコミュニティ・RBACロール（Consumer/Service/Owner）を設定。</p>
+                <p><strong>Deploy：</strong> CI/CDパイプラインがスペックを検証し、パイプラインをデプロイ、SLOモニターを作成し、カタログに公開、ポリシーを適用する。</p>
+                <p><strong>Retire：</strong> 利用状況メトリクスを追跡し、非アクティブなプロダクトを削除する。</p>
+            </div>
+
+            <h3>コンシューマー vs 開発者の視点</h3>
+            <p>Dehghaniはプラットフォーム設計をユーザージャーニー駆動で行うことを推奨する。2つの主要ペルソナが存在する：</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label" style="background:rgba(239,68,68,0.12); color:#EF4444;">Consumer Persona</div>
+                    <h4>データコンシューマー</h4>
+                    <p>データを発見・利用する人。メッシュ体験プレーンが主たるインターフェース。</p>
+                    <p style="font-size:0.85rem; color:var(--text-secondary);">ジャーニー：発見 → 評価 → アクセス申請 → 消費 → フィードバック提供</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Developer Persona</div>
+                    <h4>データプロダクト開発者</h4>
+                    <p>データプロダクトをビルド・維持する人。開発者体験プレーンが主たるインターフェース。</p>
+                    <p style="font-size:0.85rem; color:var(--text-secondary);">ジャーニー：Incept → Explore → Bootstrap → ... → Retire（全11フェーズ）</p>
+                </div>
+            </div>
+
+            <div class="alert alert-emerald">
+                <div class="alert-title">// 設計の優先順位</div>
+                <p>ブッククラブ参加者の議論では「<span class="highlight">コンシューマーから設計を始めるべき</span>」という意見が強調された。コンシューマーが何を必要とするかが、プラットフォームの要件を逆算的に決定する。</p>
+            </div>
+        </section>
+
+        <!-- Section 9: Affordances -->
+        <section id="affordances">
+            <div class="section-header">
+                <div class="section-number">09</div>
+                <div>
+                    <span class="chapter-tag">Ch.9/10 — Affordances</span>
+                    <h2>データプロダクトのアフォーダンス</h2>
+                </div>
+            </div>
+
+            <p>単一のデータプロダクトが必ず提供しなければならない能力（アフォーダンス）を第9章「Data Product Quantum Blueprint」から整理する。</p>
+
+            <div class="outcome-grid">
+                <div class="outcome-card">
+                    <div class="outcome-icon">📤</div>
+                    <h4>データサービング</h4>
+                    <p>読み取り専用・時間軸変異型・イミュータブル。時間ウィンドウ関数として定義される。</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">🔒</div>
+                    <h4>セキュリティ</h4>
+                    <p>ローカルに強制され、分散管理される。サイドカーパターンによるポリシー埋め込み。</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">🔄</div>
+                    <h4>ライフサイクル管理</h4>
+                    <p>他のデータプロダクトを壊さずに独立してデプロイ可能。モジュール性の保証。</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">🔀</div>
+                    <h4>ポリグロットアクセス</h4>
+                    <p>マルチモーダル対応。アナリスト用SQL・データサイエンティスト用カラムナー・アプリ用イベント。</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">🔍</div>
+                    <h4>発見可能性</h4>
+                    <p>独立して発見可能で、良質なドキュメントを持つ。ディスカバリーポートを通じて実現。</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">🔗</div>
+                    <h4>相互運用性</h4>
+                    <p>標準インターフェースを介して他のデータプロダクトと連携できる。スキーマリンクの活用。</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">✅</div>
+                    <h4>信頼性</h4>
+                    <p>SLO（データ生産間隔・キャプチャから処理までの誤差・統計的形状）で定義・保証。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 10: Summary -->
+        <section id="summary">
+            <div class="section-header">
+                <div class="section-number">10</div>
+                <div>
+                    <span class="chapter-tag">Summary</span>
+                    <h2>まとめ — Part IIIの要点</h2>
+                </div>
+            </div>
+
+            <p>Part IIIはData Meshを「<span class="highlight">どう作るか</span>」の具体的な設計指針を提供する。以下に第9章・第10章の要点を整理する。</p>
+
+            <h3>第9章の要点</h3>
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">A</div>
+                    <div class="char3-label">Key Concept</div>
+                    <h4>Data Product Quantum</h4>
+                    <p>データプロダクトは「コード + データ/メタデータ + インフラ」の3要素をドメイン境界で一体化したアーキテクチャ量子。過去のパラダイムとの最大の違いはこの一体化にある。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">B</div>
+                    <div class="char3-label">Key Concept</div>
+                    <h4>4種類のポート設計</h4>
+                    <p>Input（受信）・Output（サービング）・Control（ガバナンス設定）・Discovery（発見）の4ポートが、データプロダクトの外部インターフェース全体を定義する。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">C</div>
+                    <div class="char3-label">Key Concept</div>
+                    <h4>サイドカーガバナンス</h4>
+                    <p>ポリシーはサイドカーとしてデータプロダクトに埋め込まれ、ローカルに実行される。「防止」ではなく「自動検知・回復」へのパラダイムシフト。</p>
+                </div>
+            </div>
+
+            <h3>第10章の要点</h3>
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">D</div>
+                    <div class="char3-label">Key Concept</div>
+                    <h4>3プレーン構造</h4>
+                    <p>インフラプロビジョニング（Plane 1）・開発者体験（Plane 2）・メッシュ監督（Plane 3）の3プレーンが、それぞれのペルソナに適した抽象レベルを提供する。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">E</div>
+                    <div class="char3-label">Key Concept</div>
+                    <h4>宣言的スペックファイル</h4>
+                    <p>開発者はYAMLスペックファイルを書くだけ。プラットフォームが残りを自動化する。「原始的なスクリプトから始め、洗練させていく」反復的アプローチ。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">F</div>
+                    <div class="char3-label">Key Concept</div>
+                    <h4>設計の優先順位</h4>
+                    <p>①データプロダクトを設計する → ②プラットフォームAPIを設計する → ③実装を決める。この順序がDehghaniの推奨する設計アプローチ。</p>
+                </div>
+            </div>
+
+            <div class="alert alert-emerald">
+                <div class="alert-title">// Part III 全体の核心メッセージ</div>
+                <p>Data Meshのアーキテクチャは特定ツールを強制しない。<span class="highlight">論理設計として原則を理解し、チームの文脈で創造的に実装する</span>ことが求められる。DPQというアーキテクチャ量子の概念と、3プレーンのプラットフォーム設計が、4原則を現実のシステムに翻訳するための中心的な道具立てとなっている。</p>
+            </div>
+
+            <div class="part-link-banner">
+                <div class="part-info">
+                    <strong>シリーズをすべて読む</strong> — Data Mesh 学習ノート
+                </div>
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                    <a href="data-mesh-principles.html" class="part-link-btn" style="border-color:rgba(139,92,246,0.4); color:#C4B5FD; background:rgba(139,92,246,0.1);">Part I — 4原則</a>
+                    <a href="data-mesh-why.html" class="part-link-btn" style="border-color:rgba(245,158,11,0.4); color:#FCD34D; background:rgba(245,158,11,0.1);">Part II — なぜ今？</a>
+                    <a href="#" class="part-link-btn">Part III — アーキテクチャ設計 ◀</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 11: Sources -->
+        <section id="sources">
+            <div class="section-header">
+                <div class="section-number">11</div>
+                <div>
+                    <span class="chapter-tag">References</span>
+                    <h2>参考文献</h2>
+                </div>
+            </div>
+
+            <ul class="sources-list">
+                <li>
+                    <span class="source-num">[1]</span>
+                    <div class="source-text">
+                        Zhamak Dehghani, <em>Data Mesh: Delivering Data-Driven Value at Scale</em>, O'Reilly Media, 2022. ISBN: 978-1-492-09239-3. 本記事の一次資料。
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[2]</span>
+                    <div class="source-text">
+                        Zhamak Dehghani, "Data Mesh Principles and Logical Architecture", martinfowler.com, 2020.<br>
+                        <a href="https://martinfowler.com/articles/data-mesh-principles.html">https://martinfowler.com/articles/data-mesh-principles.html</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[3]</span>
+                    <div class="source-text">
+                        Zhamak Dehghani, "Data Mesh Concepts" (presentation), InfoQ, 2021.<br>
+                        <a href="https://www.infoq.com/presentations/data-mesh-concepts/">https://www.infoq.com/presentations/data-mesh-concepts/</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[4]</span>
+                    <div class="source-text">
+                        "Data Mesh Architecture: Building a Data Mesh", InfoQ News, 2020.<br>
+                        <a href="https://www.infoq.com/news/2020/12/data-mesh-architecture/">https://www.infoq.com/news/2020/12/data-mesh-architecture/</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[5]</span>
+                    <div class="source-text">
+                        ThoughtWorks, "Developer Experience for Data Mesh Product", ThoughtWorks Insights Blog.<br>
+                        <a href="https://www.thoughtworks.com/insights/blog/data-strategy/dev-experience-data-mesh-product">https://www.thoughtworks.com/insights/blog/data-strategy/dev-experience-data-mesh-product</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[6]</span>
+                    <div class="source-text">
+                        dbt Labs, "The Four Principles of Data Mesh".<br>
+                        <a href="https://www.getdbt.com/blog/the-four-principles-of-data-mesh">https://www.getdbt.com/blog/the-four-principles-of-data-mesh</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[7]</span>
+                    <div class="source-text">
+                        DataMesh Book Club — Chapter 9 Discussion (YouTube).<br>
+                        <a href="https://www.youtube.com/watch?v=k_iJ9MwK7KU">https://www.youtube.com/watch?v=k_iJ9MwK7KU</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[8]</span>
+                    <div class="source-text">
+                        DataMesh Book Club — Chapter 10 Discussion (YouTube).<br>
+                        <a href="https://www.youtube.com/watch?v=HgX5gGoMRao">https://www.youtube.com/watch?v=HgX5gGoMRao</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[9]</span>
+                    <div class="source-text">
+                        datamesh-architecture.com — コミュニティリソース.<br>
+                        <a href="https://www.datamesh-architecture.com">https://www.datamesh-architecture.com</a>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- ─── Footer ─── -->
+    <footer>
+        <div class="footer-source">
+            Zhamak Dehghani — Data Mesh (O'Reilly, 2022) Part III Ch.9–10 学習ノート
+        </div>
+        <p>
+            <a href="../index.html" style="color:var(--accent-light); font-family:'JetBrains Mono',monospace; font-size:0.85rem;">← トップに戻る</a>
+        </p>
+        <p class="footer-disclaimer">
+            本記事はZhamak Dehghani著『Data Mesh』（O'Reilly Media, 2022）の個人学習ノートです。書籍の内容を要約・解説したものであり、著作権は原著者およびO'Reilly Mediaに帰属します。
+        </p>
+    </footer>
+
+    <script>
+        // ─── Smooth scroll for TOC ───
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // ─── Active nav link highlighting ───
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-links a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.style.color = '';
+                        if (link.getAttribute('href') === '#' + entry.target.id) {
+                            link.style.color = 'var(--accent)';
+                        }
+                    });
+                }
+            });
+        }, { rootMargin: '-20% 0px -60% 0px' });
+
+        sections.forEach(section => observer.observe(section));
+
+        // ─── Subtle card entrance animation ───
+        const cards = document.querySelectorAll('.char3-card, .plane-card, .journey-step, .outcome-card');
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        cards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(16px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            cardObserver.observe(card);
+        });
+    </script>
+
+</body>
+</html>
