@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Mesh — なぜ今 Data Mesh が必要か</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #F59E0B;
+            --accent-light: #FCD34D;
+            --accent-dim: rgba(245, 158, 11, 0.15);
+            --accent-glow: rgba(245, 158, 11, 0.08);
+            --bg-deep: #09080A;
+            --bg-secondary: #110F0A;
+            --bg-tertiary: #1C1810;
+            --text-primary: #E8EAED;
+            --text-secondary: #A09B8C;
+            --border: #2A2415;
+            --border-accent: rgba(245, 158, 11, 0.3);
+            --success: #10B981;
+            --warning: #EF4444;
+            --indigo: #6366F1;
+            --amber-deep: #D97706;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(245, 158, 11, 0.05) 0%, transparent 55%),
+                radial-gradient(circle at 85% 70%, rgba(217, 119, 6, 0.04) 0%, transparent 55%),
+                radial-gradient(circle at 50% 90%, rgba(245, 158, 11, 0.03) 0%, transparent 40%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #0D0B07 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        /* ─── Header & Navigation ─── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(9, 8, 10, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 40%, var(--amber-deep) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .book-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: rgba(28, 24, 16, 0.7);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Table of Contents ─── */
+        .toc-section {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+
+        .toc-box {
+            background: rgba(28, 24, 16, 0.6);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: color 0.2s ease;
+            padding: 0.3rem 0;
+        }
+
+        .toc-list li a:hover {
+            color: var(--accent-light);
+        }
+
+        .toc-num {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 34px;
+        }
+
+        /* ─── Main Content ─── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(28, 24, 16, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--amber-deep), transparent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 70px;
+            opacity: 0.9;
+        }
+
+        .chapter-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '//';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.4rem;
+            color: var(--text-primary);
+            line-height: 1.85;
+        }
+
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin: 1rem 0 1.5rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        /* ─── Tables ─── */
+        table {
+            width: 100%;
+            margin: 2rem 0;
+            border-collapse: collapse;
+            background: rgba(17, 15, 10, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(245, 158, 11, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(245, 158, 11, 0.04);
+        }
+
+        /* ─── Alert / Callout Boxes ─── */
+        .alert {
+            padding: 1.4rem 1.6rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-amber {
+            border-left-color: var(--accent);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-success {
+            border-left-color: var(--success);
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .alert-danger {
+            border-left-color: var(--warning);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-indigo {
+            border-left-color: var(--indigo);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-amber .alert-title { color: var(--accent-light); }
+        .alert-success .alert-title { color: var(--success); }
+        .alert-danger .alert-title { color: var(--warning); }
+        .alert-indigo .alert-title { color: var(--indigo); }
+
+        .alert p { margin-bottom: 0.5rem; }
+        .alert p:last-child { margin-bottom: 0; }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(17, 15, 10, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: rgba(17, 15, 10, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.12);
+        }
+
+        /* ─── Inflection Point Curve Diagram ─── */
+        .inflection-diagram {
+            margin: 2.5rem 0;
+            background: rgba(17, 15, 10, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .inflection-diagram-inner {
+            padding: 2rem 2.5rem;
+            position: relative;
+        }
+
+        .inflection-diagram-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .curve-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+
+        .curve-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .axis-label-x {
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .axis-label-y {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .curve-legend {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .curve-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .legend-line {
+            width: 24px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        /* ─── Generation Timeline ─── */
+        .timeline {
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 28px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--accent), var(--amber-deep), var(--border));
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .timeline-dot {
+            min-width: 58px;
+            height: 58px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--accent);
+            flex-shrink: 0;
+            z-index: 1;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .timeline-content {
+            background: rgba(17, 15, 10, 0.8);
+            border: 1px solid var(--border);
+            padding: 1.2rem 1.5rem;
+            border-radius: 8px;
+            flex: 1;
+        }
+
+        .timeline-content h4 {
+            margin-bottom: 0.4rem;
+            color: var(--text-primary);
+        }
+
+        .timeline-content p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .timeline-era {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 3px;
+            margin-bottom: 0.5rem;
+        }
+
+        /* ─── 3 Characteristics Blocks ─── */
+        .char3-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .char3-card {
+            background: rgba(17, 15, 10, 0.9);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.8rem;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .char3-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .char3-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.12;
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            line-height: 1;
+        }
+
+        .char3-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .char3-card h4 {
+            font-size: 1.15rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        .char3-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+
+        .char3-impact {
+            font-size: 0.82rem;
+            color: var(--warning);
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid var(--border);
+            padding-top: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ─── Stat Callout ─── */
+        .stat-callout {
+            background: rgba(17, 15, 10, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-callout-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-row-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-big {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .stat-divider {
+            width: 1px;
+            background: var(--border);
+            align-self: stretch;
+        }
+
+        /* ─── Outcome Cards ─── */
+        .outcome-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .outcome-card {
+            background: rgba(17, 15, 10, 0.8);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.6rem;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .outcome-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 6px 24px rgba(245, 158, 11, 0.1);
+        }
+
+        .outcome-card .outcome-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .outcome-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-light);
+        }
+
+        .outcome-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* ─── Comparison Table Modifier ─── */
+        .col-old {
+            color: #EF4444;
+        }
+
+        .col-new {
+            color: var(--success);
+        }
+
+        .col-aspect {
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+        }
+
+        /* ─── Highlight Inline ─── */
+        .highlight {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 0.8rem 1.5rem;
+            margin: 1.5rem 0;
+            background: rgba(245, 158, 11, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        blockquote cite {
+            display: block;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-style: normal;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Part Link Banner ─── */
+        .part-link-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(17, 15, 10, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem 1.8rem;
+            margin: 3rem 0;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .part-link-banner .part-info {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .part-link-banner .part-info strong {
+            color: var(--text-primary);
+        }
+
+        .part-link-btn {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-light);
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .part-link-btn:hover {
+            background: rgba(245, 158, 11, 0.25);
+            text-decoration: none;
+            opacity: 1;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-source {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(28, 24, 16, 0.8);
+            border: 1px solid var(--border);
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+        }
+
+        .footer-disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0.75rem auto 0;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            section {
+                padding: 2rem 1.5rem;
+            }
+
+            .section-number {
+                font-size: 1.8rem;
+                min-width: 50px;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .toc-list {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.75rem 0.9rem;
+            }
+
+            .timeline::before {
+                left: 22px;
+            }
+
+            .timeline-dot {
+                min-width: 46px;
+                height: 46px;
+            }
+
+            .char3-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero {
+                padding: 3rem 1.5rem 2rem;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-row-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ─── Utility ─── */
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header>
+        <nav>
+            <a href="../index.html" class="logo">
+                <!-- mesh network SVG logo -->
+                <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Data Mesh logo">
+                    <circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="4" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="11" cy="11" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+                    <line x1="5.8" y1="5.2" x2="9.3" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="5.2" x2="12.7" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="5.8" y1="16.8" x2="9.3" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="16.8" x2="12.7" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+                Data Mesh
+            </a>
+            <ul class="nav-links">
+                <li><a href="#ch6">Ch.6 変曲点</a></li>
+                <li><a href="#ch7">Ch.7 変曲点の後</a></li>
+                <li><a href="#ch8">Ch.8 変曲点の前</a></li>
+                <li><a href="#summary">まとめ</a></li>
+            </ul>
+            <a href="../index.html" class="back-link">← トップに戻る</a>
+        </nav>
+    </header>
+
+    <!-- ─── Hero ─── -->
+    <div class="hero">
+        <div class="eyebrow">学習ノート / O'REILLY / Part II</div>
+        <h1>Data Mesh</h1>
+        <p class="subtitle">なぜ今 Data Mesh が必要か</p>
+        <p class="subtitle" style="font-size:1rem; margin-bottom:1.5rem;">Part II「Why Data Mesh?」（第6章〜第8章）のサマリー</p>
+        <div class="book-info">
+            <span>Zhamak Dehghani</span>
+            <span style="opacity:0.4;">|</span>
+            <span>O'Reilly Media, 2022</span>
+            <span style="opacity:0.4;">|</span>
+            <span>ISBN: 978-1-492-09239-3</span>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div class="stat-label">世代のアーキテクチャの歴史</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div class="stat-label">変わらなかった根本特性</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">26.8%</div>
+                <div class="stat-label">データカルチャーを構築できた企業</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">2018</div>
+                <div class="stat-label">Dehghani が変曲点を体感した年</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2026-03-29</p>
+    </div>
+
+    <!-- ─── Table of Contents ─── -->
+    <div class="toc-section">
+        <div class="toc-box">
+            <div class="toc-title">目次 / Table of Contents</div>
+            <ul class="toc-list">
+                <li>
+                    <a href="#ch6">
+                        <span class="toc-num">Ch.6</span>
+                        変曲点（The Inflection Point）
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch6-expectations">
+                        <span class="toc-num">6.1</span>
+                        データへの大きな期待
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch6-divide">
+                        <span class="toc-num">6.2</span>
+                        データの大きな分裂
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch6-scale">
+                        <span class="toc-num">6.3</span>
+                        新しい種類のスケール
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch6-stats">
+                        <span class="toc-num">6.4</span>
+                        投資収益の高原
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch7">
+                        <span class="toc-num">Ch.7</span>
+                        変曲点の後（Data Mesh のアウトカム）
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch7-change">
+                        <span class="toc-num">7.1</span>
+                        変化の受容
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch7-agility">
+                        <span class="toc-num">7.2</span>
+                        アジリティの維持
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch7-value">
+                        <span class="toc-num">7.3</span>
+                        価値/投資比率の向上
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch8">
+                        <span class="toc-num">Ch.8</span>
+                        変曲点の前（歴史と根本原因）
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch8-generations">
+                        <span class="toc-num">8.1</span>
+                        3世代のアーキテクチャ
+                    </a>
+                </li>
+                <li>
+                    <a href="#ch8-characteristics">
+                        <span class="toc-num">8.2</span>
+                        3つの変わらなかった特性
+                    </a>
+                </li>
+                <li>
+                    <a href="#summary">
+                        <span class="toc-num">まとめ</span>
+                        Part II の全体像
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ─── Part I Link Banner ─── -->
+    <div style="max-width:1200px; margin: 0 auto; padding: 0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>Part I「What Is Data Mesh?」</strong>も公開中 — 4つの原則（ドメインオーナーシップ・データをプロダクトとして扱う・セルフサーブプラットフォーム・連合型計算ガバナンス）の詳細解説
+            </div>
+            <a href="../articles/data-mesh-principles.html" class="part-link-btn">→ Part I を読む</a>
+        </div>
+    </div>
+
+    <!-- ─── Main Content ─── -->
+    <main>
+
+        <!-- ═══ Chapter 6 ═══ -->
+        <section id="ch6">
+            <div class="section-header">
+                <div class="section-number">06</div>
+                <div>
+                    <span class="chapter-tag">Chapter 6</span>
+                    <h2>変曲点（The Inflection Point）</h2>
+                </div>
+            </div>
+
+            <blockquote>
+                戦略的変曲点とは、ビジネスの根本が変わろうとしている瞬間である。それは新たな高みへ飛翔する機会でもあり、終わりの始まりでもある。
+                <cite>— Andrew S. Grove（Intel CEO）</cite>
+            </blockquote>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">変曲点とは何か</div>
+                <p><span class="highlight">Data Mesh は変曲点の「後」に来るもの</span>だ。数学的に言えば、変曲点とはカーブが一方向への曲がりを止め、逆方向へ曲がり始める瞬間。古いアプローチは「影響の高原（Plateau）」に達し、新しいアプローチが可能性を開く。</p>
+                <p style="margin-bottom:0; font-size:0.9rem; color: var(--text-secondary);">著者 Dehghani は 2018 年、グローバル技術コンサルタント ThoughtWorks の多くのクライアントが同時期に「規模・複雑性・野望に応えられる新しいデータアーキテクチャ」を模索していることで、この変曲点を体感した。</p>
+            </div>
+
+            <!-- Inflection Point Curve Diagram -->
+            <div class="inflection-diagram">
+                <div class="inflection-diagram-inner">
+                    <div class="inflection-diagram-title">Figure 6-1. 変曲点のグラフ（概念図）</div>
+                    <div class="curve-container">
+                        <svg class="curve-svg" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Grid lines -->
+                            <line x1="60" y1="10" x2="60" y2="180" stroke="#2A2415" stroke-width="1"/>
+                            <line x1="60" y1="180" x2="790" y2="180" stroke="#2A2415" stroke-width="1"/>
+
+                            <!-- Axis arrows -->
+                            <line x1="60" y1="10" x2="60" y2="180" stroke="#3A3220" stroke-width="1.5"/>
+                            <polygon points="60,6 56,14 64,14" fill="#3A3220"/>
+                            <line x1="60" y1="180" x2="790" y2="180" stroke="#3A3220" stroke-width="1.5"/>
+                            <polygon points="794,180 786,176 786,184" fill="#3A3220"/>
+
+                            <!-- Axis labels -->
+                            <text x="420" y="198" text-anchor="middle" fill="#6B6050" font-size="11" font-family="JetBrains Mono, monospace">マクロドライバー（ビジネス複雑性 / データ期待 / ユビキタスなソース）→</text>
+                            <text x="45" y="100" text-anchor="middle" fill="#6B6050" font-size="10" font-family="JetBrains Mono, monospace" transform="rotate(-90, 45, 100)">アジリティ・価値・耐性 →</text>
+
+                            <!-- Old approach: S-curve plateauing -->
+                            <path d="M80,160 C120,158 180,140 240,110 C290,85 330,65 380,55 C430,47 470,47 530,48 C590,49 650,50 720,51" stroke="#EF4444" stroke-width="2.5" fill="none" stroke-dasharray="6,4" opacity="0.7"/>
+
+                            <!-- Data Mesh approach: rising curve -->
+                            <path d="M380,55 C430,50 480,40 540,28 C590,18 640,13 720,8" stroke="#F59E0B" stroke-width="2.5" fill="none"/>
+
+                            <!-- Inflection point marker -->
+                            <circle cx="380" cy="55" r="7" fill="#F59E0B" opacity="0.9"/>
+                            <circle cx="380" cy="55" r="14" fill="none" stroke="#F59E0B" stroke-width="1.5" opacity="0.4"/>
+                            <text x="385" y="42" fill="#FCD34D" font-size="11" font-family="JetBrains Mono, monospace" font-weight="700">変曲点</text>
+
+                            <!-- Labels -->
+                            <text x="650" y="62" fill="#EF6B6B" font-size="10" font-family="JetBrains Mono, monospace">影響の高原へ</text>
+                            <text x="600" y="22" fill="#F59E0B" font-size="10" font-family="JetBrains Mono, monospace">Data Mesh →</text>
+                        </svg>
+                    </div>
+                    <div class="curve-legend">
+                        <div class="curve-legend-item">
+                            <div class="legend-line" style="background: #EF4444; border-top: 2px dashed #EF4444; width:24px; height:0;"></div>
+                            従来アプローチ（影響の高原へ向かう）
+                        </div>
+                        <div class="curve-legend-item">
+                            <div class="legend-line" style="background: #F59E0B;"></div>
+                            Data Mesh アプローチ（新たな高みへ）
+                        </div>
+                        <div class="curve-legend-item">
+                            <div class="legend-line" style="background: #F59E0B; width:12px; height:12px; border-radius:50%;"></div>
+                            変曲点
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 id="ch6-expectations">データへの大きな期待（Great Expectations of Data）</h3>
+
+            <p>「データドリブンな組織になること」は、あらゆる業界の経営幹部が掲げる最重要戦略目標の一つだ。10年前の BI レポート中心の時代から、現在は機械学習・超パーソナライゼーション・リアルタイム物流最適化など組織全体へと期待が進化している。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>10年前の期待</h4>
+                    <p>BI（ビジネスインテリジェンス）が中心。レポート・ダッシュボードによる意思決定支援、コンプライアンス対応、リスク管理。</p>
+                </div>
+                <div class="card">
+                    <h4>現在の期待</h4>
+                    <p>製品設計・顧客体験（超パーソナライゼーション）・業務最適化（リアルタイム物流）・データの民主化——組織全体への機械学習浸透。</p>
+                </div>
+                <div class="card">
+                    <h4>必要なアクセスモードの多様性</h4>
+                    <p>SQL による構造化ビュー / 半構造化ファイル / リアルタイムイベント / ストリーム / 集計——用途に応じた多様な形式へのネイティブアクセス。</p>
+                </div>
+            </div>
+
+            <h3 id="ch6-divide">データの大きな分裂（The Great Divide of Data）</h3>
+
+            <p>今日の技術的複雑性の多くは、<span class="highlight">データを2種類に分けてしまったこと</span>に起因する。</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>種別</th>
+                        <th>別名</th>
+                        <th>特性</th>
+                        <th>用途</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong style="color: var(--accent-light);">オペレーショナルデータ</strong></td>
+                        <td class="col-aspect">Data on the Inside</td>
+                        <td>現在状態 / CRUD / OLTP / トランザクション</td>
+                        <td>ビジネスの運用（業務遂行）</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color: var(--accent-light);">アナリティカルデータ</strong></td>
+                        <td class="col-aspect">Data on the Outside</td>
+                        <td>時系列 / 集計 / 不変 / OLAP / 履歴</td>
+                        <td>ビジネスの最適化（ML・BI・分析）</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">Daff Inc. ── 本書を通じた架空企業の例</div>
+                <p>Daff Inc. はグローバルな音楽ストリーミング企業。音楽・ポッドキャスト・ラジオ・オーディオブックを提供。「ユーザー登録サービスのデータベース」= オペレーショナルデータ。「リスナーの過去の行動履歴を活用したプレイリスト推薦モデルの学習データ」= アナリティカルデータ。</p>
+                <p style="margin-bottom:0; font-size:0.88rem;">ETL による統合の脆弱性：運用システムには ETL パイプラインとの<strong>明示的な契約が存在しない</strong>ため、上流の変更が下流のパイプライン障害を引き起こす。2つの独立した組織・技術スタックが存在する。</p>
+            </div>
+
+            <h3 id="ch6-scale">新しい種類のスケール（Scale, Encounter of a New Kind）</h3>
+
+            <p>Volume / Velocity / Variety の3V への対応は達成した。今、直面しているのは<span class="highlight">データの起源と場所の多様性</span>という新しいスケール課題だ。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>内部スケール</h4>
+                    <p>社内の数百のマイクロサービス、複数のビジネスドメイン、複数のクラウドプロバイダーとオンプレミス環境。</p>
+                </div>
+                <div class="card">
+                    <h4>外部スケール</h4>
+                    <p>顧客との全タッチポイント、パートナー組織、外部データプロバイダー。単一組織のコントロールを超えたデータ。</p>
+                </div>
+                <div class="card">
+                    <h4>「収集」から「接続」へ</h4>
+                    <p>データを一か所に集める（Collect）から、どこにあってもデータを繋ぐ（Connect）へのシフト。最も興味深いパターンは多様なソースの横断接続から生まれる。</p>
+                </div>
+            </div>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">Beyond Order ── 変化への免疫</div>
+                <p>2020〜2021年のパンデミックは、組織が<span class="highlight">変化への免疫（Immunity to Change）</span>を必要とすることを明白にした。データ管理の未来は「変化をデフォルトとして組み込む」ことが不可欠だ。リアルタイムの意思決定支援は「早まった最適化」ではなく、もはや「基本機能」だ。</p>
+            </div>
+
+            <h3 id="ch6-stats">投資収益の高原への接近（Approaching the Plateau of Return）</h3>
+
+            <!-- NewVantage Stats Callout -->
+            <div class="stat-callout">
+                <div class="stat-callout-title">NewVantage Partners 年次レポート 2021 — 投資と成果の乖離</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big">26.8%</div>
+                        <div class="stat-desc">データカルチャーを<br>構築できたと回答</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">37.8%</div>
+                        <div class="stat-desc">データドリブンに<br>なれたと回答</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">45.1%</div>
+                        <div class="stat-desc">データと分析で<br>競争できると回答</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">64.8%</div>
+                        <div class="stat-desc">$50MM 超を投資<br>している企業の割合</div>
+                    </div>
+                </div>
+                <p style="margin-top: 1.5rem; font-size: 0.88rem; color: var(--text-secondary); margin-bottom:0;">投資は膨大なのに結果は乏しい——この「投資と成果の乖離」こそが Data Mesh 誕生の重要な動機の一つだ。根本原因：スキル不足、組織的・ガバナンス的ボトルネック、データの発見・信頼・アクセスへの摩擦。</p>
+            </div>
+        </section>
+
+        <!-- ═══ Chapter 7 ═══ -->
+        <section id="ch7">
+            <div class="section-header">
+                <div class="section-number">07</div>
+                <div>
+                    <span class="chapter-tag">Chapter 7</span>
+                    <h2>変曲点の後（After The Inflection Point）</h2>
+                </div>
+            </div>
+
+            <blockquote>
+                変化を理解する唯一の方法は、それに飛び込み、一緒に動き、踊ることだ。
+                <cite>— Alan Watts</cite>
+            </blockquote>
+
+            <p>Data Mesh は第6章で示した環境条件を<span class="highlight">デフォルトの出発点として受け入れ</span>、過去のアプローチの欠陥から学び、中央集権化ボトルネックを解消しなければならない。本章では、Data Mesh を採用した組織が達成する3つのトップレベル・アウトカムを論じる。</p>
+
+            <div class="outcome-grid">
+                <div class="outcome-card">
+                    <div class="outcome-icon">🔄</div>
+                    <h4>変化を受容する</h4>
+                    <p>複雑でボラティルな環境でも、変化に耐性を持ちながらデータから価値を得続ける</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">⚡</div>
+                    <h4>アジリティを維持する</h4>
+                    <p>成長（新規買収・サービス拡大・地理的拡大）の中でもデータ提供の速度を維持する</p>
+                </div>
+                <div class="outcome-card">
+                    <div class="outcome-icon">📈</div>
+                    <h4>価値/投資比率を高める</h4>
+                    <p>データへの投資に対して得られる価値の比率を根本的に改善する</p>
+                </div>
+            </div>
+
+            <h3 id="ch7-change">アウトカム1：変化の受容</h3>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>ビジネス・技術・データの整合</h4>
+                    <p>マイクロサービスがオペレーショナルデータを各ビジネスドメインへ分解したように、<strong>Data Mesh の第1原則（ドメインオーナーシップ）は同じ分解をアナリティカルデータに適用</strong>する。各ドメインが分析データの所有権・管理責任を担う。</p>
+                </div>
+                <div class="card">
+                    <h4>オペレーショナルとアナリティカルのギャップを閉じる</h4>
+                    <p>各ドメインがオペレーショナルな責任に加えて、<strong>アナリティカルデータをプロダクトとして提供する責任</strong>も担う。<span class="mono">Data Product Quantum（DPQ）</span>が両プレーンをドメイン境界で統合する。</p>
+                </div>
+                <div class="card">
+                    <h4>パイプラインの偶発的複雑性の削減</h4>
+                    <p>DPQ は単一のドメイン指向セマンティクスを持ちながら、SQL・ファイル・イベントなど<strong>複数のアクセスモードをネイティブに提供</strong>する。データコピーとパイプラインの必要性を取り除く。</p>
+                </div>
+            </div>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">変更のドメインへの局所化</div>
+                <p>Data Mesh は明確に定義されたインターフェース（契約）を通じてデータを共有する。これにより、ドメインは中央の共有カノニカルモデルへの調整なしにデータモデルを変更できる。古いバージョンの契約をサポートしながら、ユーザーを新バージョンへ段階的に移行させる。</p>
+            </div>
+
+            <h3 id="ch7-agility">アウトカム2：アジリティの維持</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>課題</th>
+                        <th class="col-old">従来の問題</th>
+                        <th class="col-new">Data Mesh のアプローチ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="col-aspect">中央ボトルネック</td>
+                        <td>中央のデータチームがすべてのソース・ユースケースを管理</td>
+                        <td>P2P（ピアツーピア）でデータを直接消費。中央的コンポーネントや仲介チーム不要</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">パイプライン調整</td>
+                        <td>新機能ごとに全パイプラインコンポーネントの同期変更が必要</td>
+                        <td>ドメイン指向分解により、多くの場合ドメイン単独で新ソース・ユースケースを対応</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">ガバナンス調整</td>
+                        <td>中央ガバナンスチームが全データアクセス・品質・ポリシー適用を担当</td>
+                        <td>連合型計算ガバナンス：各ドメインDPO が連合体を構成し、ポリシーをコードで自動適用</td>
+                    </tr>
+                    <tr>
+                        <td class="col-aspect">チーム自律性</td>
+                        <td>中央への依存で各チームが意思決定できない</td>
+                        <td>セルフサーブプラットフォームにより、ドメインチームが自律的にDPQのライフサイクルを管理</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 id="ch7-value">アウトカム3：価値/投資比率の向上</h3>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>技術的複雑性の抽象化</h4>
+                    <p>データプロダクト開発者・コンシューマー中心のプラットフォームを再構想。専門家でなくても（ジェネラリスト開発者でも）データプロダクトを構築できる環境を目指す。</p>
+                </div>
+                <div class="card">
+                    <h4>あらゆる場所へのプロダクト思考</h4>
+                    <p>データを「資産」から「プロダクト」へ。成功指標を「データ量」から「データユーザーの満足度」へ。プラットフォーム自体もプロダクトとして運営（ドメインチームが「顧客」）。</p>
+                </div>
+                <div class="card">
+                    <h4>境界を超えた価値創造</h4>
+                    <p>マルチドメイン・マルチ組織のデータアクセスを前提として設計。DPQ はオープンプロトコルにより物理的な場所に関係なく発見・利用可能。</p>
+                </div>
+            </div>
+
+            <div class="alert alert-success">
+                <div class="alert-title">Data Mesh は銀の弾丸ではない</div>
+                <p>Data Mesh は<strong>データへのアクセスを真に民主化</strong>するための重要なピースだが、データから価値を引き出すためのループを閉じるには、継続的なアナリティクス・ML ソリューションの提供など、さらに多くの取り組みが必要だ。しかし、そのループを起動するには<strong>スケールでのデータアクセス</strong>が前提条件となる——それが Data Mesh の焦点だ。</p>
+            </div>
+        </section>
+
+        <!-- ═══ Chapter 8 ═══ -->
+        <section id="ch8">
+            <div class="section-header">
+                <div class="section-number">08</div>
+                <div>
+                    <span class="chapter-tag">Chapter 8</span>
+                    <h2>変曲点の前（Before The Inflection Point）</h2>
+                </div>
+            </div>
+
+            <blockquote>
+                今日の問題は昨日の「解決策」から生まれる。
+                <cite>— Peter Senge,『The Fifth Discipline』</cite>
+            </blockquote>
+
+            <p>過去のアプローチは<span class="highlight">機械をスケールさせること</span>に成功した（大容量・高速・多様なデータ処理）。しかし<strong>組織的スケール・人的スケールには限界</strong>があった。本章はその歴史的文脈を追い、根本原因を明らかにする。</p>
+
+            <h3 id="ch8-generations">アナリティカルデータアーキテクチャの3世代</h3>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-dot">第1世代<br>DWH</div>
+                    <div class="timeline-content">
+                        <span class="timeline-era">1960年代〜 / 概念的起源</span>
+                        <h4>データウェアハウス（Data Warehouse）</h4>
+                        <p>運用システムから Extract → Transform → Load（ETL）。全社統合スキーマへの変換。SQL によるアクセス。データアナリストの BI・レポート用途。<br><br><strong style="color: var(--warning);">問題：</strong>プロプライエタリで高価・専門化必須。数千の ETL ジョブ・テーブル・レポートが蓄積。CI/CD への適応困難。技術的債務が蓄積し、DWH 間の<em>脱出不可能な移行サイクル</em>に陥る。</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot">第2世代<br>Lake</div>
+                    <div class="timeline-content">
+                        <span class="timeline-era">2010年〜</span>
+                        <h4>データレイク（Data Lake）</h4>
+                        <p>DWH の課題に対応。最小変換でオブジェクトストレージへ保存（元の形に近い）。データサイエンス・ML モデルトレーニング用途。下流に「Lakeshore Mart」が位置。<br><br><strong style="color: var(--warning);">問題：</strong>後工程のパイプラインが複雑化。超専門化されたデータエンジニアが運用する複雑なバッチ・ストリーミングジョブ。品質・信頼性・文脈が失われた「<em>データの沼（Data Swamp）</em>」化。</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-dot">第3世代<br>Cloud</div>
+                    <div class="timeline-content">
+                        <span class="timeline-era">現在</span>
+                        <h4>マルチモーダルクラウドアーキテクチャ</h4>
+                        <p>ストリーミング（Kappa）/ バッチ・ストリーム統合（Apache Beam）/ クラウドネイティブ（コンピュートとストレージ分離）/ ウェアハウスとレイクの収束（<span class="mono">Google BigQuery ML</span> / <span class="mono">Databricks Lakehouse</span>）。<br><br><strong style="color: var(--warning);">問題：</strong>リアルタイム分析やインフラコスト削減は改善されているが、<em>前世代から引き継いだ根本的な特性は解消されていない。</em></p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 id="ch8-characteristics">3世代に共通する変わらなかった3つの特性</h3>
+
+            <p>技術的なイノベーションが爆発的に起きた（FirstMark の年次ビッグデータ＆AI 景観図が示すように）にもかかわらず、<span class="highlight">根本的な前提は何十年も変わらなかった</span>：</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <span class="char3-label">特性 #1</span>
+                    <h4>モノリシック（Monolithic）</h4>
+                    <p>単一の巨大プラットフォームが全企業データを取り込み・クレンジング・提供する。ウェアハウス技術（Snowflake・BigQuery・Synapse）はユーザー体験としてモノリシック。データレイク技術も「契約・インターフェースのない密結合のラビリンス状パイプライン」を生む。</p>
+                    <p>Conway's Law により、組織も「BI チーム / データ分析グループ / データプラットフォームチーム」というモノリシック構造に。その中に<em>超専門化し、業務部門からサイロ化されたデータエンジニア</em>たちが生まれる。</p>
+                    <div class="char3-impact">→ 結果：接続されていないソースチーム / バックログを争う不満な消費者 / 疲弊する中央データチーム</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <span class="char3-label">特性 #2</span>
+                    <h4>中央集権的（Centralized）</h4>
+                    <p>オペレーショナルシステムには DDD（ドメイン駆動設計）のバウンデッドコンテキストが10年で広く適用されてきた。しかし<strong>アナリティカルデータには DDD が適用されず</strong>、ドメインの外側に中央集権的なオーナーシップが維持され続けた。</p>
+                    <p>データ品質に最も精通しているドメインが品質の責任を持たない。中央チームがクレンジングパイプラインを通じて品質を再構築しようとするが、パイプラインを通った末のデータは<em>元の形式と意味を失っている</em>ことが多い。</p>
+                    <div class="char3-impact">→ 結果：「ダークデータ」問題（収集・処理・保存しながら活用できないデータ資産）</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <span class="char3-label">特性 #3</span>
+                    <h4>技術駆動（Technology-Driven）</h4>
+                    <p>アーキテクチャは常に技術的機能（インジェスト→クレンジング→集計→配信）でコンポーネントを分解・統合する「<strong>技術的パーティショニング</strong>」を採用してきた。</p>
+                    <p>これが「活動指向のチーム」（インジェスト担当チーム・Lakeshore Mart 提供チーム）を生む。Daff Inc. の例：「ポッドキャスト再生率の可視化」という単一機能の追加でも、<em>パイプラインの全コンポーネントを同期変更しなければならない</em>。最小変更単位は依然としてパイプライン全体——モノリスだ。</p>
+                    <div class="char3-impact">→ 結果：成果（Outcome）の配信が遅く、組織摩擦が大きい。変化の軸と分解の軸が直交している</div>
+                </div>
+            </div>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">根本原因：組織的・文化的な問題</div>
+                <blockquote style="margin: 0.5rem 0 0; background: transparent; border-left-color: rgba(239,68,68,0.5);">
+                    狂気の定義とは、同じことを繰り返しながら異なる結果を期待することだ。
+                    <cite>— Albert Einstein</cite>
+                </blockquote>
+                <p style="margin-top: 1rem; margin-bottom: 0;">3世代のアーキテクチャは技術的には進化した（大容量・高速・多様なデータ）。しかし根本的な特性は変わらなかった。失敗の原因は技術的なものではなく、<strong>組織的なものだった</strong>。「アナリティカルユースケースのために、データはドメインから抽出され中央リポジトリに統合されなければならない」という古い前提を疑わなかったことが根本原因だ。</p>
+            </div>
+        </section>
+
+        <!-- ═══ Summary ═══ -->
+        <section id="summary">
+            <div class="section-header">
+                <div class="section-number">∑</div>
+                <div>
+                    <span class="chapter-tag">Summary</span>
+                    <h2>Part II の全体像と洞察</h2>
+                </div>
+            </div>
+
+            <p>3つの章が示す論理構造は以下の通りだ。<span class="highlight">「なぜ今 Data Mesh か」への答えが、この3つの章で完成する。</span></p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>章</th>
+                        <th>テーマ</th>
+                        <th>キーメッセージ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong style="color: var(--accent-light);">第6章</strong></td>
+                        <td>変曲点（今、何が起きているか）</td>
+                        <td>業務複雑性の増大・データへの期待・ユビキタスなソースが従来アプローチを限界に追い込んだ。投資対成果の乖離が顕在化している。</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color: var(--accent-light);">第7章</strong></td>
+                        <td>変曲点の後（Data Mesh は何を解決するか）</td>
+                        <td>変化の受容・アジリティの維持・価値/投資比率の向上。中央集権・モノリシック・技術駆動の逆を行く。</td>
+                    </tr>
+                    <tr>
+                        <td><strong style="color: var(--accent-light);">第8章</strong></td>
+                        <td>変曲点の前（なぜ過去の解決策は機能しなかったか）</td>
+                        <td>DWH→レイク→クラウドの3世代は「モノリシック・中央集権的・技術駆動」という特性を共有し続けた。根本原因は組織的。</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">Part II の本質的な洞察</div>
+                <p>Data Mesh は<strong>技術的な課題への技術的な解答ではない</strong>。組織的な課題への、ソシオテクニカル（社会技術的）なアプローチだ。</p>
+                <p style="margin-bottom:0;">ソフトウェアエンジニアリングが DDD・マイクロサービスで解いた問題——チームの自律性・責任の局所化・明確なインターフェース——を<strong>アナリティカルデータの世界に持ち込む</strong>試みだ。テクノロジーを変えるだけでは問題は解消されない。<span class="highlight">誰がデータに責任を持つか</span>という組織設計こそが、データアーキテクチャの本質的な問いとなる。</p>
+            </div>
+
+            <!-- Part navigation -->
+            <div class="part-link-banner" style="margin-top: 3rem;">
+                <div class="part-info">
+                    <strong>次のステップ：Part II「What Is Data Mesh?」</strong> — 4つの原則（ドメインオーナーシップ・データをプロダクト・セルフサーブプラットフォーム・連合型計算ガバナンス）の詳細解説
+                </div>
+                <a href="../articles/data-mesh-principles.html" class="part-link-btn">→ Part I を読む</a>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ─── Footer ─── -->
+    <footer>
+        <div class="footer-source">
+            出典：Zhamak Dehghani,『Data Mesh』, O'Reilly Media, 2022 — ISBN 978-1-492-09239-3
+        </div>
+        <p>学習日：2026-03-29 &nbsp;|&nbsp; Part II（第6章〜第8章）個人学習ノート</p>
+        <p class="footer-disclaimer">
+            本記事は個人の学習目的で作成されたサマリーです。原著の内容を正確に伝えることを目指していますが、
+            完全性・正確性を保証するものではありません。詳細は原著をご参照ください。
+        </p>
+    </footer>
+
+</body>
+</html>
