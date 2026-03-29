@@ -1,0 +1,2018 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Mesh — 導入戦略と組織変革</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #38BDF8;
+            --accent-light: #7DD3FC;
+            --accent-dim: rgba(56, 189, 248, 0.15);
+            --accent-glow: rgba(56, 189, 248, 0.08);
+            --bg-deep: #070A0C;
+            --bg-secondary: #0A0E11;
+            --bg-tertiary: #101820;
+            --text-primary: #E8EAED;
+            --text-secondary: #8CA0A0;
+            --border: #152025;
+            --border-accent: rgba(56, 189, 248, 0.3);
+            --danger: #EF4444;
+            --indigo: #6366F1;
+            --amber: #F59E0B;
+            --sky-deep: #0369A1;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(56, 189, 248, 0.05) 0%, transparent 55%),
+                radial-gradient(circle at 85% 70%, rgba(3, 105, 161, 0.04) 0%, transparent 55%),
+                radial-gradient(circle at 50% 90%, rgba(56, 189, 248, 0.03) 0%, transparent 40%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #080C10 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        /* ─── Header & Navigation ─── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(7, 10, 12, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 40%, var(--sky-deep) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .book-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: rgba(16, 24, 32, 0.7);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Table of Contents ─── */
+        .toc-section {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+
+        .toc-box {
+            background: rgba(16, 24, 32, 0.6);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: color 0.2s ease;
+            padding: 0.3rem 0;
+        }
+
+        .toc-list li a:hover {
+            color: var(--accent-light);
+        }
+
+        .toc-num {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 34px;
+        }
+
+        /* ─── Main Content ─── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(16, 24, 32, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--sky-deep), transparent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 70px;
+            opacity: 0.9;
+        }
+
+        .chapter-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '//';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.4rem;
+            color: var(--text-primary);
+            line-height: 1.85;
+        }
+
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin: 1rem 0 1.5rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        /* ─── Tables ─── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(10, 14, 17, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(56, 189, 248, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(56, 189, 248, 0.04);
+        }
+
+        /* ─── Alert / Callout Boxes ─── */
+        .alert {
+            padding: 1.4rem 1.6rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-sky {
+            border-left-color: var(--accent);
+            background: rgba(56, 189, 248, 0.08);
+        }
+
+        .alert-success {
+            border-left-color: #34D399;
+            background: rgba(52, 211, 153, 0.08);
+        }
+
+        .alert-danger {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-indigo {
+            border-left-color: var(--indigo);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .alert-amber {
+            border-left-color: var(--amber);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-sky .alert-title { color: var(--accent-light); }
+        .alert-success .alert-title { color: #34D399; }
+        .alert-danger .alert-title { color: var(--danger); }
+        .alert-indigo .alert-title { color: var(--indigo); }
+        .alert-amber .alert-title { color: var(--amber); }
+
+        .alert p { margin-bottom: 0.5rem; }
+        .alert p:last-child { margin-bottom: 0; }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(10, 14, 17, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: rgba(10, 14, 17, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(56, 189, 248, 0.12);
+        }
+
+        /* ─── Char3 Cards (3-column feature blocks) ─── */
+        .char3-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .char3-card {
+            background: rgba(10, 14, 17, 0.9);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.8rem;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .char3-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(56, 189, 248, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .char3-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.12;
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            line-height: 1;
+        }
+
+        .char3-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .char3-card h4 {
+            font-size: 1.15rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        .char3-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+
+        .char3-impact {
+            font-size: 0.82rem;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid var(--border);
+            padding-top: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ─── Assessment Grid (Spider Graph 8 axes) ─── */
+        .assess-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .assess-card {
+            background: rgba(10, 14, 17, 0.85);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            padding: 1.4rem 1.6rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .assess-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .assess-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 0.4rem;
+        }
+
+        .assess-card h4 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+        }
+
+        .assess-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .assess-card p {
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        /* ─── Phase Timeline ─── */
+        .phase-list {
+            list-style: none;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .phase-list::before {
+            content: '';
+            position: absolute;
+            left: 18px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+            opacity: 0.3;
+        }
+
+        .phase-item {
+            display: flex;
+            gap: 1.2rem;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .phase-dot {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--accent-dim);
+            border: 2px solid var(--border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--accent);
+            z-index: 1;
+        }
+
+        .phase-content h4 {
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+            color: var(--text-primary);
+        }
+
+        .phase-content p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        .phase-timing {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            margin-bottom: 0.3rem;
+        }
+
+        /* ─── Diagram Containers ─── */
+        .diagram-wrap {
+            margin: 2.5rem 0;
+            background: rgba(10, 14, 17, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .diagram-inner {
+            padding: 2rem 2.5rem;
+            position: relative;
+        }
+
+        .diagram-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* ─── Highlight Inline ─── */
+        .highlight {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .en-term {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 0.8rem 1.5rem;
+            margin: 1.5rem 0;
+            background: rgba(56, 189, 248, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        blockquote cite {
+            display: block;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-style: normal;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Stat Callout ─── */
+        .stat-callout {
+            background: rgba(10, 14, 17, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-callout-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-row-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-big {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ─── Part Link Banner ─── */
+        .part-link-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(10, 14, 17, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem 1.8rem;
+            margin: 3rem 0;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .part-link-banner .part-info {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .part-link-banner .part-info strong {
+            color: var(--text-primary);
+        }
+
+        .part-link-btn {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-light);
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .part-link-btn:hover {
+            background: rgba(56, 189, 248, 0.25);
+            text-decoration: none;
+            opacity: 1;
+        }
+
+        /* ─── Value Shift Table ─── */
+        .value-shift-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .shift-col {
+            background: rgba(10, 14, 17, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .shift-col-before {
+            border-top: 3px solid var(--danger);
+        }
+
+        .shift-col-after {
+            border-top: 3px solid #34D399;
+        }
+
+        .shift-col-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .shift-col-before .shift-col-title { color: var(--danger); }
+        .shift-col-after .shift-col-title { color: #34D399; }
+
+        .shift-item {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.5;
+        }
+
+        .shift-item:last-child { border-bottom: none; }
+
+        /* ─── Summary Takeaways ─── */
+        .takeaway-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .takeaway-item {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 1.2rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .takeaway-item:last-child { border-bottom: none; }
+
+        .takeaway-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 40px;
+            opacity: 0.8;
+        }
+
+        .takeaway-body strong {
+            display: block;
+            color: var(--text-primary);
+            font-size: 1.02rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .takeaway-body p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.65;
+        }
+
+        /* ─── Sources Section ─── */
+        .sources-list {
+            list-style: none;
+            margin: 0;
+        }
+
+        .sources-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .sources-list li:last-child {
+            border-bottom: none;
+        }
+
+        .source-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 28px;
+            margin-top: 0.1rem;
+        }
+
+        .source-text {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .source-text a {
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            word-break: break-all;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-source {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(16, 24, 32, 0.8);
+            border: 1px solid var(--border);
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+        }
+
+        .footer-disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0.75rem auto 0;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .nav-links { display: none; }
+            section { padding: 2rem 1.5rem; }
+            .section-number { font-size: 1.8rem; min-width: 50px; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .toc-list { grid-template-columns: 1fr; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 0.75rem 0.9rem; }
+            .char3-grid { grid-template-columns: 1fr; }
+            .value-shift-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .hero { padding: 3rem 1.5rem 2rem; }
+            .hero-stats { grid-template-columns: 1fr; }
+            .stat-row-grid { grid-template-columns: 1fr; }
+            .assess-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ─── Utility ─── */
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header>
+        <nav>
+            <a href="../index.html" class="logo">
+                <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Data Mesh logo">
+                    <circle cx="4" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="4" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="4" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="18" cy="18" r="2" stroke="currentColor" stroke-width="1.5"/>
+                    <circle cx="11" cy="11" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+                    <line x1="5.8" y1="5.2" x2="9.3" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="5.2" x2="12.7" y2="9.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="5.8" y1="16.8" x2="9.3" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                    <line x1="16.2" y1="16.8" x2="12.7" y2="12.5" stroke="currentColor" stroke-width="1"/>
+                </svg>
+                Data Mesh
+            </a>
+            <ul class="nav-links">
+                <li><a href="#overview">Part V 概要</a></li>
+                <li><a href="#ch15-assessment">自己診断</a></li>
+                <li><a href="#ch15-strategy">データ戦略</a></li>
+                <li><a href="#ch15-execution">実行アプローチ</a></li>
+                <li><a href="#ch16-sociotech">社会技術変革</a></li>
+                <li><a href="#ch16-teams">チームと役割</a></li>
+                <li><a href="#ch16-culture">文化変革</a></li>
+                <li><a href="#summary">まとめ</a></li>
+            </ul>
+            <a href="../index.html" class="back-link">← トップに戻る</a>
+        </nav>
+    </header>
+
+    <!-- ─── Hero ─── -->
+    <div class="hero">
+        <div class="eyebrow">学習ノート / O'REILLY / Part V</div>
+        <h1>Data Mesh — 導入戦略と組織変革</h1>
+        <p class="subtitle">Part V: How to Get Started — 学習ノート</p>
+        <p class="subtitle" style="font-size:1rem; margin-bottom:1.5rem;">Zhamak Dehghani著『Data Mesh』（O'Reilly, 2022）Part V「How to Get Started」第15〜16章の要約</p>
+        <div class="book-info">
+            <span>Zhamak Dehghani</span>
+            <span style="opacity:0.4;">|</span>
+            <span>O'Reilly Media, 2022</span>
+            <span style="opacity:0.4;">|</span>
+            <span>ISBN: 978-1-492-09239-3</span>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">2</div>
+                <div class="stat-label">対象章（第15〜16章）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">8</div>
+                <div class="stat-label">導入準備度の評価軸（スパイダーグラフ）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">5</div>
+                <div class="stat-label">実行フェーズ（Discover→Align→Launch→Scale→Evolve）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div class="stat-label">社会技術変革の次元（技術・ユースケース・文化）</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2026-03-30 &nbsp;|&nbsp; 読了目安: ~18分</p>
+    </div>
+
+    <!-- ─── Table of Contents ─── -->
+    <div class="toc-section">
+        <div class="toc-box">
+            <div class="toc-title">// Table of Contents</div>
+            <ul class="toc-list">
+                <li><a href="#overview"><span class="toc-num">00</span>Part V 概要</a></li>
+                <li><a href="#ch15-assessment"><span class="toc-num">01</span>Ch.15：導入前の自己診断（8軸評価）</a></li>
+                <li><a href="#ch15-strategy"><span class="toc-num">02</span>Ch.15：データ戦略とData Mesh</a></li>
+                <li><a href="#ch15-execution"><span class="toc-num">03</span>Ch.15：反復的・価値駆動の実行アプローチ</a></li>
+                <li><a href="#ch16-sociotech"><span class="toc-num">04</span>Ch.16：社会技術的トランスフォーメーション</a></li>
+                <li><a href="#ch16-teams"><span class="toc-num">05</span>Ch.16：チームトポロジーと役割</a></li>
+                <li><a href="#ch16-culture"><span class="toc-num">06</span>Ch.16：文化変革</a></li>
+                <li><a href="#summary"><span class="toc-num">07</span>まとめ — Part Vの要点</a></li>
+                <li><a href="#sources"><span class="toc-num">08</span>参考文献</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ─── Part Series Banner ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Data Mesh 学習ノート
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="data-mesh-principles.html" class="part-link-btn" style="border-color:rgba(139,92,246,0.4); color:#C4B5FD; background:rgba(139,92,246,0.1);">Part I — 4原則</a>
+                <a href="data-mesh-why.html" class="part-link-btn" style="border-color:rgba(245,158,11,0.4); color:#FCD34D; background:rgba(245,158,11,0.1);">Part II — なぜ今？</a>
+                <a href="data-mesh-architecture.html" class="part-link-btn" style="border-color:rgba(16,185,129,0.4); color:#34D399; background:rgba(16,185,129,0.1);">Part III — アーキテクチャ設計</a>
+                <a href="data-mesh-data-product.html" class="part-link-btn" style="border-color:rgba(236,72,153,0.4); color:#F9A8D4; background:rgba(236,72,153,0.1);">Part IV — データプロダクト設計</a>
+                <a href="#" class="part-link-btn">Part V — 導入戦略 ◀</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Main Content ─── -->
+    <main>
+
+        <!-- Section 0: Overview -->
+        <section id="overview">
+            <div class="section-header">
+                <div class="section-number">00</div>
+                <div>
+                    <span class="chapter-tag">Part V Overview</span>
+                    <h2>Part V 概要</h2>
+                </div>
+            </div>
+
+            <p>Part Vは、Zhamak Dehghani著『Data Mesh』の<span class="highlight">最終パート</span>であり、「どうやって始めるか」（<span class="en-term">How to Get Started</span>）という実践的な問いへの回答だ。Part I〜IVで積み上げてきた原則・理論・アーキテクチャ・設計の知識を、<span class="highlight">実際の組織で始動・進化させるためのロードマップ</span>として統合する。</p>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// Part V のスコープ</div>
+                <p>第15章「Strategy and Execution（戦略と実行）」では、Data Mesh導入の適否を判断する8軸自己診断、データ戦略との関係、そして反復的・価値駆動の実行アプローチを論じる。第16章「Organization and Culture（組織と文化）」では、社会技術的変革の本質、チームトポロジー、主要役割、そして必要な文化的価値転換を掘り下げる。</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Chapter 15</div>
+                    <h4>戦略と実行</h4>
+                    <p>導入の適否を測る8軸スパイダーグラフ診断、Data Meshをデータ戦略の一要素として位置づける思考枠組み、そしてDUTIフレームワークを用いた段階的・価値駆動の実行アプローチを提示する。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 16</div>
+                    <h4>組織と文化</h4>
+                    <p>技術・ユースケース・文化の3次元が複合ギアシステムのように連動して動く「社会技術的変革」のモデル、チームトポロジーと主要役割の定義、そして文化的価値転換の要件を論じる。</p>
+                </div>
+            </div>
+
+            <blockquote>
+                "Data mesh is not an organizational concept or a recipe for culture change. It's a sociotechnical paradigm."
+                <cite>— Zhamak Dehghani, Data Mesh (O'Reilly, 2022) Chapter 16</cite>
+            </blockquote>
+        </section>
+
+        <!-- Section 1: Ch.15 Self-Assessment -->
+        <section id="ch15-assessment">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <div>
+                    <span class="chapter-tag">Ch.15 / Self-Assessment</span>
+                    <h2>Ch.15: 導入前の自己診断</h2>
+                </div>
+            </div>
+
+            <p>Dehghaniは「<span class="highlight">今すぐData Meshを採用すべきか？</span>」という問いに対し、8つの評価軸による<span class="en-term">Spider Graph</span>（スパイダーグラフ）形式の準備度診断を提示する。これらの軸で<strong>中〜高スコア</strong>を持つ組織が、Data Mesh導入で最大の効果を得られる。</p>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// 最重要評価軸について</div>
+                <p>Dehghaniは「組織の複雑性（<span class="en-term">Organizational Complexity</span>）」を<strong>最も根本的な判断基準</strong>と位置付ける。既存のデータウェアハウス/レイク構成でニーズが満たされているなら、Data Meshは過剰な変革となる。固有のビジネス複雑性とデータソース・ユースケースの多様性が存在することが前提だ。</p>
+            </div>
+
+            <!-- 8-axis assessment cards -->
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">AXIS 01</div>
+                    <h4>組織の複雑性</h4>
+                    <span class="assess-en">Organizational Complexity</span>
+                    <p>スケールと複雑性により既存データアーキテクチャがボトルネックになっている組織向け。多様なデータドメイン・データタイプを持ち、ML/分析を戦略的差別化手段とする企業（小売・金融・保険・ヘルスケア等）が対象。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">AXIS 02</div>
+                    <h4>データ指向戦略</h4>
+                    <span class="assess-en">Data-Oriented Strategy</span>
+                    <p>データ・ML・分析を競争上の差別化要因として活用するという組織的コミットメントが必要。「データ指向戦略 → データ駆動アプリケーション → チームの関与」という戦略の落とし込みが重要。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">AXIS 03</div>
+                    <h4>経営層のサポート</h4>
+                    <span class="assess-en">Executive Support</span>
+                    <p>Data Meshは大規模な変革をもたらすため、必ず反対勢力・抵抗勢力が生まれる。C-レベルの強力なトップダウン支援と、困難な意思決定（プラットフォーム vs. ポイントソリューション等）を下す権限が不可欠。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">AXIS 04</div>
+                    <h4>データテクノロジーの中核化</h4>
+                    <span class="assess-en">Data Technology at Core</span>
+                    <p>データ・AIを競争優位の中核として捉え、各ビジネス機能にデータ共有技術を組み込める組織が対象。技術を外部ベンダーに委譲・外注している組織はData Meshと相性が悪い。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">AXIS 05</div>
+                    <h4>アーリーアダプター気質</h4>
+                    <span class="assess-en">Early Adopter</span>
+                    <p>執筆時点でData Meshはイノベーター/リードアダプター段階。実験精神・リスクテイク・失敗から学ぶ姿勢・ゼロベース思考が必要。「実績のある方法論だけを使いたい」レイトアダプターには時期尚早。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">AXIS 06</div>
+                    <h4>モダンエンジニアリング</h4>
+                    <span class="assess-en">Modern Engineering</span>
+                    <p>CI/CD・DevOps・分散アーキテクチャ・コンピュテーショナルポリシー・現代的なストレージ/処理技術が前提。マイクロサービスと同じ技術的前提条件を共有する。集中型データモデリングを強制する技術は不適合。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">AXIS 07</div>
+                    <h4>ドメイン指向の組織構造</h4>
+                    <span class="assess-en">Domain-Oriented Organization</span>
+                    <p>ビジネスドメインごとに専任技術チームが存在し、技術チームとビジネスドメインが密に連携していることが前提。プロジェクト横断でリソースを共有する集中型ITは不向き。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">AXIS 08</div>
+                    <h4>長期的なコミットメント</h4>
+                    <span class="assess-en">Long-Term Commitment</span>
+                    <p>Data Meshは一回限りのプロジェクトではなく、継続的な変革の旅。便益はスケールと共に複利的に拡大する。組織がビジョンへの長期的コミットメントを持てるかどうかが問われる。</p>
+                </div>
+            </div>
+
+            <!-- SVG Spider Graph Diagram -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// 8軸準備度スパイダーグラフ — 概念図</div>
+                    <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <!-- Background -->
+                        <rect width="600" height="400" fill="transparent"/>
+
+                        <!-- Center -->
+                        <g transform="translate(300, 200)">
+                            <!-- Radar rings -->
+                            <polygon points="0,-120 113.1,-36.9 69.9,96.9 -69.9,96.9 -113.1,-36.9 0,-120" fill="none" stroke="rgba(56,189,248,0.08)" stroke-width="1"/>
+                            <polygon points="0,-90 84.9,-27.7 52.4,72.7 -52.4,72.7 -84.9,-27.7 0,-90" fill="none" stroke="rgba(56,189,248,0.1)" stroke-width="1"/>
+                            <polygon points="0,-60 56.6,-18.5 34.9,48.5 -34.9,48.5 -56.6,-18.5 0,-60" fill="none" stroke="rgba(56,189,248,0.12)" stroke-width="1"/>
+                            <polygon points="0,-30 28.3,-9.2 17.5,24.2 -17.5,24.2 -28.3,-9.2 0,-30" fill="none" stroke="rgba(56,189,248,0.15)" stroke-width="1"/>
+
+                            <!-- 8 axes -->
+                            <line x1="0" y1="0" x2="0" y2="-130" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+                            <line x1="0" y1="0" x2="92" y2="-92" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+                            <line x1="0" y1="0" x2="130" y2="0" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+                            <line x1="0" y1="0" x2="92" y2="92" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+                            <line x1="0" y1="0" x2="0" y2="130" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+                            <line x1="0" y1="0" x2="-92" y2="92" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+                            <line x1="0" y1="0" x2="-130" y2="0" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+                            <line x1="0" y1="0" x2="-92" y2="-92" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+
+                            <!-- Sample score polygon (high readiness) -->
+                            <polygon points="0,-108 82,-70 110,0 73,75 0,112 -65,78 -100,0 -72,-72"
+                                fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.6)" stroke-width="2"/>
+
+                            <!-- Axis labels -->
+                            <text x="0" y="-142" text-anchor="middle" fill="#7DD3FC" font-family="JetBrains Mono" font-size="9" font-weight="600">組織の複雑性</text>
+                            <text x="100" y="-100" text-anchor="start" fill="#8CA0A0" font-family="Noto Sans JP" font-size="8.5">データ指向戦略</text>
+                            <text x="140" y="5" text-anchor="start" fill="#8CA0A0" font-family="Noto Sans JP" font-size="8.5">経営層のサポート</text>
+                            <text x="100" y="104" text-anchor="start" fill="#8CA0A0" font-family="Noto Sans JP" font-size="8.5">データ技術の中核化</text>
+                            <text x="0" y="148" text-anchor="middle" fill="#8CA0A0" font-family="Noto Sans JP" font-size="8.5">アーリーアダプター気質</text>
+                            <text x="-102" y="104" text-anchor="end" fill="#8CA0A0" font-family="Noto Sans JP" font-size="8.5">モダンエンジニアリング</text>
+                            <text x="-142" y="5" text-anchor="end" fill="#8CA0A0" font-family="Noto Sans JP" font-size="8.5">ドメイン指向組織</text>
+                            <text x="-100" y="-100" text-anchor="end" fill="#8CA0A0" font-family="Noto Sans JP" font-size="8.5">長期的コミットメント</text>
+
+                            <!-- Center dot -->
+                            <circle cx="0" cy="0" r="4" fill="rgba(56,189,248,0.5)"/>
+                        </g>
+
+                        <!-- Legend -->
+                        <rect x="20" y="360" width="14" height="14" rx="2" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.6)" stroke-width="1.5"/>
+                        <text x="40" y="371" fill="#8CA0A0" font-family="JetBrains Mono" font-size="9">高い準備度スコアの例（理想的な採用候補）</text>
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Ch.15 Data Strategy -->
+        <section id="ch15-strategy">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <div>
+                    <span class="chapter-tag">Ch.15 / Data Strategy</span>
+                    <h2>Ch.15: データ戦略とData Mesh</h2>
+                </div>
+            </div>
+
+            <p>Dehghaniは「<span class="highlight">Data MeshはデータStrategyの全体ではない</span>」と明確にする。Data Meshはデータ指向戦略を<em>実現するための</em>アーキテクチャ的・組織的基盤であり、戦略そのものではない。</p>
+
+            <h3>Daff Inc. の事例</h3>
+
+            <p>書籍では<span class="en-term">Daff, Inc.</span>という架空の音楽プラットフォーム企業を例に挙げる。Daffのデータ戦略の本質は：</p>
+
+            <blockquote>
+                「アーティストとリスナーをデータとMLを通じて没入型体験でつなぎ、すべてのインタラクションに埋め込まれた継続的改善のループを構築する」
+                <cite>— Daff Inc. の戦略 (Data Mesh, Ch.15 より)</cite>
+            </blockquote>
+
+            <p>この戦略は<span class="highlight">自己強化型の好循環ループ</span>を生み出す：予測精度が上がるほどユーザーが増え、ユーザーが増えるほどデータが蓄積し、データが蓄積するほどさらに予測精度が向上する。Data Meshはこのループを支える<strong>アーキテクチャ的・組織的基盤</strong>を提供する。</p>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// Data Meshとデータ戦略の関係</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:1.4rem; color:#7DD3FC;">データ戦略</div>
+                        <div class="stat-desc">「なぜデータを活用するか」のビジョン<br>競争差別化の方向性を定義</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:2rem;">→</div>
+                        <div class="stat-desc">戦略の落とし込み</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:1.4rem; color:#38BDF8;">Data Mesh</div>
+                        <div class="stat-desc">「どう実現するか」の基盤<br>アーキテクチャ・組織・文化の変革</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// 重要な前提</div>
+                <p>Data Meshを導入するには、その前提として「データを戦略的差別化要因として活用する」という経営レベルのコミットメントが存在していなければならない。Data Meshはそのコミットメントを<em>実現可能にする</em>手段であって、戦略そのものを生み出すものではない。</p>
+            </div>
+        </section>
+
+        <!-- Section 3: Ch.15 Execution -->
+        <section id="ch15-execution">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <div>
+                    <span class="chapter-tag">Ch.15 / Execution</span>
+                    <h2>Ch.15: 反復的・価値駆動の実行アプローチ</h2>
+                </div>
+            </div>
+
+            <p>Dehghaniは<span class="highlight">反復的かつインクリメンタルなアプローチ</span>を推奨する。これはLeanとアジャイルの哲学に基づいており、一度に全体を変革しようとする「ビッグバン移行」を明確に否定する。</p>
+
+            <h3>DUTIフレームワーク</h3>
+
+            <p>Paulo Caroliの研究（書籍の原則に基づく）から導かれた<span class="en-term">DUTI</span>フレームワークは、Data Mesh実装の基本単位を定義する：</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">D</div>
+                    <div class="char3-label">Domain</div>
+                    <h4>ドメイン選定</h4>
+                    <p>準備度スコアが高く、モチベーションの高いチームを持つドメインから開始する。成功の可視化が組織全体への波及効果を生む。</p>
+                    <div class="char3-impact">→ パイロットドメインの特定</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">U</div>
+                    <div class="char3-label">Use Case</div>
+                    <h4>ユースケース選定</h4>
+                    <p>高い価値と低い実装難易度を持つユースケースを優先する。ビジネスインパクトが明確で測定可能なものを選ぶ。</p>
+                    <div class="char3-impact">→ ライトハウスユースケースの特定</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">T</div>
+                    <div class="char3-label">Thin Slice</div>
+                    <h4>薄いスライス</h4>
+                    <p>MVP（最小限の実用的な成果物）として「薄いスライス」を提供し、方向性を検証する。完全なソリューションではなく、学習のための最小単位。</p>
+                    <div class="char3-impact">→ MVPとしてのデータプロダクト</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">I</div>
+                    <div class="char3-label">Increment</div>
+                    <h4>インクリメンタルな積み上げ</h4>
+                    <p>各インクリメントが前のものの上に積み上がる。学習を次の反復に組み込み、段階的に価値を増大させる。</p>
+                    <div class="char3-impact">→ 継続的な価値の積み上げ</div>
+                </div>
+            </div>
+
+            <h3>実行フェーズ</h3>
+
+            <p>書籍の原則とAWSのData Mesh戦略フレームワークを統合すると、実装は次の5つのフェーズで進む：</p>
+
+            <ul class="phase-list">
+                <li class="phase-item">
+                    <div class="phase-dot">P1</div>
+                    <div class="phase-content">
+                        <div class="phase-timing">Months 1–3</div>
+                        <h4>Discover — 発見・診断</h4>
+                        <p>組織の準備度を評価し、ビジネス・データランドスケープをマッピングする。モチベーションの高いパイロットドメインを特定し、現在の痛点を文書化する。この段階でステークホルダーとの共通認識を形成する。</p>
+                    </div>
+                </li>
+                <li class="phase-item">
+                    <div class="phase-dot">P2</div>
+                    <div class="phase-content">
+                        <div class="phase-timing">Months 2–4</div>
+                        <h4>Align — 整合・合意形成</h4>
+                        <p>MVPのスコープを定義し、ライトハウス/パイロットユースケースを選定する。ステークホルダーの整合を取り、成功指標を定義する。ガバナンス原則の草案を作成する。</p>
+                    </div>
+                </li>
+                <li class="phase-item">
+                    <div class="phase-dot">P3</div>
+                    <div class="phase-content">
+                        <div class="phase-timing">Months 3–6</div>
+                        <h4>Launch — 立ち上げ</h4>
+                        <p>MVPとしてのデータプロダクトを構築・デプロイする。基本的なデータカタログを展開し、データプロダクトテンプレートを確立する。ガバナンスメカニズムを構築する。</p>
+                    </div>
+                </li>
+                <li class="phase-item">
+                    <div class="phase-dot">P4</div>
+                    <div class="phase-content">
+                        <div class="phase-timing">Months 6–12+</div>
+                        <h4>Scale — スケールアウト</h4>
+                        <p>MVPを超えて展開を拡大する。追加ドメインをオンボードし、適切なカタログを実装する。データプロダクトのCI/CDパイプラインを構築し、ガバナンスを自動化する。</p>
+                    </div>
+                </li>
+                <li class="phase-item">
+                    <div class="phase-dot">P5</div>
+                    <div class="phase-content">
+                        <div class="phase-timing">Year 2+</div>
+                        <h4>Evolve — 継続的進化</h4>
+                        <p>組織全体への採用を完成させ、データプロダクトのマーケットプレースを実現する。継続的改善と後発ユースケースの追加。Data Meshが組織のDNAに組み込まれた状態へ。</p>
+                    </div>
+                </li>
+            </ul>
+
+            <h3>実行上の重要原則</h3>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">// 最大の失敗パターン：プラットフォームから始めること</div>
+                <p>Dehghaniは明確に警告する：「<strong>最大の失敗は、プラットフォームから始めることだ</strong>」。先にセルフサービスプラットフォームを構築し、後からドメインチームを引き付けようとするアプローチは機能しない。ドメインチームの痛みがプラットフォームの要件を駆動すべきだ。</p>
+            </div>
+
+            <ul>
+                <li><strong>ドメインから始める</strong>：プラットフォームではなく、具体的なドメインとユースケースから出発する</li>
+                <li><strong>手作業から始める</strong>：最初は手動プロセスで始め、学習をプロダクト化する</li>
+                <li><strong>価値駆動で進める</strong>：アウトプット（パイプライン数・モデル数）ではなく、アウトカム（価値）で測定する</li>
+                <li><strong>漸進的移行</strong>：レガシーからの移行は段階的に行う。ビッグバン移行は危険</li>
+                <li><strong>痛みを需要に変える</strong>：ドメインチームの現実的な課題から始め、それをプラットフォーム改善の燃料にする</li>
+            </ul>
+        </section>
+
+        <!-- Section 4: Ch.16 Sociotechnical -->
+        <section id="ch16-sociotech">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <div>
+                    <span class="chapter-tag">Ch.16 / Sociotechnical</span>
+                    <h2>Ch.16: 社会技術的トランスフォーメーション</h2>
+                </div>
+            </div>
+
+            <p>第16章の中心的洞察は：Data Meshは<span class="highlight">純粋に技術的なものでも純粋に社会的なものでもない——社会技術的（<span class="en-term">Sociotechnical</span>）パラダイム</span>である、ということだ。技術と文化は相互に依存して共進化する。</p>
+
+            <h3>複合ギアシステムの比喩</h3>
+
+            <p>Dehghaniは変革の本質を<span class="en-term">Compound Dynamic Gear System</span>（複合動態ギアシステム）の比喩で説明する。組織のギアと技術のギアが互いに噛み合って動く：</p>
+
+            <!-- Gear System SVG -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// 複合動態ギアシステム — 3次元の同時変革</div>
+                    <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <rect width="700" height="280" fill="transparent"/>
+
+                        <!-- Gear 1: Technology Platform -->
+                        <g transform="translate(160, 140)">
+                            <circle cx="0" cy="0" r="80" fill="rgba(56,189,248,0.08)" stroke="rgba(56,189,248,0.4)" stroke-width="2"/>
+                            <circle cx="0" cy="0" r="30" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.5)" stroke-width="1.5"/>
+                            <!-- Gear teeth (simplified) -->
+                            <circle cx="0" cy="-85" r="7" fill="rgba(56,189,248,0.4)"/>
+                            <circle cx="60" cy="-60" r="7" fill="rgba(56,189,248,0.4)"/>
+                            <circle cx="85" cy="0" r="7" fill="rgba(56,189,248,0.4)"/>
+                            <circle cx="60" cy="60" r="7" fill="rgba(56,189,248,0.4)"/>
+                            <circle cx="0" cy="85" r="7" fill="rgba(56,189,248,0.4)"/>
+                            <circle cx="-60" cy="60" r="7" fill="rgba(56,189,248,0.4)"/>
+                            <circle cx="-85" cy="0" r="7" fill="rgba(56,189,248,0.4)"/>
+                            <circle cx="-60" cy="-60" r="7" fill="rgba(56,189,248,0.4)"/>
+                            <text x="0" y="-8" text-anchor="middle" fill="#7DD3FC" font-family="JetBrains Mono" font-size="10" font-weight="700">TECHNOLOGY</text>
+                            <text x="0" y="8" text-anchor="middle" fill="#7DD3FC" font-family="JetBrains Mono" font-size="10" font-weight="700">PLATFORM</text>
+                            <text x="0" y="23" text-anchor="middle" fill="#8CA0A0" font-family="Noto Sans JP" font-size="8">技術プラットフォーム</text>
+                        </g>
+
+                        <!-- Gear 2: Use Cases (center) -->
+                        <g transform="translate(350, 140)">
+                            <circle cx="0" cy="0" r="60" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.6)" stroke-width="2.5"/>
+                            <circle cx="0" cy="0" r="22" fill="rgba(56,189,248,0.2)" stroke="rgba(56,189,248,0.6)" stroke-width="1.5"/>
+                            <text x="0" y="-6" text-anchor="middle" fill="#38BDF8" font-family="JetBrains Mono" font-size="9" font-weight="700">USE</text>
+                            <text x="0" y="7" text-anchor="middle" fill="#38BDF8" font-family="JetBrains Mono" font-size="9" font-weight="700">CASES</text>
+                            <text x="0" y="20" text-anchor="middle" fill="#8CA0A0" font-family="Noto Sans JP" font-size="7">ユースケース</text>
+                        </g>
+
+                        <!-- Gear 3: Culture -->
+                        <g transform="translate(540, 140)">
+                            <circle cx="0" cy="0" r="80" fill="rgba(52,211,153,0.07)" stroke="rgba(52,211,153,0.35)" stroke-width="2"/>
+                            <circle cx="0" cy="0" r="30" fill="rgba(52,211,153,0.12)" stroke="rgba(52,211,153,0.4)" stroke-width="1.5"/>
+                            <circle cx="0" cy="-85" r="7" fill="rgba(52,211,153,0.4)"/>
+                            <circle cx="60" cy="-60" r="7" fill="rgba(52,211,153,0.4)"/>
+                            <circle cx="85" cy="0" r="7" fill="rgba(52,211,153,0.4)"/>
+                            <circle cx="60" cy="60" r="7" fill="rgba(52,211,153,0.4)"/>
+                            <circle cx="0" cy="85" r="7" fill="rgba(52,211,153,0.4)"/>
+                            <circle cx="-60" cy="60" r="7" fill="rgba(52,211,153,0.4)"/>
+                            <circle cx="-85" cy="0" r="7" fill="rgba(52,211,153,0.4)"/>
+                            <circle cx="-60" cy="-60" r="7" fill="rgba(52,211,153,0.4)"/>
+                            <text x="0" y="-8" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="10" font-weight="700">CULTURE</text>
+                            <text x="0" y="8" text-anchor="middle" fill="#34D399" font-family="JetBrains Mono" font-size="10" font-weight="700">&amp; ORG</text>
+                            <text x="0" y="23" text-anchor="middle" fill="#8CA0A0" font-family="Noto Sans JP" font-size="8">文化・組織</text>
+                        </g>
+
+                        <!-- Connection arrows -->
+                        <path d="M 242 140 L 286 140" stroke="rgba(56,189,248,0.5)" stroke-width="2" marker-end="url(#arrow)"/>
+                        <path d="M 414 140 L 456 140" stroke="rgba(56,189,248,0.5)" stroke-width="2" marker-end="url(#arrow)"/>
+                        <defs>
+                            <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="3" orient="auto">
+                                <path d="M0,0 L0,6 L8,3 z" fill="rgba(56,189,248,0.5)"/>
+                            </marker>
+                        </defs>
+
+                        <!-- Label bottom -->
+                        <text x="350" y="255" text-anchor="middle" fill="#8CA0A0" font-family="Noto Sans JP" font-size="10">技術・ユースケース・文化の3次元が同時に動く「複合ギアシステム」</text>
+                    </svg>
+                </div>
+            </div>
+
+            <h3>3つの変革次元</h3>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Technology</div>
+                    <h4>技術プラットフォームの向上</h4>
+                    <p>セルフサービスデータプラットフォームの構築・進化。ドメインチームが自律的にデータプロダクトを作成・提供できるインフラ整備。</p>
+                    <div class="char3-impact">→ プラットフォームの継続的改善</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Use Cases</div>
+                    <h4>ビジネスユースケースの実現</h4>
+                    <p>データプロダクトを通じて具体的なビジネス価値を提供する。ユースケースの成功が技術投資を正当化し、文化変革の触媒になる。</p>
+                    <div class="char3-impact">→ 価値の可視化と拡大</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Culture</div>
+                    <h4>文化・組織変革</h4>
+                    <p>行動様式・組織構造・価値観の進化。技術が文化変革を加速し、文化変革が技術の有用性を高める相互強化ループ。</p>
+                    <div class="char3-impact">→ 組織的行動の持続的変革</div>
+                </div>
+            </div>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">// よくある誤解：「まず組織変革、次に技術」</div>
+                <p>「最初に組織変革をしてから、技術は後で考える」というアプローチは<strong>失敗する</strong>とDehghaniは警告する。文化変革だけを試みてもアジリティのビジョンは動かない。変革的テクノロジー（大きな複合ギア）がスケールでの行動変容を加速するために必要だ。技術と文化は常に共創・再創造し合う関係にある。</p>
+            </div>
+
+            <!-- Key message callout -->
+            <div class="alert alert-sky" style="border-left-width: 6px; margin-top: 2.5rem;">
+                <div class="alert-title" style="font-size:1rem;">// Part V の本質的なメッセージ</div>
+                <p>Data Meshは純粋に社会的な概念でも純粋に技術的な概念でもない。<strong>社会技術的（<span class="en-term">Sociotechnical</span>）</strong>なパラダイムだ。テクノロジーと文化は複合ギアシステムのように互いに噛み合い、共に進化しなければならない。片方だけを動かそうとすると、システム全体が停滞する。組織変革を先にして技術を後回しにする戦略も、技術を先に整備して文化変革を後回しにする戦略も、どちらも不完全だ。両者が<strong>同時に、相互に強化し合いながら</strong>前進することが、Data Meshトランスフォーメーションの本質的な要件である。</p>
+            </div>
+        </section>
+
+        <!-- Section 5: Ch.16 Teams & Roles -->
+        <section id="ch16-teams">
+            <div class="section-header">
+                <div class="section-number">05</div>
+                <div>
+                    <span class="chapter-tag">Ch.16 / Teams &amp; Roles</span>
+                    <h2>Ch.16: チームトポロジーと役割</h2>
+                </div>
+            </div>
+
+            <p>Dehghaniは<span class="highlight">チームトポロジー</span>を同心円（<span class="en-term">Concentric Circles</span>）のモデルで説明する。各チームの相互作用の頻度と性質が明確に定義されており、コンウェイの法則（<span class="en-term">Conway's Law</span>）の含意を反映した構造だ。</p>
+
+            <h3>コアチームとイネーブラーチーム</h3>
+
+            <!-- Concentric circles diagram -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// チームトポロジー — 同心円モデル</div>
+                    <svg viewBox="0 0 600 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+                        <rect width="600" height="340" fill="transparent"/>
+                        <g transform="translate(300, 170)">
+                            <!-- Outer circle: Executive -->
+                            <circle cx="0" cy="0" r="155" fill="rgba(245,158,11,0.04)" stroke="rgba(245,158,11,0.25)" stroke-width="1.5" stroke-dasharray="4,4"/>
+                            <!-- Middle circle: Enablers -->
+                            <circle cx="0" cy="0" r="108" fill="rgba(99,102,241,0.05)" stroke="rgba(99,102,241,0.3)" stroke-width="1.5"/>
+                            <!-- Inner circle: Platform + Domain -->
+                            <circle cx="0" cy="0" r="60" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.5)" stroke-width="2"/>
+
+                            <!-- Inner label -->
+                            <text x="0" y="-14" text-anchor="middle" fill="#7DD3FC" font-family="JetBrains Mono" font-size="8.5" font-weight="700">PLATFORM TEAM</text>
+                            <text x="0" y="-2" text-anchor="middle" fill="#8CA0A0" font-family="Noto Sans JP" font-size="7.5">セルフサービスデータ</text>
+                            <text x="0" y="10" text-anchor="middle" fill="#38BDF8" font-family="JetBrains Mono" font-size="8.5" font-weight="700">+ DOMAIN TEAMS</text>
+                            <text x="0" y="22" text-anchor="middle" fill="#8CA0A0" font-family="Noto Sans JP" font-size="7.5">ドメインチーム群</text>
+
+                            <!-- Middle label (Enablers) -->
+                            <text x="0" y="-120" text-anchor="middle" fill="#818CF8" font-family="JetBrains Mono" font-size="8" font-weight="700">GOVERNANCE / ASSETS / CLOUD</text>
+                            <text x="0" y="-108" text-anchor="middle" fill="#8CA0A0" font-family="Noto Sans JP" font-size="7">イネーブラーチーム（頻繁な連携）</text>
+
+                            <!-- Outer label (Executive) -->
+                            <text x="0" y="-163" text-anchor="middle" fill="#FCD34D" font-family="JetBrains Mono" font-size="8" font-weight="700">EXECUTIVE LEADERSHIP TEAM</text>
+                            <text x="0" y="-150" text-anchor="middle" fill="#8CA0A0" font-family="Noto Sans JP" font-size="7">経営層チーム（非頻繁・障害除去）</text>
+
+                            <!-- Frequency labels at sides -->
+                            <text x="165" y="5" fill="#8CA0A0" font-family="JetBrains Mono" font-size="7">低頻度</text>
+                            <text x="115" y="5" fill="#818CF8" font-family="JetBrains Mono" font-size="7">中頻度</text>
+                            <text x="65" y="5" fill="#7DD3FC" font-family="JetBrains Mono" font-size="7">高頻度</text>
+                        </g>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label" style="background:rgba(56,189,248,0.1); color:#38BDF8;">Core Team</div>
+                    <h4>経営リーダーシップチーム</h4>
+                    <p>データ戦略ビジョンの策定、Data Meshのスポンサーシップ、健全性メトリクスの定義と収集。組織的な障害を除去する役割。連携頻度は低いが、方向性の設定と予算・権限付与において決定的。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label" style="background:rgba(56,189,248,0.1); color:#38BDF8;">Core Team</div>
+                    <h4>ドメインチーム</h4>
+                    <p>データプロダクトのオーナーシップ、リーダーシップとの優先事項の整合、ドメイン固有の知識の活用。プラットフォームチームと最も頻繁に連携する現場チーム。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label" style="background:rgba(56,189,248,0.1); color:#38BDF8;">Core Team</div>
+                    <h4>セルフサービスデータプラットフォームチーム</h4>
+                    <p>プラットフォームのオーナーシップ・保守・ロードマップ。ユーザーフィードバックに基づく機能実装。質問への対応窓口。ドメインチームと最も緊密に協働する。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label" style="background:rgba(99,102,241,0.1); color:#818CF8;">Enabler</div>
+                    <h4>ガバナンスチーム</h4>
+                    <p>ガバナンス原則・ガードレールの定義、標準準拠の保証、データ品質のゲートキーパー機能。プラットフォームチームとは頻繁に連携し、ドメインチームとはより低頻度で関与する。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label" style="background:rgba(99,102,241,0.1); color:#818CF8;">Enabler</div>
+                    <h4>アセットチーム</h4>
+                    <p>ドメイン横断の再利用可能なアセット（データスキーマ・変換ロジック・共通パターン等）を特定・抽出し、組織全体で活用できる形で提供する専門チーム。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label" style="background:rgba(99,102,241,0.1); color:#818CF8;">Enabler</div>
+                    <h4>クラウドファンデーションチーム</h4>
+                    <p>インフラの設定・プロビジョニングを担当。データプラットフォームが利用するクラウドインフラの基盤を整備する。セキュリティ・コンプライアンス・コスト管理も担う。</p>
+                </div>
+            </div>
+
+            <h3>主要役割一覧</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>役割</th>
+                            <th>所属チーム</th>
+                            <th>主な責務</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="highlight">データプロダクトオーナー</span></td>
+                            <td><span class="mono">Domain</span></td>
+                            <td>データプロダクトの成功に責任、ライフサイクル定義、コンシューマーの満足度向上</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">データプロダクト開発者</span></td>
+                            <td><span class="mono">Domain</span></td>
+                            <td>ドメインのデータプロダクトの構築・提供・保守</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">データオーナー</span></td>
+                            <td><span class="mono">Domain</span></td>
+                            <td>データのビジネス側の担当者、データ品質管理、アクセス管理</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">データスチュワード</span></td>
+                            <td><span class="mono">Platform / Domain / Governance</span></td>
+                            <td>アクセス管理、メタデータ標準の保証、データリテラシーの推進</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">データアーキテクト</span></td>
+                            <td><span class="mono">Platform / Domain</span></td>
+                            <td>技術的な連絡窓口、スケーラブルなアーキテクチャ設計、プロダクト構成の定義</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">データソリューションオーナー</span></td>
+                            <td><span class="mono">Platform</span></td>
+                            <td>プラットフォームのビジネス担当者、戦略・ロードマップの策定</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">データエンジニア</span></td>
+                            <td><span class="mono">Platform / Domain / Assets</span></td>
+                            <td>データ機能の実装、インジェスチョン・ストレージ・変換の開発</td>
+                        </tr>
+                        <tr>
+                            <td><span class="highlight">ユースケースオーナー</span></td>
+                            <td><span class="mono">Domain</span></td>
+                            <td>ユースケースのスコープ定義、実現可能性評価、成功指標の定義</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>コンウェイの法則とData Mesh</h3>
+
+            <blockquote>
+                "Organizations which design systems are constrained to produce designs which are copies of the communication structures of these organizations."
+                <cite>— Melvin Conway（コンウェイの法則）</cite>
+            </blockquote>
+
+            <p>コンウェイの法則の含意：<span class="highlight">推進したいアーキテクチャを反映したチーム構造を設計すること</span>。Data Meshでは分散型のアーキテクチャを推進するため、チーム構造も分散型であることが必要だ。すべてのコミュニケーションが有益なわけではない。過剰な相互依存は作業を妨げる。チームのスコープと集中したコミュニケーションを明確に定義することが重要だ。</p>
+        </section>
+
+        <!-- Section 6: Ch.16 Culture -->
+        <section id="ch16-culture">
+            <div class="section-header">
+                <div class="section-number">06</div>
+                <div>
+                    <span class="chapter-tag">Ch.16 / Culture</span>
+                    <h2>Ch.16: 文化変革</h2>
+                </div>
+            </div>
+
+            <p>Data Meshが要求する文化変革は根本的だ。<span class="highlight">データに対する組織の基本的な価値観</span>が変わらなければ、技術的な変革は持続しない。Dehghaniはいくつかの重要な「価値のシフト」を示す。</p>
+
+            <h3>価値の転換</h3>
+
+            <div class="value-shift-grid">
+                <div class="shift-col shift-col-before">
+                    <div class="shift-col-title">// FROM — 旧来の価値観</div>
+                    <div class="shift-item">データは収集すべき「資産」である</div>
+                    <div class="shift-item">収集したデータ量で成功を測る</div>
+                    <div class="shift-item">成功 = 構築したパイプライン数・モデル数</div>
+                    <div class="shift-item">データ管理はデータチームの責任</div>
+                    <div class="shift-item">中央集権型のデータガバナンス</div>
+                </div>
+                <div class="shift-col shift-col-after">
+                    <div class="shift-col-title">// TO — Data Meshの価値観</div>
+                    <div class="shift-item">データはユーザーに<strong>提供すべき「プロダクト」</strong></div>
+                    <div class="shift-item">データユーザーの満足度・ハッピネスで測る</div>
+                    <div class="shift-item">成功 = データを通じて生み出した<strong>価値</strong></div>
+                    <div class="shift-item">分析データは<strong>全員の責任</strong></div>
+                    <div class="shift-item">連合型・分散型のガバナンス</div>
+                </div>
+            </div>
+
+            <h3>Data Meshが促進する文化的価値</h3>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">VALUE 01</div>
+                    <h4>品質と有用性の規範化</h4>
+                    <p>データの品質と有用性がすべてのドメインにわたる当然の期待値として定着する。品質は専任チームの仕事ではなく、全員の日常業務の一部となる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">VALUE 02</div>
+                    <h4>クロスファンクショナルな知識共有</h4>
+                    <p>組織の壁を越えたデータとインサイトの共有が、組織的な価値として高く評価される。サイロを壊し、知識の流動性を高める文化。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">VALUE 03</div>
+                    <h4>信頼するが検証する文化</h4>
+                    <span class="assess-en">Trust-but-Verify Culture</span>
+                    <p>コンシューマーはデータの有効性をデフォルトで信頼しつつ、自分のユースケースへの適合性を検証する。自律性と責任のバランス。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">VALUE 04</div>
+                    <h4>データ駆動のイノベーション文化</h4>
+                    <p>データの発見と共有が効率化されることで、データ駆動のイノベーションを促進する文化が醸成される。ピアツーピアのデータ共有と実験の奨励。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">VALUE 05</div>
+                    <h4>自律性と相互運用性の両立</h4>
+                    <p>各ドメインは高い自律性を持ちつつ、標準的なインターフェースとプロトコルを通じて全体の相互運用性を維持する。自由と秩序の共存。</p>
+                </div>
+            </div>
+
+            <h3>抵抗への対処</h3>
+
+            <p>Data Mesh変革は必ず組織的な抵抗に直面する。Dehghaniは以下のアプローチを推奨する：</p>
+
+            <ul>
+                <li><strong>中央データチームへの配慮</strong>：脅威を感じる中央データチームの懸念に積極的に対処する。役割が「消える」のではなく「進化する」ことを明確に説明する</li>
+                <li><strong>ビジネスユニットの責任増加への対応</strong>：データ所有の追加責任を課されることへのビジネスユニットの抵抗を、共感と明確な説明で対処する</li>
+                <li><strong>アーリーアダプターの特定</strong>：組織内のアーリーアダプターを見つけ、内部チャンピオンとして育成する</li>
+                <li><strong>トレーニングと支援の提供</strong>：新しい責任を担うチームに継続的なトレーニングと支援を提供する</li>
+                <li><strong>パイロットによる価値実証</strong>：スケールする前に、パイロットプロジェクトで価値を実証する</li>
+            </ul>
+
+            <div class="alert alert-success">
+                <div class="alert-title" style="color:#34D399;">// 文化変革のパラドックス</div>
+                <p>文化変革は宣言によっては起こらない。技術的ツールと成功事例の積み上げが、実際の行動変容を生む。「まず文化を変えてから技術を導入する」というアプローチは本質を逆転させている。<strong>技術が文化を形成し、文化が技術の活用を深める</strong>という相互強化のサイクルが変革の現実だ。</p>
+            </div>
+        </section>
+
+        <!-- Section 7: Summary -->
+        <section id="summary">
+            <div class="section-header">
+                <div class="section-number">07</div>
+                <div>
+                    <span class="chapter-tag">Part V Summary</span>
+                    <h2>まとめ — Part Vの要点</h2>
+                </div>
+            </div>
+
+            <p>Part Vは、理論から実践への橋渡しとなる最終章群だ。以下の7つの要点がPart Vの核心を成す：</p>
+
+            <ul class="takeaway-list">
+                <li class="takeaway-item">
+                    <div class="takeaway-num">01</div>
+                    <div class="takeaway-body">
+                        <strong>8軸の自己診断で導入適否を判断する</strong>
+                        <p>すべての組織にData Meshが適しているわけではない。8つの評価軸（組織の複雑性・データ指向戦略・経営層のサポート・データ技術の中核化・アーリーアダプター気質・モダンエンジニアリング・ドメイン指向組織・長期的コミットメント）で準備度を評価し、中〜高スコアの組織が最良の採用候補となる。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">02</div>
+                    <div class="takeaway-body">
+                        <strong>Data MeshはデータStrategyの全体ではなく、その実現基盤だ</strong>
+                        <p>Data Meshは「なぜデータを活用するか」のビジョン（データ戦略）に対して、「どう実現するか」の手段（アーキテクチャ・組織・文化）を提供する。Daff Inc.の例が示すように、自己強化型の価値ループを実現するための基盤として機能する。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">03</div>
+                    <div class="takeaway-body">
+                        <strong>プラットフォームではなく、ドメインとユースケースから始める</strong>
+                        <p>DUTIフレームワーク（Domain→Use Case→Thin Slice→Increment）に従い、準備度の高いドメインから反復的に始める。最大の失敗パターンはプラットフォームを先に構築すること。ドメインチームの痛みがプラットフォームの要件を駆動しなければならない。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">04</div>
+                    <div class="takeaway-body">
+                        <strong>5フェーズの段階的実行（Discover→Align→Launch→Scale→Evolve）</strong>
+                        <p>ビッグバン移行ではなく、反復的・価値駆動の段階的アプローチが鍵。各フェーズで具体的な価値を生み出し、その学習を次フェーズに組み込む。アウトカムでの測定（パイプライン数ではなく価値）が重要。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">05</div>
+                    <div class="takeaway-body">
+                        <strong>社会技術的変革：技術と文化は同時に動かなければならない</strong>
+                        <p>複合ギアシステムの比喩が示すように、技術プラットフォームの向上・ビジネスユースケースの実現・文化・組織変革の3次元は同時に進行しなければならない。どれか一つだけを動かそうとすると全体が停滞する。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">06</div>
+                    <div class="takeaway-body">
+                        <strong>チームトポロジーはアーキテクチャを反映する（コンウェイの法則）</strong>
+                        <p>コアチーム（経営・ドメイン・プラットフォーム）とイネーブラーチーム（ガバナンス・アセット・クラウド基盤）からなる同心円モデルで、分散型アーキテクチャを組織構造でも体現する。各役割の責務と相互作用の頻度を明確にすることが重要。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">07</div>
+                    <div class="takeaway-body">
+                        <strong>文化変革は宣言ではなく、ツールと成功事例の積み上げで起こる</strong>
+                        <p>「データは収集すべき資産」から「データは提供すべきプロダクト」への価値転換は、技術的ツールの提供と具体的な成功事例の蓄積によって初めて実現する。信頼するが検証する（Trust-but-Verify）文化を醸成しながら、アーリーアダプターを内部チャンピオンとして活用する。</p>
+                    </div>
+                </li>
+            </ul>
+
+            <div class="alert alert-sky" style="border-left-width: 6px; margin-top: 2rem;">
+                <div class="alert-title" style="font-size: 1rem;">// Dehghaniのメッセージ — Data Meshの旅について</div>
+                <p>Dehghaniは本書を次のメッセージで締めくくる：Data Meshの採用は<span class="highlight">「変革の旅（<span class="en-term">Transformation Journey</span>）」</span>であり、一度限りのプロジェクトではない。その便益は時間の経過とスケールの拡大とともに複利的に増大する。組織がこのビジョンへの長期的なコミットメントを持ち、社会技術的な複合ギアを両手で動かし続けることができれば、データ主導の競争優位は必然的に実現する。「今日から始めることができる最初のステップは何か？」——それを問い続けることがData Meshの旅の出発点だ。</p>
+            </div>
+        </section>
+
+        <!-- Section 8: Sources -->
+        <section id="sources">
+            <div class="section-header">
+                <div class="section-number">08</div>
+                <div>
+                    <span class="chapter-tag">References</span>
+                    <h2>参考文献</h2>
+                </div>
+            </div>
+
+            <ul class="sources-list">
+                <li>
+                    <span class="source-num">[1]</span>
+                    <div class="source-text">
+                        Zhamak Dehghani, <em>Data Mesh: Delivering Data-Driven Value at Scale</em>, O'Reilly Media, 2022. ISBN: 978-1-492-09239-3.<br>
+                        <a href="https://www.oreilly.com/library/view/data-mesh/9781492092384/">https://www.oreilly.com/library/view/data-mesh/9781492092384/</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[2]</span>
+                    <div class="source-text">
+                        TechTarget / BookShelf — Data Mesh Chapter 15 excerpt (PDF).<br>
+                        <a href="https://cdn.ttgtmedia.com/rms/editorial/bookshelf-datamesh.pdf">https://cdn.ttgtmedia.com/rms/editorial/bookshelf-datamesh.pdf</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[3]</span>
+                    <div class="source-text">
+                        Thoughtworks — Data Mesh book excerpt (PDF).<br>
+                        <a href="https://www.thoughtworks.com/content/dam/thoughtworks/documents/books/bk_data_mesh_excerpt.pdf">https://www.thoughtworks.com/content/dam/thoughtworks/documents/books/bk_data_mesh_excerpt.pdf</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[4]</span>
+                    <div class="source-text">
+                        AWS Prescriptive Guidance — Data Mesh Strategy Framework (PDF).<br>
+                        <a href="https://docs.aws.amazon.com/pdfs/prescriptive-guidance/latest/strategy-data-mesh/strategy-data-mesh.pdf">https://docs.aws.amazon.com/pdfs/prescriptive-guidance/latest/strategy-data-mesh/strategy-data-mesh.pdf</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[5]</span>
+                    <div class="source-text">
+                        Nextdata (Dehghani interview) — "Data Mesh is Neither Socio Nor Technical, It's Sociotechnical".<br>
+                        <a href="https://www.nextdata.com/our-pov/data-mesh-is-neither-socio-nor-technical-its-sociotechnical">https://www.nextdata.com/our-pov/data-mesh-is-neither-socio-nor-technical-its-sociotechnical</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[6]</span>
+                    <div class="source-text">
+                        Caroli.org — DUTI Framework: Data Mesh Readiness.<br>
+                        <a href="https://caroli.org/en/data-mesh-readiness/">https://caroli.org/en/data-mesh-readiness/</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[7]</span>
+                    <div class="source-text">
+                        ISG Research — "The Benefits of Data Mesh Extend to Organizational and Cultural Change".<br>
+                        <a href="https://research.isg-one.com/analyst-perspectives/the-benefits-of-data-mesh-extend-to-organizational-and-cultural-change">https://research.isg-one.com/analyst-perspectives/the-benefits-of-data-mesh-extend-to-organizational-and-cultural-change</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[8]</span>
+                    <div class="source-text">
+                        Datadef — Data Mesh Guide (en).<br>
+                        <a href="https://datadef.io/guides/en/data-mesh">https://datadef.io/guides/en/data-mesh</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[9]</span>
+                    <div class="source-text">
+                        Martin Fowler — "Data Mesh Principles and Logical Architecture".<br>
+                        <a href="https://martinfowler.com/articles/data-mesh-principles.html">https://martinfowler.com/articles/data-mesh-principles.html</a>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- ─── Footer ─── -->
+    <footer>
+        <div class="footer-source">
+            Zhamak Dehghani — Data Mesh (O'Reilly, 2022) Part V Ch.15–16 学習ノート
+        </div>
+        <p>
+            <a href="../index.html" style="color:var(--accent-light); font-family:'JetBrains Mono',monospace; font-size:0.85rem;">← トップに戻る</a>
+        </p>
+        <p class="footer-disclaimer">
+            本記事はZhamak Dehghani著『Data Mesh』（O'Reilly Media, 2022）の個人学習ノートです。書籍の内容を要約・解説したものであり、著作権は原著者およびO'Reilly Mediaに帰属します。
+        </p>
+    </footer>
+
+    <script>
+        // ─── Smooth scroll for TOC ───
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // ─── Active nav link highlighting ───
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-links a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.style.color = '';
+                        if (link.getAttribute('href') === '#' + entry.target.id) {
+                            link.style.color = 'var(--accent)';
+                        }
+                    });
+                }
+            });
+        }, { rootMargin: '-20% 0px -60% 0px' });
+
+        sections.forEach(section => observer.observe(section));
+
+        // ─── Subtle card entrance animation ───
+        const cards = document.querySelectorAll('.char3-card, .assess-card, .card');
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        cards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(16px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            cardObserver.observe(card);
+        });
+    </script>
+
+</body>
+</html>
