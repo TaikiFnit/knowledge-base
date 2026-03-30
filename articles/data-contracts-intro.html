@@ -1,0 +1,2074 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Contracts — なぜ今データコントラクトが必要か</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #06B6D4;
+            --accent-light: #22D3EE;
+            --accent-dim: rgba(6, 182, 212, 0.15);
+            --accent-glow: rgba(6, 182, 212, 0.08);
+            --bg-deep: #070B0C;
+            --bg-secondary: #0A0F11;
+            --bg-tertiary: #101A1C;
+            --text-primary: #E8EAED;
+            --text-secondary: #8CA0A6;
+            --border: #15222A;
+            --border-accent: rgba(6, 182, 212, 0.3);
+            --danger: #EF4444;
+            --indigo: #6366F1;
+            --amber: #F59E0B;
+            --teal-deep: #0E7490;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(6, 182, 212, 0.06) 0%, transparent 55%),
+                radial-gradient(circle at 85% 70%, rgba(14, 116, 144, 0.04) 0%, transparent 55%),
+                radial-gradient(circle at 50% 90%, rgba(6, 182, 212, 0.03) 0%, transparent 40%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #080D0F 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        /* ─── Header & Navigation ─── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(7, 11, 12, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 40%, var(--teal-deep) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .book-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: rgba(16, 26, 28, 0.7);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Table of Contents ─── */
+        .toc-section {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+
+        .toc-box {
+            background: rgba(16, 26, 28, 0.6);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: color 0.2s ease;
+            padding: 0.3rem 0;
+        }
+
+        .toc-list li a:hover {
+            color: var(--accent-light);
+        }
+
+        .toc-num {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 34px;
+        }
+
+        /* ─── Main Content ─── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(16, 26, 28, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--teal-deep), transparent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 70px;
+            opacity: 0.9;
+        }
+
+        .chapter-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '//';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.4rem;
+            color: var(--text-primary);
+            line-height: 1.85;
+        }
+
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin: 1rem 0 1.5rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        /* ─── Tables ─── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(10, 15, 17, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(6, 182, 212, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(6, 182, 212, 0.04);
+        }
+
+        /* ─── Alert / Callout Boxes ─── */
+        .alert {
+            padding: 1.4rem 1.6rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-sky {
+            border-left-color: var(--accent);
+            background: rgba(6, 182, 212, 0.08);
+        }
+
+        .alert-success {
+            border-left-color: #34D399;
+            background: rgba(52, 211, 153, 0.08);
+        }
+
+        .alert-danger {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-indigo {
+            border-left-color: var(--indigo);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .alert-amber {
+            border-left-color: var(--amber);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-sky .alert-title { color: var(--accent-light); }
+        .alert-success .alert-title { color: #34D399; }
+        .alert-danger .alert-title { color: var(--danger); }
+        .alert-indigo .alert-title { color: var(--indigo); }
+        .alert-amber .alert-title { color: var(--amber); }
+
+        .alert p { margin-bottom: 0.5rem; }
+        .alert p:last-child { margin-bottom: 0; }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(10, 15, 17, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: rgba(10, 15, 17, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(6, 182, 212, 0.12);
+        }
+
+        /* ─── Char3 Cards (3-column feature blocks) ─── */
+        .char3-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .char3-card {
+            background: rgba(10, 15, 17, 0.9);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.8rem;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .char3-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(6, 182, 212, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .char3-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.12;
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            line-height: 1;
+        }
+
+        .char3-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .char3-card h4 {
+            font-size: 1.15rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        .char3-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+
+        .char3-impact {
+            font-size: 0.82rem;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid var(--border);
+            padding-top: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ─── Assess Grid ─── */
+        .assess-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .assess-card {
+            background: rgba(10, 15, 17, 0.85);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            padding: 1.4rem 1.6rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .assess-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 4px 20px rgba(6, 182, 212, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .assess-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 0.4rem;
+        }
+
+        .assess-card h4 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+        }
+
+        .assess-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .assess-card p {
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        /* ─── Phase Timeline ─── */
+        .phase-list {
+            list-style: none;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .phase-list::before {
+            content: '';
+            position: absolute;
+            left: 18px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+            opacity: 0.3;
+        }
+
+        .phase-item {
+            display: flex;
+            gap: 1.2rem;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .phase-dot {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--accent-dim);
+            border: 2px solid var(--border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--accent);
+            z-index: 1;
+        }
+
+        .phase-content h4 {
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+            color: var(--text-primary);
+        }
+
+        .phase-content p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        .phase-timing {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            margin-bottom: 0.3rem;
+        }
+
+        /* ─── Diagram Containers ─── */
+        .diagram-wrap {
+            margin: 2.5rem 0;
+            background: rgba(10, 15, 17, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .diagram-inner {
+            padding: 2rem 2.5rem;
+            position: relative;
+        }
+
+        .diagram-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* ─── Highlight Inline ─── */
+        .highlight {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .en-term {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 0.8rem 1.5rem;
+            margin: 1.5rem 0;
+            background: rgba(6, 182, 212, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        blockquote cite {
+            display: block;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-style: normal;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Stat Callout ─── */
+        .stat-callout {
+            background: rgba(10, 15, 17, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-callout-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-row-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-big {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ─── Part Link Banner ─── */
+        .part-link-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(10, 15, 17, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem 1.8rem;
+            margin: 3rem 0;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .part-link-banner .part-info {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .part-link-banner .part-info strong {
+            color: var(--text-primary);
+        }
+
+        .part-link-btn {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-light);
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .part-link-btn:hover {
+            background: rgba(6, 182, 212, 0.25);
+            text-decoration: none;
+            opacity: 1;
+        }
+
+        /* ─── Value Shift Table ─── */
+        .value-shift-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .shift-col {
+            background: rgba(10, 15, 17, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .shift-col-before {
+            border-top: 3px solid var(--danger);
+        }
+
+        .shift-col-after {
+            border-top: 3px solid #34D399;
+        }
+
+        .shift-col-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .shift-col-before .shift-col-title { color: var(--danger); }
+        .shift-col-after .shift-col-title { color: #34D399; }
+
+        .shift-item {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.5;
+        }
+
+        .shift-item:last-child { border-bottom: none; }
+
+        /* ─── Summary Takeaways ─── */
+        .takeaway-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .takeaway-item {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 1.2rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .takeaway-item:last-child { border-bottom: none; }
+
+        .takeaway-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 40px;
+            opacity: 0.8;
+        }
+
+        .takeaway-body strong {
+            display: block;
+            color: var(--text-primary);
+            font-size: 1.02rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .takeaway-body p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.65;
+        }
+
+        /* ─── Code blocks ─── */
+        pre {
+            background: rgba(7, 11, 12, 0.95);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.7;
+            color: #94D1E0;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            color: var(--accent-light);
+            background: rgba(6, 182, 212, 0.1);
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+            font-size: inherit;
+        }
+
+        /* ─── Sources Section ─── */
+        .sources-list {
+            list-style: none;
+            margin: 0;
+        }
+
+        .sources-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .sources-list li:last-child {
+            border-bottom: none;
+        }
+
+        .source-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 28px;
+            margin-top: 0.1rem;
+        }
+
+        .source-text {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .source-text a {
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            word-break: break-all;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-source {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(16, 26, 28, 0.8);
+            border: 1px solid var(--border);
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+        }
+
+        .footer-disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0.75rem auto 0;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .nav-links { display: none; }
+            section { padding: 2rem 1.5rem; }
+            .section-number { font-size: 1.8rem; min-width: 50px; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .toc-list { grid-template-columns: 1fr; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 0.75rem 0.9rem; }
+            .char3-grid { grid-template-columns: 1fr; }
+            .value-shift-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .hero { padding: 3rem 1.5rem 2rem; }
+            .hero-stats { grid-template-columns: 1fr; }
+            .stat-row-grid { grid-template-columns: 1fr; }
+            .assess-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ─── Utility ─── */
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header>
+        <nav>
+            <a href="../index.html" class="logo">
+                <!-- DC monogram: contract handshake-inspired geometric mark in teal -->
+                <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Data Contracts logo">
+                    <!-- D shape: arc on left -->
+                    <path d="M3 4 L3 18 L7 18 Q13 18 13 11 Q13 4 7 4 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+                    <!-- C shape: open arc on right -->
+                    <path d="M19 7 Q14 4 14 11 Q14 18 19 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                    <!-- Connection dot center -->
+                    <circle cx="13.5" cy="11" r="1" fill="currentColor"/>
+                </svg>
+                Data Contracts
+            </a>
+            <ul class="nav-links">
+                <li><a href="#overview">Part I 概要</a></li>
+                <li><a href="#ch1-gigo">GIGO</a></li>
+                <li><a href="#ch1-evolution">アーキテクチャ進化</a></li>
+                <li><a href="#ch2-quality">データ品質</a></li>
+                <li><a href="#ch2-metrics">品質測定</a></li>
+                <li><a href="#ch3-scale">スケーリング</a></li>
+                <li><a href="#ch4-contracts">コントラクト</a></li>
+                <li><a href="#summary">まとめ</a></li>
+            </ul>
+            <a href="../index.html" class="back-link">← トップに戻る</a>
+        </nav>
+    </header>
+
+    <!-- ─── Hero ─── -->
+    <div class="hero">
+        <div class="eyebrow">学習ノート / O'REILLY / Part I</div>
+        <h1>Data Contracts — なぜ今データコントラクトが必要か</h1>
+        <p class="subtitle">Part I: Introduction to the Data Contract Architecture — 学習ノート</p>
+        <p class="subtitle" style="font-size:1rem; margin-bottom:1.5rem;">Chad Sanderson, Mark Freeman, B.E. Schmidt著『Data Contracts』（O'Reilly, 2025）Part I 第1〜4章の要約</p>
+        <div class="book-info">
+            <span>Chad Sanderson, Mark Freeman, B.E. Schmidt</span>
+            <span style="opacity:0.4;">|</span>
+            <span>O'Reilly Media, 2025</span>
+            <span style="opacity:0.4;">|</span>
+            <span>ISBN: 9781098157623</span>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">4</div>
+                <div class="stat-label">対象章（第1〜4章）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">$663K</div>
+                <div class="stat-label">大規模リファクタリングの平均コスト（1,500 staff days）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">11</div>
+                <div class="stat-label">リアクティブなデータ品質解決ライフサイクルのステップ数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">1:4</div>
+                <div class="stat-label">データ開発者 対 ソフトウェア開発者の比率（欧州上位50社中央値）</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2026-03-30 &nbsp;|&nbsp; 読了目安: ~25分</p>
+    </div>
+
+    <!-- ─── Table of Contents ─── -->
+    <div class="toc-section">
+        <div class="toc-box">
+            <div class="toc-title">// Table of Contents</div>
+            <ul class="toc-list">
+                <li><a href="#overview"><span class="toc-num">00</span>Part I 概要</a></li>
+                <li><a href="#ch1-gigo"><span class="toc-num">01</span>Ch.1：Garbage-In, Garbage-Out サイクル</a></li>
+                <li><a href="#ch1-evolution"><span class="toc-num">02</span>Ch.1：データアーキテクチャの進化</a></li>
+                <li><a href="#ch2-quality"><span class="toc-num">03</span>Ch.2：データ品質の再定義</a></li>
+                <li><a href="#ch2-metrics"><span class="toc-num">04</span>Ch.2：データ品質の測定</a></li>
+                <li><a href="#ch3-scale"><span class="toc-num">05</span>Ch.3：スケーリングの課題</a></li>
+                <li><a href="#ch4-contracts"><span class="toc-num">06</span>Ch.4：データコントラクトとは何か</a></li>
+                <li><a href="#summary"><span class="toc-num">07</span>まとめ — Part Iの要点</a></li>
+                <li><a href="#sources"><span class="toc-num">08</span>参考文献</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ─── Part Series Banner ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Data Contracts 学習ノート
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="#" class="part-link-btn">Part I — なぜ今必要か ◀</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Main Content ─── -->
+    <main>
+
+        <!-- Section 0: Overview -->
+        <section id="overview">
+            <div class="section-header">
+                <div class="section-number">00</div>
+                <div>
+                    <span class="chapter-tag">Part I Overview</span>
+                    <h2>Part I 概要</h2>
+                </div>
+            </div>
+
+            <p>Part I（第1〜4章）は、データコントラクトの「なぜ」と「何か」を確立する。データ品質を劣化させてきた歴史的な力を追跡し、データ品質が本当に何を意味するかを定義し、データインフラをスケールさせる際の組織的・技術的課題を検討し、解決策として<span class="highlight">データコントラクト・アーキテクチャ</span>を導入する。</p>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// Part I の中心的主張</div>
+                <p>「<span class="en-term">Data contracts</span>—agreements between data producers and consumers that are established, updated, and enforced via an API—are necessary for scaling and maintaining data-related change management within an organization.」</p>
+                <p>データ問題は本質的に<strong>複雑なシステム内の変更管理問題</strong>である。データコントラクトは、組織がスケールしてもその変更管理を維持するために必要なメカニズムだ。</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Chapter 1</div>
+                    <h4>なぜ今データコントラクトが必要か</h4>
+                    <p>データ負債（<span class="en-term">data debt</span>）の概念、GIGOサイクルの複合的影響、Convoyのケーススタディ、データアーキテクチャの歴史的進化（プレモダン〜データ中心AI時代）を論じる。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 2</div>
+                    <h4>データ品質は完璧なデータについてではない</h4>
+                    <p>「データ品質 ＝ ビジネス用途に適合すること」という核心的洞察。Wang et al. の定義の拡張、OLTP/OLAPの翻訳問題、Kelpケーススタディ、品質測定の先行・後行指標。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 3</div>
+                    <h4>データインフラをスケールさせる際の課題</h4>
+                    <p>ソフトウェア開発 vs データ開発の比較、大規模リファクタリングのコスト、コンセプトドリフトの4類型、Dunbar の数、Conway の法則がデータシステムに与える影響。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 4</div>
+                    <h4>データコントラクト入門</h4>
+                    <p>ステークホルダー（プロデューサー vs コンシューマー）の定義、11ステップの反応的解決ライフサイクル vs 7ステップのコントラクトワークフロー、データコントラクト vs データオブザーバビリティの比較。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: Ch.1 GIGO -->
+        <section id="ch1-gigo">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <div>
+                    <span class="chapter-tag">Ch.1 / GIGO Cycle</span>
+                    <h2>Ch.1: Garbage-In, Garbage-Out サイクル</h2>
+                </div>
+            </div>
+
+            <p>第1章の出発点は、業界がいかにして<span class="highlight">データ負債</span>（<span class="en-term">data debt</span>）という慢性疾患を蓄積してきたか、という問いだ。ビッグデータ・クラウドコンピューティング・モダンデータスタックの台頭は、データの利活用を加速させた反面、制約の欠如による深刻な負の遺産を生んだ。</p>
+
+            <h3>データ負債（Data Debt）の定義</h3>
+
+            <blockquote>
+                "Data debt refers to the outcome of incremental technology choices made to expedite the delivery of data infrastructure at the expense of its long-term trustworthiness."
+                <cite>— Chad Sanderson et al., Data Contracts (O'Reilly, 2025) Ch.1</cite>
+            </blockquote>
+
+            <p>技術的負債（<span class="en-term">tech debt</span>）に類似しているが、データ負債には2つの重要な違いがある：</p>
+
+            <div class="value-shift-grid">
+                <div class="shift-col shift-col-before">
+                    <div class="shift-col-title">Tech Debt（技術的負債）</div>
+                    <div class="shift-item">速度 vs <strong>保守性</strong>のトレードオフ</div>
+                    <div class="shift-item">個別マイクロサービスを独立してリファクタリング可能</div>
+                    <div class="shift-item">コードは可視化・差分確認が容易</div>
+                    <div class="shift-item">影響範囲の特定が比較的容易</div>
+                </div>
+                <div class="shift-col shift-col-after">
+                    <div class="shift-col-title">Data Debt（データ負債）</div>
+                    <div class="shift-item">速度 vs <strong>信頼性</strong>のトレードオフ ← より深刻</div>
+                    <div class="shift-item">緊密に結合した依存関係により解消が困難</div>
+                    <div class="shift-item">サイレントな失敗（誤った出力が検出されない）</div>
+                    <div class="shift-item">広範な組織的合意なしには変更不可能</div>
+                </div>
+            </div>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">// データ負債の悪循環</div>
+                <p>「Data debt is a vicious cycle. It depreciates trust in the data, which attacks the core value proposition of the data team. And unwinding data debt is not easy—not even close.」</p>
+                <p>データ負債は信頼を侵食し、信頼の低下はデータチームの存在意義を脅かす。解消はソフトウェアのリファクタリングより遥かに困難だ。</p>
+            </div>
+
+            <h3>GIGO（Garbage-In, Garbage-Out）サイクル</h3>
+
+            <p><span class="en-term">GIGO</span> とは、ステークホルダーの期待を満たさないデータがパイプラインに入り込む状態を指す。GIGOが特に問題なのは、<span class="highlight">事後的にしか対処できない</span>という点だ。つまり問題が発生した後に必ずコストが生じる。</p>
+
+            <p>GIGOの影響は時間とともに指数関数的に増大する。修正が積み重なるにつれ、特定の個人に<span class="en-term">institutional knowledge hotspot</span>（制度的知識の集積点）が形成される。この個人が退職すると、そのコンテキストを取り戻すことは極めて困難になる。ソフトウェア開発者に対するデータ開発者の比率が増加するにつれ、GIGOによるデータ負債は指数関数的に増加する。</p>
+
+            <!-- Convoy Case Study -->
+            <div class="alert alert-amber">
+                <div class="alert-title">// ケーススタディ：Convoy（物流スタートアップ）</div>
+                <p>Convoyのエンジニアリングチームは、Spotifyの組織モデルから採用した「ポッド（pod）」に分割されていた。各ポッドは独立して意思決定し、異なる問題に集中していた：</p>
+                <p>• ML モデルでカスタマーサービス問題の優先順位付けを行うポッド<br>
+                • コア価格モデルを担当するポッド<br>
+                • 最大パートナーへのリアルタイム出荷ETAアナリティクスを担当するポッド</p>
+                <p>ポッド間のコミュニケーションは最小限だった。その結果、あるポッドのソフトウェアエンジニアがカラム名の変更・カラムの削除・ビジネスロジックの変更・イベントの停止などを行っても、データコンシューマーには何も伝わらなかった。</p>
+                <p><strong>重要な観察：</strong>スタートアップが約20名以下のエンジニアの段階では、データエンジニアはまだ複数のサイロ化されたドメインに分裂していない。20名を超え始めると、このコミュニケーション構造は機能しなくなる。</p>
+            </div>
+        </section>
+
+        <!-- Section 2: Ch.1 Evolution -->
+        <section id="ch1-evolution">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <div>
+                    <span class="chapter-tag">Ch.1 / Evolution</span>
+                    <h2>Ch.1: データアーキテクチャの進化</h2>
+                </div>
+            </div>
+
+            <p>現代のデータ品質危機を理解するには、どのように今日の状況に至ったかを把握する必要がある。第1章は、プレモダン時代からデータ中心AI時代まで、<span class="highlight">アーキテクチャの歴史的変遷</span>を丁寧に辿る。</p>
+
+            <!-- Timeline Diagram -->
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// データアーキテクチャの歴史的進化</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">01</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Pre-2000s — プレモダン時代</div>
+                                <h4>オンプレミス データウェアハウス時代</h4>
+                                <p>Oracle・IBM DB2・Microsoft SQL Server などのオンプレミスDWH。高価な ETL ツール（Informatica, SSIS）。<strong>データアーキテクト</strong>が ERD（Entity Relationship Diagram）を設計し、論理的・意味的なビジネス構造を表現していた。Bill Inmon の4原則（主題指向・統合・時系列・非揮発性）に基づくデータウェアハウスが単一の真実ソース（SSOT）として機能した。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">02</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">2000s–2010s — Software Eats the World</div>
+                                <h4>アジャイル・クラウド変革時代</h4>
+                                <p>Marc Andreessen が「ソフトウェアが世界を食べている（<span class="en-term">Software Is Eating the World</span>）」と宣言（WSJ, 2011）。Thoughtworks が普及させたアジャイル手法、Mark Zuckerberg の「Move fast and break things」文化。AWS・Azure・GCPがクラウドインフラを民主化。<strong>データアーキテクチャは意図的に軽視された</strong>——ERD設計に数ヶ月を費やすことはアジャイルの「移動速度」と相容れなかったのだ。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">03</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">2010s — マイクロサービス時代</div>
+                                <h4>モノリス → マイクロサービスへの分解</h4>
+                                <p>「<span class="en-term">Microservices</span>」は Thoughtworks コンサルタントが初めて使用し、Martin Fowler のブログで広まった。小規模・自律的・独立してデプロイ可能なサービスへの分解。<strong>データアーキテクチャのサイレントな犠牲者：</strong>マイクロサービス全体にデータが分散し、ガバナンスのないデータレイクが台頭。これが「<span class="en-term">data swamp</span>（データ沼）」を生んだ。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">04</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">2012–2022 — モダンデータスタック時代</div>
+                                <h4>Snowflake・dbt・Fivetran の時代</h4>
+                                <p><span class="en-term">Modern Data Stack (MDS)</span>：Snowflake（クラウドベースSQL変換・ストレージの市場制覇）、Google BigQuery・Amazon Redshift・Databricks、ELTツール（Fivetran・Airbyte）、dbt（バージョン管理・テスト・ドキュメント付きSQL変換CLI）。プロダクト主導型成長（<span class="en-term">Product-Led Growth, PLG</span>）とVC投資がMDSの急速な普及を促した。<br><br><strong>問題の顕在化：</strong>①単一の真実ソースなし ②プロデューサーとコンシューマーの断絶 ③データへの信頼の喪失 ④コストの急騰。「Data teamはかつてないほど大規模になり、かつてないほど高コストになり、そして議論の余地なくかつてないほど信頼されなくなった。」</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">05</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Post-2020 — データ中心AI時代</div>
+                                <h4>Andrew Ng の Data-Centric AI とシフトレフト</h4>
+                                <p>Andrew Ng の 2021 年キャンペーンにより<span class="en-term">Data-Centric AI</span>が広く受容される。モデル中心アプローチ（モデルのチューニング・計算資源の増強）では限界があり、<strong>データの品質と選定を改善することでMLモデルの性能を向上させる</strong>アプローチが優位に。MLベンダーは 2014 年の約5社から 2024 年には 200 社超へ急増（Matt Turck 年次データベンダーレポート）。競争優位は今やデータの品質と独自性に集中する。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>「アクティブ顧客」問題 ——SQLの実例</h3>
+
+            <p>アーキテクチャ進化の実害を示す典型例として、本書は「今月のアクティブ顧客数は？」というシンプルなクエリが、上流データの変更によりどれほど複雑になるかを描写する。</p>
+
+            <p><strong>初期クエリ（シンプル）：</strong>「訪問（<code>visit</code>）」はユーザーがアプリを開いた回数として定義されていた。</p>
+
+            <pre><code>WITH visit_counts AS (
+  SELECT customer_id, COUNT(*) AS visit_count
+  FROM visits
+  WHERE DATE_FORMAT(visit_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  GROUP BY customer_id
+)
+SELECT COUNT(DISTINCT customers.customer_id) AS active_customers
+FROM customers
+LEFT JOIN visit_counts ON visit_counts.customer_id = customers.customer_id
+WHERE COALESCE(visit_counts.visit_count, 0) >= 3;</code></pre>
+
+            <p>その後、上流のエンジニアリングチームが仕様を変更：「<code>impression</code>（インプレッション）」＝ 任意の画面への遷移、「<code>visit</code>（訪問）」＝ 10秒以上の活動期間。クエリは複雑な <code>CASE WHEN</code> ロジックに膨れ上がる：</p>
+
+            <pre><code>WITH impressions_counts AS (
+  SELECT customer_id,
+    SUM(CASE WHEN duration_seconds >= 10 THEN 1 ELSE 0 END) AS visit_count,
+    SUM(CASE WHEN duration_seconds < 10 THEN 1 ELSE 0 END) AS impression_count
+  FROM impressions
+  WHERE DATE_FORMAT(impression_date, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')
+  GROUP BY customer_id
+  HAVING (visit_count + impression_count) >= 3
+)
+SELECT COUNT(DISTINCT customers.customer_id) AS active_customers
+FROM customers
+LEFT JOIN impressions_counts ON impressions_counts.customer_id = customers.customer_id
+WHERE COALESCE(impressions_counts.visit_count, 0) >= 3;</code></pre>
+
+            <p>上流変更が重なるごとにクエリは肥大化し、<code>CASE</code>文や <code>WHERE</code>句が存在する理由のコンテキストはすべて失われる。新しいデータ開発者は独自の目的のために「車輪の再発明」を行い、コアメトリクスの定義が組織内で増殖し続ける。これが<span class="highlight">データ負債の典型的な発生メカニズム</span>だ。</p>
+
+            <h3>Shift Left Data — 解決策への予兆</h3>
+
+            <p><span class="en-term">Shift Left Data</span>とは、データパイプラインにおいて、品質・ガバナンス・コントラクトの適用をより上流（データが生産されるソフトウェアエンジニアに近い側）に移動させる動きを指す。この概念が第4章のデータコントラクト・アーキテクチャの前提となる。</p>
+        </section>
+
+        <!-- Section 3: Ch.2 Data Quality -->
+        <section id="ch2-quality">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <div>
+                    <span class="chapter-tag">Ch.2 / Data Quality</span>
+                    <h2>Ch.2: データ品質の再定義</h2>
+                </div>
+            </div>
+
+            <p>第2章の核心的洞察は、データ品質の根本的な誤解を解くことにある。多くのデータキャリアの初期の過ちは、<span class="highlight">「完璧なデータ」の価値でデータ品質を売り込もうとすること</span>だ。データ実践者以外のほとんどの人々はデータ自体には関心がない——彼らが関心を持つのは、データで<em>何ができるか</em>だ。</p>
+
+            <h3>データ品質の定義の変遷</h3>
+
+            <p>データの歴史的初記録は紀元前19,000年まで遡るが、本書は1970年に Edgar F. Codd の論文「A Relational Model of Data for Large Shared Data Banks」によってリレーショナルデータベースの規律が生まれた時点から論じ始める。</p>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// データ品質の定義の進化</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:1rem; color:#22D3EE; line-height:1.4;">Wang et al. (1996)</div>
+                        <div class="stat-desc">「データコンシューマーが使用するのに適したデータ」<br><em>MIT データ品質研究グループ、最も引用される定義</em></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:2rem;">→</div>
+                        <div class="stat-desc">拡張</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:1rem; color:#06B6D4; line-height:1.4;">本書の定義 (2025)</div>
+                        <div class="stat-desc">「データライフサイクル全体において、データ資産の<em>正確性の度合い</em>を理解し、コンシューマーの使用目的に適合する度合いで、そのデータを運用する際のトレードオフを把握する組織の能力」</div>
+                    </div>
+                </div>
+            </div>
+
+            <p>本書の定義の重要なフレーズを分析しよう：</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">①</div>
+                    <div class="char3-label">Key Phrase 1</div>
+                    <h4>「様々な正確性の度合いでのトレードオフ」</h4>
+                    <p>NoSQL の台頭（1998年 Carlo Strozzi が造語、2009年 Johan Oskarsson が普及）以来、リレーショナルデータベース以外のデータ保存方法が急増し、複雑さとトレードオフが増大した。データチームが行うトレードオフを意識することが個人の行動変容の鍵となる。</p>
+                    <div class="char3-impact">→ 完璧主義より戦略的トレードオフ意識</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">②</div>
+                    <div class="char3-label">Key Phrase 2</div>
+                    <h4>「正確性の度合いを理解する能力」</h4>
+                    <p>完璧なデータが必要だという信念が陥穽だ。データは絶えず劣化しており、永遠に完結することのない継続的なモニタリングと反復が必要。健康指標の計測（血圧計・体重計・体温計）は本質的に不正確だが、予防医療においては極めて有用だ。</p>
+                    <div class="char3-impact">→ 完璧より「十分に良い」を目指す</div>
+                </div>
+            </div>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// 核心的洞察</div>
+                <p>「Central to this chapter is the idea that data quality is not about data being pristine, but instead being 'fit for use' for your stakeholders. At the end of the day, technical and data debt should ideally be a strategic trade-off where you are balancing effort and robustness with ROI.」</p>
+                <p>データ品質問題のフレーミングを「技術的完璧さ」から「重要なビジネスワークフロー（多くは収益に直結する）へのリスク」へと転換することで、経営層の関心を引きつけることができる。</p>
+            </div>
+
+            <h3>OLTP と OLAP の断絶 ——翻訳問題の根源</h3>
+
+            <p>多くのデータ品質問題の根底には、<span class="en-term">OLTP</span>（Online Transaction Processing）と<span class="en-term">OLAP</span>（Online Analytical Processing）のサイロが存在する。</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>観点</th>
+                            <th>OLTP（オンライントランザクション処理）</th>
+                            <th>OLAP（オンライン分析処理）</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>最適化対象</strong></td>
+                            <td>高速データトランザクション・現在状態の維持</td>
+                            <td>大量データのスキャン・統計計算</td>
+                        </tr>
+                        <tr>
+                            <td><strong>主要操作</strong></td>
+                            <td>CRUD + ACID準拠 + 第三正規形（3NF）</td>
+                            <td>非正規化データ・複雑なビジネスロジック・反復的探索</td>
+                        </tr>
+                        <tr>
+                            <td><strong>主要ペルソナ</strong></td>
+                            <td>ソフトウェアエンジニア（データの生産者）</td>
+                            <td>データアナリスト・データサイエンティスト・MLエンジニア</td>
+                        </tr>
+                        <tr>
+                            <td><strong>限界</strong></td>
+                            <td>複雑な分析クエリで本番DBが停止するリスク</td>
+                            <td>OLTPからのレプリケーションで複雑性と誤解が増大</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>OLTPからOLAPへのデータレプリケーションは、組織のデータ理解において大きなメリットをもたらす一方、それぞれの「データ世界観」にサイロを生み出し、誤解を招く。</p>
+
+            <!-- Kelp Case Study -->
+            <div class="alert alert-indigo">
+                <div class="alert-title">// ケーススタディ：Kelp（架空の水族館レビューサイト）</div>
+                <p>Kelpのエンジニアリングチームが「レビューの更新」機能をリリース。データアナリストはこの機能がユーザーセッション時間を増加させるかを分析しようとした。</p>
+                <p><strong>中心的な問い：</strong>「平均レビュー星数はどう計算するか？」</p>
+                <p>OLTP（3NF）では Aquarium テーブル・User テーブル・Reviews テーブルが分離されている。アナリストがOLAP用の非正規化ワイドテーブルを作成した時点で、解決不能な問いが生まれる：</p>
+                <p>• 近接した複数セッションをまたぐ場合、セッション時間はどう計算するか？<br>
+                • 一人のユーザーが複数アカウントを持つ場合は？<br>
+                • ビジネスにとって関連するセッション時間の変化はどの程度か？<br>
+                • セッション時間変化を引き起こすのはユーザーレビューそのものか、それとも複合的な属性か？</p>
+                <p>これらの問いは、OLTP データにビジネスロジックが適用されなくなった状態を示す。正解は<strong>機能を最初に構築したソフトウェアエンジニアとのコミュニケーションなしには判断できない</strong>。これがデータコントラクトが重要な理由の核心だ。</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Ch.2 Metrics -->
+        <section id="ch2-metrics">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <div>
+                    <span class="chapter-tag">Ch.2 / Measuring Quality</span>
+                    <h2>Ch.2: データ品質の測定</h2>
+                </div>
+            </div>
+
+            <p>データ品質を測定するには、<span class="en-term">leading indicators</span>（先行指標）と<span class="en-term">lagging indicators</span>（後行指標）の両方が必要だ。先行指標は将来の問題を予測し、後行指標は損害を計測する。</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Leading / 先行指標</div>
+                    <h4>データ負債（Data Debt）</h4>
+                    <p>データ環境の複雑性とスケール可能性の指標。測定ヒューリスティクス：ドキュメントが存在するデータ資産の割合、1データセットあたりの平均依存数、直近1年のバックフィルジョブ数、クエリ1件あたりの平均フィルタ数。</p>
+                    <div class="char3-impact">→ スケール可能性の予測指標</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Leading / 先行指標</div>
+                    <h4>信頼性（Trustworthiness）</h4>
+                    <p>下流チームがデータ資産を意思決定やモデルに使用する可能性と強く相関。四半期サーベイで「会社のデータを信頼しているか」「使用中のデータが現実を正確に反映しているか」等を計測。複製されたデータ資産数も信頼の代理指標。</p>
+                    <div class="char3-impact">→ データ活用率への影響が大</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Leading / 先行指標</div>
+                    <h4>オーナーシップ（Ownership）</h4>
+                    <p>上流のエラーを解決する可能性と速度を予測する指標。オーナーシップの欠如がビジネスインパクトを生み出す場合に特に有効。Ops ミーティングで提起すると議論を呼ぶ指標だ。</p>
+                    <div class="char3-impact">→ インシデント解決速度の予測</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">4</div>
+                    <div class="char3-label">Leading / 先行指標</div>
+                    <h4>期待値の違反（Violated Expectations）</h4>
+                    <p>データコンシューマーが上流データシステムに期待することの測定。4形態：①スキーマ（データ構造・型・カラム名）②セマンティクス（ビジネスロジック）③SLA（レイテンシ・ボリューム要件）④PII（個人識別情報のマスク要件）</p>
+                    <div class="char3-impact">→ ブレイキングチェンジの予防</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">5</div>
+                    <div class="char3-label">Lagging / 後行指標</div>
+                    <h4>データダウンタイム（Data Downtime）</h4>
+                    <p>データエンジニアリングチームでデータ品質を定量化する最も一般的な指標。ログ：全インシデントの記録（期間・原因・解決プロセス）。計算：平均ダウンタイム時間・頻度・ビジネスオペレーションへの影響（遅延レポート・誤分析・誤意思決定）。</p>
+                    <div class="char3-impact">→ 損害の可視化・過去分析</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">6</div>
+                    <div class="char3-label">Lagging / 後行指標</div>
+                    <h4>四半期インシデント数</h4>
+                    <p>時系列で「ビジネスインパクト」が最も高いインシデントを追跡。ソフトウェアと同様に重大度スケール（P0〜P3）で分類。実世界への影響があるインシデントが最も意味のある種類。</p>
+                    <div class="char3-impact">→ ビジネスリスクの可視化</div>
+                </div>
+            </div>
+
+            <h3>誰がデータ品質問題の影響を受けるか</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ペルソナ</th>
+                            <th>影響</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>データエンジニア</strong></td>
+                            <td>全データ問題のデフォルト「オーナー」として機能。オンコールのバックログが積み上がる。アナリティクス/データサイエンスチームとの緊張が高まる。</td>
+                        </tr>
+                        <tr>
+                            <td><strong>データサイエンティスト</strong></td>
+                            <td>欠陥データでMLモデルを数ヶ月訓練してから問題を発見。学術的バックグラウンドがデータの信頼性への過信につながる。</td>
+                        </tr>
+                        <tr>
+                            <td><strong>データアナリスト</strong></td>
+                            <td>ビジネスロジックが混乱。信頼していたデータソースが予期せず変化。ステークホルダーへの誤った推奨を行う。</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ソフトウェアエンジニア</strong></td>
+                            <td>通常は上流の原因（意図的ではない）。変更が適切なデータコンシューマーに届かない。</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ビジネスチーム</strong></td>
+                            <td>最終的な消費者。問題の特定・解決への主体性がほぼない。上流のエラーの帰結を最も大きく受ける。</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 5: Ch.3 Scale Challenges -->
+        <section id="ch3-scale">
+            <div class="section-header">
+                <div class="section-number">05</div>
+                <div>
+                    <span class="chapter-tag">Ch.3 / Scale Challenges</span>
+                    <h2>Ch.3: スケーリングの課題</h2>
+                </div>
+            </div>
+
+            <p>第3章は、データ開発がソフトウェア開発とどのように異なるかを詳しく解説し、その違いが組織のデータ価値創出能力にどのような意味を持つかを論じる。また、スケールに伴いデータシステムが複雑化する際の根本的な課題を掘り下げる。</p>
+
+            <h3>ソフトウェア開発 vs データ開発</h3>
+
+            <div class="value-shift-grid">
+                <div class="shift-col" style="border-top: 3px solid var(--accent);">
+                    <div class="shift-col-title" style="color:var(--accent);">SOFTWARE DEVELOPMENT</div>
+                    <div class="shift-item">既知のユーザー体験から開始</div>
+                    <div class="shift-item">要件定義 → 技術仕様 → ビルド</div>
+                    <div class="shift-item">最重要事前作業：要件収集・アーキテクチャ設計</div>
+                    <div class="shift-item">チーム内変更管理：バージョン管理・PR・コードdiff が確立</div>
+                </div>
+                <div class="shift-col" style="border-top: 3px solid var(--accent-light);">
+                    <div class="shift-col-title" style="color:var(--accent-light);">DATA DEVELOPMENT</div>
+                    <div class="shift-item">ビジネスの問いから開始（「今月のアクティブ顧客数は？」）</div>
+                    <div class="shift-item">データ探索 → クエリ構築 → 検証 → 安定化</div>
+                    <div class="shift-item">最重要事前作業：仮説の定式化・データの理解</div>
+                    <div class="shift-item">クロスチーム変更管理：確立されたシステムが<strong>存在しない</strong></div>
+                </div>
+            </div>
+
+            <p>データ開発では、データが存在するか・どこにあるか・誰がオーナーか・何を意味するか・アクセス権限があるか、といった<span class="en-term">data discovery</span>（データ発見）の問いに答えるだけで、1つの問いあたり数時間〜数日を費やすことがある。</p>
+
+            <h3>大規模リファクタリングのコスト</h3>
+
+            <p>Martin Fowler のリファクタリング定義：「観察可能な動作を変えずに、より理解しやすくより変更しやすくするためにソフトウェアの内部構造を変える変更。」</p>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// リファクタリングコストの統計（James Ivers et al. の調査）</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big">1,500</div>
+                        <div class="stat-desc">大規模リファクタリング1件あたりの平均スタッフ日数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">$663K</div>
+                        <div class="stat-desc">平均給与 $115,000・260 勤務日/年で換算した労務費</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">5年</div>
+                        <div class="stat-desc">Alan社がリファクタリングを先延ばしにした期間（その間、欠陥データモデルの上に技術的負債が積み上がった）</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alan Case Study -->
+            <div class="alert alert-success">
+                <div class="alert-title">// ケーススタディ：Alan（フランスの医療保険会社）の大規模リファクタリング</div>
+                <p>Alan は 2016 年創業の医療保険会社。データモデルの中心的な前提：<strong>ユーザーと健康保険契約が1対1の関係</strong>（フランスでは標準だが、国際展開では成立しない）。国際展開のため、複数契約ユーザーをサポートするリファクタリングが必要になった。</p>
+                <p><strong>Alan の7ステップ大規模リファクタリング：</strong><br>
+                1. 変更が必要な箇所の特定（コードベース全体から1対1前提を探索）<br>
+                2. 変更内容の決定（コアデータモデルの変更が最重要と判断）<br>
+                3. 変更の実装（製品ロードマップへの優先付けと専任クロスファンクショナルチームの結成）<br>
+                4. 新規テストの生成と既存テストの移行<br>
+                5. リファクタリングコードの検証<br>
+                6. 再認定（ヘルスケアコンテキストでのHIPAA等コンプライアンス要件）<br>
+                7. ドキュメントの更新（技術的問題ではなく、エンジニアリングチームを超えるビジネス問題）</p>
+                <p>欠陥データモデルの上に5年間の技術的負債が積み重なり、リファクタリングは極めて困難なプロジェクトとなった。</p>
+            </div>
+
+            <h3>コンセプトドリフトの4類型</h3>
+
+            <p>データとその理解の変化（<span class="en-term">concept drift</span>）がモデルパフォーマンスとデータ品質に影響を与える。Jie Lu et al.「Learning Under Concept Drift: A Review」の分類体系：</p>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">TYPE 01</div>
+                    <h4>突発的ドリフト（Sudden Drift）</h4>
+                    <span class="assess-en">abrupt change in data distribution</span>
+                    <p>例：GDPR コンプライアンス対応でユーザーデータの削除・変更が必要になり、EU加盟国ユーザーがトラフィックから消失。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">TYPE 02</div>
+                    <h4>漸進的ドリフト（Gradual Drift）</h4>
+                    <span class="assess-en">slow shift in distribution over time</span>
+                    <p>例：Netflix が DVD販売からストリーミングへ移行し、最終的にDVDを廃止（製品ターゲット顧客が徐々に変化）。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">TYPE 03</div>
+                    <h4>段階的ドリフト（Incremental Drift）</h4>
+                    <span class="assess-en">step-by-step change in distribution</span>
+                    <p>例：Roblox の当初のユーザー層は幼い子供だったが、現在の中央年齢は13歳超（ユーザーベースが段階的に高齢化）。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">TYPE 04</div>
+                    <h4>周期的ドリフト（Recurring Drift）</h4>
+                    <span class="assess-en">periodically recurring patterns</span>
+                    <p>例：景気後退は定期的に発生するが、正確な予測は不可能。消費者組織データにおける任意消費支出の減少は周期的なコンセプト。</p>
+                </div>
+            </div>
+
+            <h3>Dunbar の数と Conway の法則</h3>
+
+            <p>組織がスケールするにつれてデータシステムがなぜ機能不全に陥るかを、人類学と組織論の2つの原理が説明する。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>Dunbar の数（~150）</h4>
+                    <p>人類学者 Robin Dunbar が提唱。人間が維持できる有意義な関係の認知上限は<strong>約150</strong>。Malcolm Gladwell の『The Tipping Point』でも引用。</p>
+                    <p>Meta の CPO Chris Cox（2016）：「150人を超えると、おかしなことが起き始める」。150名の組織では<strong>11,175の潜在的関係</strong>が存在し、1名追加するごとに150の新たな関係が生まれる。Martin Fowler：「コードの著者と容易に話せれば、コードへの豊かな理解を構築しやすい」。</p>
+                </div>
+                <div class="card">
+                    <h4>Conway の法則</h4>
+                    <p>Melvin Conway「How Do Committees Invent?」：「システムを設計するいかなる組織も、その組織のコミュニケーション構造のコピーである設計を不可避的に生み出す。」</p>
+                    <p>データシステムは組織のサイロを反映する。これらの法則が共に示すのは、<strong>複雑なデータシステムのスケールは人的コーディネーションだけでは達成できない</strong>ということだ。データコントラクトはこの限界を技術的に克服するメカニズムとなる。</p>
+                </div>
+            </div>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// スケーリング問題への5つの要件</div>
+                <p>効果的なデータ変更管理フレームワーク（<span class="en-term">design surface</span>）には4つの要件が必要だ：①データの存在と使用方法の可視性、②データプロデューサーとコンシューマーの接続、③変更通知のタイムリーな伝達（「ブレイキングチェンジ直前」が最適）、④適切なステークホルダーの特定。</p>
+                <p>そして5要件のデータ変更管理：①ドメイン知識のコード化、②意味のある制約の作成、③データドリフトの識別、④閾値超過時のアラート、⑤ドリフト後のデータ品質修正またはビジネスロジックの更新。</p>
+                <p>「これら5つの要件こそが、データコントラクトがスケールにおけるデータ品質を実現するために必要なメカニズムだと我々が強く信じる理由だ。」</p>
+            </div>
+        </section>
+
+        <!-- Section 6: Ch.4 Contracts -->
+        <section id="ch4-contracts">
+            <div class="section-header">
+                <div class="section-number">06</div>
+                <div>
+                    <span class="chapter-tag">Ch.4 / What Are Data Contracts?</span>
+                    <h2>Ch.4: データコントラクトとは何か</h2>
+                </div>
+            </div>
+
+            <p>前3章が「なぜ」を論じてきたのに対し、第4章はデータコントラクト・アーキテクチャが<span class="highlight">具体的に何であり、どのように機能するか</span>を定義する。本書の技術的基盤となる章だ。</p>
+
+            <h3>ステークホルダーの定義</h3>
+
+            <div class="value-shift-grid">
+                <div class="shift-col" style="border-top: 3px solid var(--accent);">
+                    <div class="shift-col-title" style="color:var(--accent);">DATA PRODUCERS（データプロデューサー）</div>
+                    <div class="shift-item">データの収集・保存を担当するエンジニア。最も一般的な形態は<strong>ソフトウェアエンジニア</strong></div>
+                    <div class="shift-item">トランザクショナルイベント（PostgreSQL・MySQL・Kafka）を生成</div>
+                    <div class="shift-item">クリックストリームイベント（Segment・Rudderstack・Amplitude）を生成</div>
+                    <div class="shift-item">リレーショナルDBをアプリケーションの延長として扱う</div>
+                    <div class="shift-item">現代のデータ環境では、データが収集・処理・保存された後、役割が終了</div>
+                </div>
+                <div class="shift-col" style="border-top: 3px solid var(--accent-light);">
+                    <div class="shift-col-title" style="color:var(--accent-light);">DATA CONSUMERS（データコンシューマー）</div>
+                    <div class="shift-item">データエンジニア：データの抽出・移動・パイプライン構築</div>
+                    <div class="shift-item">データサイエンティスト：ML・統計モデリング</div>
+                    <div class="shift-item">データアナリスト：SQL専門家、ダッシュボード・レポート</div>
+                    <div class="shift-item">アナリティクスエンジニア：ソフトウェア開発の最善実践をデータ分析に適用（dbtモデル等）</div>
+                    <div class="shift-item">プラットフォームエンジニア：データインフラの実装・採用・保守</div>
+                </div>
+            </div>
+
+            <p>コンシューマーが退職すると、データに関して積み上げられたコンテキストを取り戻すことは<span class="highlight">極めて困難</span>だ。これが<span class="en-term">data lineage</span>（データリネージュ）——分析環境内でデータ資産を相互に結びつける蜘蛛の巣状の接続——が重要な理由の一つだ。</p>
+
+            <h3>11ステップ 反応的解決ライフサイクル vs 7ステップ コントラクトワークフロー</h3>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">// 現状：11ステップの反応的解決ライフサイクル</div>
+                <p>「これらの数字が少し正常ではないように見えると思います」という言葉はデータ実践者の恐怖だ。典型的な解決プロセス：</p>
+                <p>①ステークホルダーが問題を発見 → ②問題のトリアージ → ③要件スコーピング → ④問題の再現 → ⑤データプロファイリング（タイムライン・null パターン・スパイク/ドロップ・集計別カウント） → ⑥下流パイプライン調査 → ⑦上流パイプライン調査 → ⑧技術ステークホルダーへの相談 → ⑨デプロイ前：DQ修正の実装 → ⑩デプロイ：DQ修正の適用 → ⑪ステークホルダーへのコミュニケーション</p>
+                <p>「これらのステップの大多数は技術的なものではなく、チームをまたいだコミュニケーションを中心に展開する。」このプロセスは依然として手動的・反応的だ。</p>
+            </div>
+
+            <div class="alert alert-success">
+                <div class="alert-title">// 代替案：7ステップ データコントラクト ワークフロー（プロアクティブ）</div>
+                <p>①データコンシューマーがデータ制約を特定 → ②データコンシューマーがデータ資産のコントラクトをリクエスト → ③データプロデューサーがコントラクトの実現可能性を確認 → ④コントラクトがコードとして確認（通常 YAML ファイル、バージョン管理） → ⑤データプロデューサーがデータ資産変更のプルリクエストを作成 → ⑥CI/CD チェックが要求変更がデータコントラクトに違反するか自動検証 → ⑦（7a）CI/CD 失敗：データ資産オーナーに違反通知・失敗プロトコルに従う（7b）CI/CD 成功：変更が下流プロセスに適用</p>
+                <p><strong>鍵となるシフト：</strong>データコントラクトワークフローは、データ品質解決プロセスを反応的から<span class="highlight">プロアクティブへ</span>移行させ、各ステークホルダーのインセンティブと責任を根本的に変える。</p>
+            </div>
+
+            <h3>データコントラクト vs データオブザーバビリティ</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>観点</th>
+                            <th>データコントラクト</th>
+                            <th>データオブザーバビリティ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>主目的</strong></td>
+                            <td>特定のデータ品質問題の<span class="highlight">防止</span></td>
+                            <td>データ品質トレンドの<span class="highlight">検出・可視化</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>CI/CDとの関係</strong></td>
+                            <td>CI/CD ワークフローに<strong>組み込まれる</strong>（デプロイ前にブレイキングチェンジを防止）</td>
+                            <td>CI/CD ワークフローを<strong>補完する</strong>（開発者ワークフロー外でデータプロセスを測定）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ビジネスロジック</strong></td>
+                            <td>ビジネスコンテキストが<strong>入力</strong>（プロデューサーとコンシューマー間のコミュニケーションをスケールさせる技術）</td>
+                            <td>ビジネスロジックがデータに<strong>どう捉えられるかを反映</strong>する（出力の測定）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>可視性の範囲</strong></td>
+                            <td><strong>ターゲット可視性</strong>：最重要データ資産のみ</td>
+                            <td><strong>広範な可視性</strong>：データスタック全体（インジェスト〜消費まで）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>アラートのタイミング</strong></td>
+                            <td><strong>変更前にアラート</strong>：プロデューサーとコンシューマーの合意を暗黙から明示へ（本番デプロイ前）</td>
+                            <td><strong>変更後にアラート</strong>：イベントが観測可能になった後（発生後の検出が必須）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>アナロジー</strong></td>
+                            <td>スポットライト（重要な資産に焦点を当てた光）</td>
+                            <td>懐中電灯（データシステム全体を照らす）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <blockquote>
+                "The key difference between data contracts and data observability is that contracts emphasize the <strong>prevention</strong> of data quality issues, while observability emphasizes <strong>detection</strong>."
+                <cite>— Chad Sanderson et al., Data Contracts (O'Reilly, 2025) Ch.4</cite>
+            </blockquote>
+
+            <h3>データコントラクトの成熟度曲線</h3>
+
+            <p>データコントラクトの採用は本質的に<span class="highlight">社会的・組織的課題</span>であり、純粋に技術的なものではない。成熟度は組織間だけでなく、組織内のチーム間でも異なる。</p>
+
+            <ul class="phase-list">
+                <li class="phase-item">
+                    <div class="phase-dot">P1</div>
+                    <div class="phase-content">
+                        <div class="phase-timing">Stage 1 — Awareness（認識）</div>
+                        <h4>目標：下流チームが上流データをどう使用するかの可視性を確立</h4>
+                        <p>データプロデューサーは自分の変更がコンシューマーに害を与えることを理解する必要がある。プロデューサーはアウテージを起こしたいわけではない——デプロイ前に何が壊れるかを知るコンテキストがないだけだ。</p>
+                    </div>
+                </li>
+                <li class="phase-item">
+                    <div class="phase-dot">P2</div>
+                    <div class="phase-content">
+                        <div class="phase-timing">Stage 2 — Collaboration（協働）</div>
+                        <h4>目標：コントラクトによるソースでのデータ保護</h4>
+                        <p>「この協働がデプロイ前、コンテキストによって促進される形で行われることの重要性はいくら強調してもし足りない。プロデューサーが事前にコミュニケーションし、コンシューマーが何が変わるかの可視性を持てば、ほとんどのデータ品質問題は回避できた。」</p>
+                    </div>
+                </li>
+                <li class="phase-item">
+                    <div class="phase-dot">P3</div>
+                    <div class="phase-content">
+                        <div class="phase-timing">Stage 3 — Ownership（オーナーシップ）</div>
+                        <h4>目標：データ資産の明確なオーナーシップとアカウンタビリティの確立</h4>
+                        <p>プロデューサーがユースケースとコンシューマーを理解し、アクセス可能なフィールドを明示的に定義し、変更管理・コントラクトバージョン管理・コントラクト進化のプロセスを確立した段階。「Visibility creates culture change.」</p>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Section 7: Summary -->
+        <section id="summary">
+            <div class="section-header">
+                <div class="section-number">07</div>
+                <div>
+                    <span class="chapter-tag">Part I Summary</span>
+                    <h2>まとめ — Part I の要点</h2>
+                </div>
+            </div>
+
+            <p>Part I を通じて明らかになった核心的な洞察を整理する。</p>
+
+            <ul class="takeaway-list">
+                <li class="takeaway-item">
+                    <div class="takeaway-num">01</div>
+                    <div class="takeaway-body">
+                        <strong>データ問題は変更管理問題である</strong>
+                        <p>データの品質問題は表面上は技術的に見えるが、その根本はすべて<span class="en-term">change management within complex systems</span>（複雑なシステム内の変更管理）に行き着く。コードの変更がデータコンシューマーに届かないこと、届く仕組みがないことが問題の本質だ。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">02</div>
+                    <div class="takeaway-body">
+                        <strong>データ負債はテック負債より解消が困難</strong>
+                        <p>テック負債は個別マイクロサービスを独立してリファクタリングできる。しかしデータ負債は相互に依存した事業体の上に構築されており、広範な組織合意と多大なコーディネーションなしには変更できない。Alan 社の事例は、欠陥データモデルの上に5年間の負債が積み上がり、約663,000ドルのリファクタリングコストが発生することを示す。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">03</div>
+                    <div class="takeaway-body">
+                        <strong>データ品質 ≠ 完璧なデータ</strong>
+                        <p>Wang et al. の「利用目的に適合すること（<span class="en-term">fit for use</span>）」は今なお正しい。本書はこれを「様々な正確性の度合いでデータ資産を運用する際のトレードオフを理解し管理する組織の能力」へと拡張する。データは常に劣化しており、完全な完璧さは非現実的な目標だ。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">04</div>
+                    <div class="takeaway-body">
+                        <strong>OLTP/OLAP の断絶が翻訳問題を生む</strong>
+                        <p>OLTPの3NFとOLAPの非正規化された世界観の間に存在するギャップは、データチームが単独では解決できない解釈の問題を生み出す。Kelp のケースが示すように、「平均レビュー星数をどう計算するか」という問いは、最初にその機能を構築したソフトウェアエンジニアとのコミュニケーションなしには答えられない。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">05</div>
+                    <div class="takeaway-body">
+                        <strong>Dunbar の数と Conway の法則がスケールを阻む</strong>
+                        <p>150人を超えると人間の関係維持能力は限界を迎え（Dunbar の数）、組織のシステムはその通信構造を反映する（Conway の法則）。これらの組み合わせは、スケールした組織ではデータシステムの変更管理が人的コーディネーションだけでは維持できないことを意味する。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">06</div>
+                    <div class="takeaway-body">
+                        <strong>コントラクトはオブザーバビリティを置き換えない、補完する</strong>
+                        <p>データオブザーバビリティ（懐中電灯）はデータスタック全体を広く照らすが、イベントが発生した後にのみアラートを出す。データコントラクト（スポットライト）は最重要データ資産に焦点を当て、本番デプロイ前に問題を防ぐ。組み合わせることで最大の効果を発揮する。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">07</div>
+                    <div class="takeaway-body">
+                        <strong>シフトレフトは文化変革である</strong>
+                        <p>データコントラクトの採用は技術的な実装だけではなく、データプロデューサーとコンシューマーの間のコラボレーション文化の変革を要求する。可視性が文化変革を生む（<em>"Visibility creates culture change."</em>）。成熟度は認識 → 協働 → オーナーシップと段階的に進む。</p>
+                    </div>
+                </li>
+            </ul>
+
+            <!-- Central Message Callout -->
+            <div class="alert alert-sky" style="margin-top: 3rem; border-left-width: 6px;">
+                <div class="alert-title" style="font-size:1rem;">// Part I の本質的なメッセージ</div>
+                <p style="font-size:1rem; line-height:1.9;">データ品質問題は<strong>検査（inspection）の問題ではなく、予防（prevention）の問題</strong>だ。業界は反応的（オブザーバビリティ）なアプローチからプロアクティブ（コントラクト）なアプローチへとシフトする必要がある。</p>
+                <p style="font-size:1rem; font-weight:600; color:var(--accent-light);">「Most data quality problems are code quality problems.」</p>
+                <p>上流のコードの変更が、通知なしに下流のデータ消費者に影響を与える。データコントラクトはこの暗黙の依存関係を明示的・強制可能なAPI契約へと変換することで、ソフトウェア指向の変更管理をデータチームへと拡張する。これがデータコントラクトの存在意義だ。</p>
+            </div>
+        </section>
+
+        <!-- Section 8: Sources -->
+        <section id="sources">
+            <div class="section-header">
+                <div class="section-number">08</div>
+                <div>
+                    <span class="chapter-tag">References</span>
+                    <h2>参考文献</h2>
+                </div>
+            </div>
+
+            <ul class="sources-list">
+                <li>
+                    <span class="source-num">[1]</span>
+                    <div class="source-text">
+                        Chad Sanderson, Mark Freeman, B. E. Schmidt, <em>Data Contracts: Developing Production-Grade Pipelines at Scale</em>, O'Reilly Media, Inc., November 2025. ISBN: 9781098157623<br>
+                        Ch.1: <a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch01.html">https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch01.html</a><br>
+                        Ch.2: <a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch02.html">https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch02.html</a><br>
+                        Ch.3: <a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch03.html">https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch03.html</a><br>
+                        Ch.4: <a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch04.html">https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch04.html</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[2]</span>
+                    <div class="source-text">
+                        Chad Sanderson — "An Engineer's Guide to Data Contracts" (Substack).<br>
+                        <a href="https://dataproducts.substack.com/p/an-engineers-guide-to-data-contracts">https://dataproducts.substack.com/p/an-engineers-guide-to-data-contracts</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[3]</span>
+                    <div class="source-text">
+                        Chad Sanderson — "The Shift Left Data Manifesto" (Substack).<br>
+                        <a href="https://dataproducts.substack.com/p/the-shift-left-data-manifesto">https://dataproducts.substack.com/p/the-shift-left-data-manifesto</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[4]</span>
+                    <div class="source-text">
+                        Monte Carlo Data — "Data Contracts Explained".<br>
+                        <a href="https://www.montecarlodata.com/blog-data-contracts-explained/">https://www.montecarlodata.com/blog-data-contracts-explained/</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[5]</span>
+                    <div class="source-text">
+                        Gable.ai — Data Contracts Book Site.<br>
+                        <a href="https://www.gable.ai/data-contracts-book">https://www.gable.ai/data-contracts-book</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[6]</span>
+                    <div class="source-text">
+                        Richard Y. Wang et al., "Beyond Accuracy: What Data Quality Means to Data Consumers," MIT TDQM, 1996. — "data that are fit for use by data consumers."
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[7]</span>
+                    <div class="source-text">
+                        Marc Andreessen, "Software Is Eating the World," <em>The Wall Street Journal</em>, August 20, 2011.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[8]</span>
+                    <div class="source-text">
+                        Martin Fowler, <em>Refactoring: Improving the Design of Existing Code</em>, Addison-Wesley. / Martin Fowler's blog on microservices.<br>
+                        <a href="https://martinfowler.com/articles/microservices.html">https://martinfowler.com/articles/microservices.html</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[9]</span>
+                    <div class="source-text">
+                        Melvin Conway, "How Do Committees Invent?," <em>Datamation</em>, April 1968. — Source of Conway's Law.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[10]</span>
+                    <div class="source-text">
+                        Jie Lu et al., "Learning Under Concept Drift: A Review," <em>IEEE Transactions on Knowledge and Data Engineering</em>, 2018. — Concept drift taxonomy.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[11]</span>
+                    <div class="source-text">
+                        James Ivers et al., survey on large-scale software refactoring costs. — 1,500 staff days average.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[12]</span>
+                    <div class="source-text">
+                        Melody Chien and Ankush Jain, "Data and Analytics Essentials: Data Observability," Gartner, 2023. — Source of data observability definition.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[13]</span>
+                    <div class="source-text">
+                        Malcolm Gladwell, <em>The Tipping Point</em>, Back Bay Books. — Reference to Dunbar's Number.
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- ─── Footer ─── -->
+    <footer>
+        <div class="footer-source">
+            Chad Sanderson et al. — Data Contracts (O'Reilly, 2025) Part I Ch.1–4 学習ノート
+        </div>
+        <p>
+            <a href="../index.html" style="color:var(--accent-light); font-family:'JetBrains Mono',monospace; font-size:0.85rem;">← トップに戻る</a>
+        </p>
+        <p class="footer-disclaimer">
+            本記事は Chad Sanderson, Mark Freeman, B.E. Schmidt 著『Data Contracts』（O'Reilly Media, 2025）の個人学習ノートです。書籍の内容を要約・解説したものであり、著作権は原著者および O'Reilly Media に帰属します。
+        </p>
+    </footer>
+
+    <script>
+        // ─── Smooth scroll for TOC ───
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // ─── Active nav link highlighting ───
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-links a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.style.color = '';
+                        if (link.getAttribute('href') === '#' + entry.target.id) {
+                            link.style.color = 'var(--accent)';
+                        }
+                    });
+                }
+            });
+        }, { rootMargin: '-20% 0px -60% 0px' });
+
+        sections.forEach(section => observer.observe(section));
+
+        // ─── Subtle card entrance animation ───
+        const cards = document.querySelectorAll('.char3-card, .assess-card, .card');
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        cards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(16px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            cardObserver.observe(card);
+        });
+    </script>
+
+</body>
+</html>
