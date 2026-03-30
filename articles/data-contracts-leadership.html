@@ -1279,7 +1279,7 @@
                 <li><a href="#ch12-phases"><span class="toc-num">09</span>Ch.12：3フェーズ測定モデル</a></li>
                 <li><a href="#conclusion"><span class="toc-num">10</span>Conclusion：AIとデータコントラクトの未来</a></li>
                 <li><a href="#summary"><span class="toc-num">11</span>まとめ — Part IIIの要点</a></li>
-                <li><a href="#sources"><span class="toc-num">12</span>参考文献</a></li>
+                <li><a href="#sources"><span class="toc-num">12</span>参考文献（16件）</a></li>
             </ul>
         </div>
     </div>
@@ -1427,6 +1427,21 @@
 
             <p>現在のデータチームは、ほぼ全力を$100ステージに費やしている。シフトレフトとは、労力を$1ステージに前倒しすることで品質担保を安価にする戦略的転換だ。</p>
 
+            <h3>First-Principles Thinking — 失敗の根本診断</h3>
+
+            <p><span class="highlight">First-Principles Thinking（第一原理思考）</span>とは、問題を最も基本的な真実に分解し、そこから推論する方法論だ。書籍はこれをShift Left Data採用失敗の根本原因診断に用いる。</p>
+
+            <blockquote>
+                「はしごを十分高く積み上げれば月に届くか？」——第一原理思考は、実行の改善を問うのではなく、<strong>アプローチ自体が間違っていないか</strong>を問う。
+                <cite>— Ch.9, Data Contracts (O'Reilly, 2025)</cite>
+            </blockquote>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// 第一原理思考から導出されたKey Insight</div>
+                <p>初期のShift Left Data採用失敗の根本原因：認識ギャップの存在だけでなく、<strong>「ギャップの間違った側（データチーム側）で実行していた」</strong>ことが問題だった。</p>
+                <p>データチームが単独でアダプションを推進しようとしても機能しない——ソフトウェアエンジニアをパートナーとして関与させることが不可欠だ。</p>
+            </div>
+
             <h3>シフトレフトが解決する3つのコア問題</h3>
 
             <div class="char3-grid">
@@ -1464,6 +1479,44 @@
                 </div>
             </div>
 
+            <h3>Table 9-1: SWE vs データチームの構造的差異</h3>
+
+            <p>書籍は、認識ギャップの構造的根拠を示すために、ソフトウェアチームとデータチームの差異をTable 9-1として示す。</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>比較軸</th>
+                            <th>ソフトウェアチーム</th>
+                            <th>データチーム</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>役割</strong></td>
+                            <td>Frontend / Backend / Full Stack / QAエンジニア</td>
+                            <td>データエンジニア / アナリティクスエンジニア / データサイエンティスト</td>
+                        </tr>
+                        <tr>
+                            <td><strong>協力者</strong></td>
+                            <td>プロダクトマネージャー、他エンジニアリングチーム</td>
+                            <td>ビジネスステークホルダー、ドメインエキスパート</td>
+                        </tr>
+                        <tr>
+                            <td><strong>使用システム</strong></td>
+                            <td>上流トランザクショナルDB（CRUD、ログ）</td>
+                            <td>下流分析DB（大規模スキャン、集計、統計）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>主要目標</strong></td>
+                            <td>収益に繋がる製品機能の追加・最適化</td>
+                            <td>戦略的インサイトの提供、リスク特定、直接価値を生むデータプロダクト</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
             <h3>認識ギャップ（Perception Gap）</h3>
 
             <p><span class="highlight">認識ギャップ</span>とは、ソフトウェアエンジニアがデータをどう認識するか（コードの副産物であり、自分の責任範囲外）と、データチームがデータをどう認識するか（ガバナンスと管理が必要な重要プロダクト）の間の根本的な断絶を指す。</p>
@@ -1472,6 +1525,44 @@
                 「What I found in my swim upstream were well-meaning engineers modifying services unaware that something as simple as dropping a field could have major implications on dashboards (or other consumers) downstream.」
                 <cite>— Andrew Jones, GoCardless（Monte Carlo Data、2022年7月）</cite>
             </blockquote>
+
+            <h3>Convoyの3つの具体事例——認識ギャップのリアルコスト</h3>
+
+            <p>Sandersonの旧務先であるデジタル輸送仒介スタートアップConvoyの3つの実事例は、認識ギャップが具体的にどうビジネスダメージに繋がるかを示す。</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Case 01 / Faulty Assumptions</div>
+                    <h4>Carrier Routing — 誤った仮定</h4>
+                    <p>ML・自動化で物流最適化を図るチームが、運送業者の現実を反映しないデータ仮定に基づき意思決定。初期ユーザーが失敗体験し、スタートアップの評判が毀損した。</p>
+                    <div class="char3-impact">→ データ仮定が運送業者の現実を反映せず、評判毀損</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Case 02 / Hidden Complexity</div>
+                    <h4>Detention Pay / Geofencing — 複雑性の稺如</h4>
+                    <p>ジオフェンシングで運送業者の到着を追跡→施設到着時に携帯の信号が途切れ、到着時刻が不正確に記録される。メトリクスが歪む——データチームはエンドユーザー行動の微妙な点を把握できていなかった。</p>
+                    <div class="char3-impact">→ 到着時刻メトリクスが歪み、データ分析が無効化</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Case 03 / Lifecycle Disconnect</div>
+                    <h4>Auto-Bid Feature — ビジネスロジックの断絶</h4>
+                    <p>オークション自動入朮機能が成功して人気に→大量の自動入朮が殺到→データチームのオークションモデルが破網。SWEの設計通りに動作する機能が、データチームのモデルを二次的に破壊。</p>
+                    <div class="char3-impact">→ ビジネスロジックのライフサイクルの断絶が現体化</div>
+                </div>
+            </div>
+
+            <h3>Hidden Influencers — 橋渡し役の発見</h3>
+
+            <p>McKinsey（Lili Duan, Emily Sheeren, Leigh M. Weiss）の研究は、SWEチーム内の「<span class="highlight">Hidden Influencers（隠れた影響力者）</span>」を特定し、データコントラクト概念の仒介者として活用する战術を提唱する。</p>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// 橋渡し役を見つける戦術</div>
+                <p>データコントラクトのアディションは、トップダウンの指令だけではなく、SWEチーム内のキーパーソン——Hidden Influencers——を特定し、データチームとSWEチームの両方から信頼される人物を通じて概念を導入することが効果的だ。</p>
+                <p>参照：McKinsey & Company, Lili Duan, Emily Sheeren, Leigh M. WeissによるHidden Influencers研究</p>
+            </div>
 
             <h3>採用の「曲がり角」——9ステップの険しい旅</h3>
 
@@ -1659,6 +1750,56 @@
                 </div>
             </div>
 
+            <h3>DevSecOpsが証明する3つの力</h3>
+
+            <p>書籍はDevSecOpsの成功を、Shift Left Dataが実現可能である先例として激励的に引用する。セキュリティが「極遠の右（far right）」に住んでいた状態から左辺に移った3つの主風的力を明示する。</p>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">FORCE 01</div>
+                    <h4>DevOps/Agileの台頭</h4>
+                    <span class="assess-en">Ascension of DevOps and Agile</span>
+                    <p>開発タイムラインの圧縮で、遙いステージでのセキュリティレビューの余地がなくなった。データにも同じプレッシャーがかかる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">FORCE 02</div>
+                    <h4>クラウドネイティブアーキテクチャの普及</h4>
+                    <span class="assess-en">Proliferation of Cloud-Native Architectures</span>
+                    <p>攻撃対象面の大幅拡大。データにおいても、マイクロサービス化でデータフローの追跡が極たんて困難になった。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">FORCE 03</div>
+                    <h4>規制・評判圧力</h4>
+                    <span class="assess-en">GDPR, HIPAA, PCI DSS &amp; High-Profile Breaches</span>
+                    <p>データ保護法と高知度の侵害事件が観察・評判圧力を生んだ。データコントラクト導入の経営部門への説明にも直接活用できる。</p>
+                </div>
+            </div>
+
+            <h3>SWE Quality-of-Life Metrics</h3>
+
+            <p>シフトレフト文化が機能しているかを確認するため、<span class="highlight">SWEが最初に恩恵を感じること</span>が重要だ。書籍は以下のメトリクスが特に有効とする。</p>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">METRIC 01</div>
+                    <h4>パルスサーベイ</h4>
+                    <span class="assess-en">Pulse Surveys</span>
+                    <p>2−3問、月次または四半期ごとの簡単なアンケート。SWEの同働満足度・導入評価を継続的に計測する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">METRIC 02</div>
+                    <h4>チケット量の削減</h4>
+                    <span class="assess-en">Ticket Volume Reduction</span>
+                    <p>SWEがコードを再訪問・再デプロイするチケット量の削減。データ品質問題を原因とする援業侜業の減少を指標化する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">METRIC 03</div>
+                    <h4>Tier-1本番インシデントの監視</h4>
+                    <span class="assess-en">Production Incident Monitoring</span>
+                    <p>Tier-1データ問題に起因する本番インシデントの数と頂度。SWEが最初に恣恵を感じることが重要。</p>
+                </div>
+            </div>
+
             <div class="alert alert-amber">
                 <div class="alert-title">// シフトレフトは漸進でなく逆転</div>
                 <p>「The teams that succeed with data are not gonna be the ones trying to apply more centralized data management methodologies to systems that are becoming increasingly more federated and fragmented.」</p>
@@ -1688,6 +1829,36 @@
             </ul>
 
             <p>理論上、チェンジマネジメントは純粋にプロセスとして実現できる。実際には不可能だ。現代ソフトウェアシステムにおける変更のボリュームは、人間のレビューが処理できる量を超えている。<strong>チェンジマネジメントは自動化されなければならない。</strong></p>
+
+            <h3>Airplane vs Airline Projects — 技術とビジネスの分離</h3>
+
+            <p>書籍は、データコントラクト導入がなぜ失敗するかを理解するために重要なフレームワークを提供する。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Airplane Project</div>
+                    <h4>技術的実行可能性の証明</h4>
+                    <p>「該技術は機能するか？」——Wright兄弟の初飛行のように、技術的実行可能性を証明するプロジェクト。ほとんどのETL/ELTツールはこのカテゴリだ。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Airline Project</div>
+                    <h4>ビジネス的実行可能性の証明</h4>
+                    <p>「人々は使うか？採用インセンティブは何か？」——Percival Fanslerのセントピーターズバーグ−タンパ袊船便のように、ビジネス的実行可能性に焦点を当てる。</p>
+                </div>
+            </div>
+
+            <div class="alert alert-deep">
+                <div class="alert-title">// データコントラクトはAirline Project</div>
+                <p><strong>技術的実行可能性はビジネス的実行可能性のサブセット</strong>だ。データカタログはAirplane Projectとして扱われて失敗した——技術は機能するが誰も使わない。データコントラクトの技術はシンプルだが、<strong>採用の複雑性が課題</strong>だ。</p>
+            </div>
+
+            <h3>Friction（摩擦）の正式定義</h3>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// Frictionの定義（Ch.10）</div>
+                <p><strong>「ターゲットオーディエンスが望ましいアクション/ワークフローに従事するのを妨げるブロッカー」</strong></p>
+                <p>「正しいことを簡単にすること」は、「作って待つ（If we build it, they will come）」より効果的だ。アドプションの課題は、技術ではなく<strong>インセンティブと摩擦削減</strong>にある。</p>
+            </div>
 
             <h3>APIアナロジー</h3>
 
@@ -1754,6 +1925,138 @@
                 <div>
                     <span class="chapter-tag">Ch.10 / Supply Chain + Strategy</span>
                     <h2>Ch.10: データをサプライチェーンとして捉え、導入戦略を立てる</h2>
+                </div>
+            </div>
+
+            <h3>Gunpei Yokoi — データサプライチェーンの樹端</h3>
+
+            <p>書籍の「データをサプライチェーンとして捉える」メタファーのインスピレーション源は、任天堂の<span class="highlight">横井軍平（1975年）</span>の「朏れた技術の水平思考（Lateral Thinking with Withered Technology）」コンセプトだ。</p>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// 朏れた技術の水平思考</div>
+                <p>既存の成熟した技術に新しい創造的用途を見出すこと。サプライチェーン管理という成熟した頭嶺をデータエンジニアリングの新しい課題に応用することで、データコントラクトの概念的根拠になる。</p>
+            </div>
+
+            <h3>Forward/Backward-Looking Problems</h3>
+
+            <p>データコントラクト導入に際しては、必ず2種類の問題を同時に考慮しなければならない。</p>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Forward-Looking Problem</div>
+                    <h4>新規データ・変更への対処</h4>
+                    <p>コントラクトがまだ存在しない新しいデータ・新しい変更への対処。新規ストリームとコントラクトが同時に存在する仕組みを作る。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Backward-Looking Problem</div>
+                    <h4>レガシーデータへの対処</h4>
+                    <p>コントラクトシステム以前から存在するレガシーデータ・スキーマへの対処。段階的移行・優先順位付け・データプロダクトマネージャーの手動レビューが必要になることが多い。</p>
+                </div>
+            </div>
+
+            <h3>3 Levels of Implementation — 実装アプローチの進化</h3>
+
+            <p>書籍はデータコントラクト実装のアプローチをレベル別に分類し、それぞれのトレードオフを明確化する。</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>レベル</th>
+                            <th>アプローチ</th>
+                            <th>特徴</th>
+                            <th>課題</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Level 1</strong><br><code>Source Data Requirement</code></td>
+                            <td>手動/基本—データプロダクトマネージャーがレビュー</td>
+                            <td>シンプルな出発点、早期採用向き</td>
+                            <td>スケーラビリティ不足、コントラクト変更管理不足</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Level 2</strong><br><code>Technology-First</code></td>
+                            <td>自動化—テストフレームワーク機械的構築</td>
+                            <td>プロデューサーに責任を移管</td>
+                            <td>採用インセンティブなし、「技術は作ったが採用に苦労」</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Level 3</strong><br><code>Airline-Oriented</code></td>
+                            <td>チェンジマネジメント重視—インセンティブと摩擦削減</td>
+                            <td>「正しいことを簡単にする」</td>
+                            <td>最も複雑だが最も効果的</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>5 Requirements — 成功する実装の必要条件</h3>
+
+            <p>Level 3（Airline-Oriented）実装が満たすべき5つの要件（書籍より）：</p>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">REQ 01</div>
+                    <h4>Visibility（可視性）</h4>
+                    <p>ソースからコンシューマーまでのフローグラフ、影響分析。変更が何に影響するかを事前に測ることができる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">REQ 02</div>
+                    <h4>Change Communication（変更伝達）</h4>
+                    <p>上流変更を伝達する構造化プロトコル。サイレントな変更が下流を破壊する前に通知する仕組み。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">REQ 03</div>
+                    <h4>Policies（ポリシー）</h4>
+                    <p>文書化だけでなく、<strong>強制可能なポリシー</strong>。Wikiのエントリではなく、CI/CDに組み込まれた自動強制が必要。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">REQ 04</div>
+                    <h4>Context Evolution（文脈進化）</h4>
+                    <p>スキーマ変更を超えた意味・ロジック変更への対応。「フィールド名が同じでも意味が変わった」ケースも捕捉できる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">REQ 05</div>
+                    <h4>Contract Management（コントラクト管理）</h4>
+                    <p>コントラクト自体の進化を管理するシステム。コントラクトが古くなったり矛盾したりしないようバージョン管理・アーカイブの仕組みを持つ。</p>
+                </div>
+            </div>
+
+            <h3>Hypothesis-Led Approach — McKinsey/BCGの7ステップ戦略策定</h3>
+
+            <p>書籍は、データコントラクト導入戦略の策定に、McKinsey & CompanyとBCGが使用するHypothesis-Led Approach（仮説主導型アプローチ）を適用する。</p>
+
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 01</div>
+                    <h4>問題の定義（Going Deeper）</h4>
+                    <p>「なぜなぜ」を繰り返す「Going Deeper」手法で表面症状でなく根本原因を掴る。最終的に「効果的なチェンジマネジメントワークフローが必要」という根本にたどり着く。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 02</div>
+                    <h4>問題の構造化（イシューツリー）</h4>
+                    <p>問題をサブコンポーネントに分解するイシューツリー。革層構造が重要だ：トップレベルの課題がサブ課題に分解される。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 03</div>
+                    <h4>優先順位付け（優先度マトリクス）</h4>
+                    <p>インパクトと実装の容易さを軸にした優先度マトリクス。何から始めるか、何を委任するか、何を後回しにするかを決定する。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 04</div>
+                    <h4>分析計画の策定と実施</h4>
+                    <p>思考から実行へ移行。現在のドキュメント確認、チーム間の関係確認、データ補集・分析を実施する。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 05</div>
+                    <h4>発見事項の合成（Pyramid Principle）</h4>
+                    <p>意思決定→論拠→データの3層構造で説得力ある内容を作る。<span class="en-term">Pyramid Principle</span>（McKinsey）に基づく。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 06</div>
+                    <h4>推奨事項の策定（SCQA/SCR）</h4>
+                    <p><span class="en-term">Situation → Complication → Question → Answer</span>の構造で最終成果を読者に伝える。「変更の度ょ8時間の導模時間→フェデレーテッド構造による断絶→狠元に戻す必要ない文の架橋」という構造。</p>
                 </div>
             </div>
 
@@ -1889,6 +2192,147 @@
 
             <p>第11章は戦略から戦術へ——具体的に、組織モメンタムを構築する<span class="highlight">早期・目に見える・証明可能な成功</span>をどう生み出すか。核心的前提は：早期成果は単なるROI証明ではなく、組織全体の採用を拡大するための<span class="highlight">一次的メカニズム</span>であるということだ。</p>
 
+            <h3>Steel Threads — 最初のデータコントラクト対象の選定</h3>
+
+            <p><span class="highlight">Steel Threads（スティールスレッド）</span>の概念は、サスペンションブリッジの鋼線ケーブルから借用したものだ。ソフトウェアエンジニアリングでは、重要なビジネス機能を支えるエンドツーエンドの実行パスを指す。</p>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// Steel Thread の定義（Ch.11）</div>
+                <p><strong>データコントラクトにおけるスティールスレッド：失敗が即座に測定可能なビジネスインパクトを引き起こすデータプロダクト</strong></p>
+                <p>例：自動車物流ダッシュボード——データ品質が失敗すると製造停止が起き、<span class="highlight">1分あたり約$22,000の利益損失</span>が生じる。このような高インパクトの対象がPOCの優先候補だ。</p>
+            </div>
+
+            <h3>Data Product MVP の定義</h3>
+
+            <blockquote>
+                「データアセット＋それを運用する手段＋ビジネス成果への明確な関係を持つ、パッケージ化されたワークフロー/プロセス」
+                <cite>— Data Contracts (O'Reilly, 2025), Ch.11 — Data Product MVP定義</cite>
+            </blockquote>
+
+            <p>このMVP定義は、最初のPOC候補となるデータプロダクトをフィルタリングするために使用する。迅速なフィードバックループを実現する最小限の要素を備えていることが条件だ。</p>
+
+            <h3>Weighted Decision Matrix — スティールスレッド候補の評価</h3>
+
+            <p>最終的なスティールスレッド選定には、7つの基準による加重意思決定マトリクスを使用する：</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>評価基準</th>
+                            <th>説明</th>
+                            <th>重視する理由</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Operational Impact</strong></td>
+                            <td>運用インパクト</td>
+                            <td>インパクト大 → バイインと緊急性が高まる</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Stakeholder Engagement</strong></td>
+                            <td>ステークホルダー関与度</td>
+                            <td>関与度高いプロデューサー/コンシューマーの方がメリットを得やすい</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Data Dynamism</strong></td>
+                            <td>データ動態性</td>
+                            <td>高動態のスレッドは頻繁更新が必要（リスク）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Existing Data Quality Issues</strong></td>
+                            <td>既存データ品質問題</td>
+                            <td>既存問題がPOCを複雑化させる場合あり</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Interdependencies</strong></td>
+                            <td>相互依存性</td>
+                            <td>依存性少ない = パイロットリスク低い</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Implementation Effort</strong></td>
+                            <td>実装コスト</td>
+                            <td>ツールとエンジニアリングコストの見積もり</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Number of Dependent Teams</strong></td>
+                            <td>依存チーム数</td>
+                            <td>依存チーム多い = メリットがより明確になる</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Business Case 4-Step Process</h3>
+
+            <p>スティールスレッドを選定した後、以下4ステップでビジネスケースを構築し、エグゼクティブスポンサーシップを獲得する：</p>
+
+            <ul class="phase-list">
+                <li class="phase-item">
+                    <div class="phase-dot">01</div>
+                    <div class="phase-content">
+                        <h4>情報収集とエンゲージメント計画の策定</h4>
+                        <p>アクセスログ・gitブレーム・オンコールレポート・Slackチャンネルを監査し、エンゲージメント計画を作成する。</p>
+                    </div>
+                </li>
+                <li class="phase-item">
+                    <div class="phase-dot">02</div>
+                    <div class="phase-content">
+                        <h4>ステークホルダーのデータライフサイクルマッピング</h4>
+                        <p>Value Stream Mapping（価値ストリームマッピング）を使って、主要ステークホルダーがデータライフサイクルのどこに位置するかを可視化する。</p>
+                    </div>
+                </li>
+                <li class="phase-item">
+                    <div class="phase-dot">03</div>
+                    <div class="phase-content">
+                        <h4>ステークホルダーの影響力・関心・リスク評価</h4>
+                        <p>2×2マトリクスを2種類使用：<strong>影響力 vs 関心</strong>（Champions/Enablers/Keep Informed/Monitor）と<strong>インパクト vs 確率</strong>（Act Immediately/Monitor/Contingency Plan/Note）。</p>
+                    </div>
+                </li>
+                <li class="phase-item">
+                    <div class="phase-dot">04</div>
+                    <div class="phase-content">
+                        <h4>エグゼクティブリーダーシップのスポンサーシップ獲得</h4>
+                        <p>スライドデック（Lean Deck）を使った承認取得。以下のLean Deck Outlineに従う。</p>
+                    </div>
+                </li>
+            </ul>
+
+            <h3>Lean Deck Outline — CxO向けパイロット承認プレゼン</h3>
+
+            <p>書籍がサイドバーとして提供するCxO/リーダーシップ向けプレゼンテーション構成（16要素）：</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>スライド</th>
+                            <th>内容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>1</td><td>タイトル</td><td>短く注目を引くタイトル</td></tr>
+                        <tr><td>2</td><td>著者＋スポンサー</td><td>発表者と後援者を明示</td></tr>
+                        <tr><td>3</td><td>エグゼクティブサマリー</td><td>問題・解決策・ビジネス便益</td></tr>
+                        <tr><td>4</td><td>問題文</td><td>解決すべき問題の明確な定義</td></tr>
+                        <tr><td>5</td><td>一次エビデンス</td><td>現在の状態を示すメトリクス</td></tr>
+                        <tr><td>6</td><td>スティールスレッドのビジネスインパクト</td><td>失敗コストの定量化</td></tr>
+                        <tr><td>7</td><td>現状＋コンテキスト</td><td>組織の背景</td></tr>
+                        <tr><td>8</td><td>二次エビデンス</td><td>過去のインシデント・レガシー問題</td></tr>
+                        <tr><td>9</td><td>ユースケース名＋実世界シナリオ</td><td>具体的なユースケース</td></tr>
+                        <tr><td>10</td><td>期待メトリクス</td><td>影響を受けるメトリクス</td></tr>
+                        <tr><td>11</td><td>期待ビジネス成果</td><td>インパクトまでの時間でランク付け</td></tr>
+                        <tr><td>12</td><td>期待技術成果</td><td>技術的アウトカム</td></tr>
+                        <tr><td>13</td><td>ハイレベルプロセス概要</td><td>実装アプローチの概要</td></tr>
+                        <tr><td>14</td><td>フェーズ→タイムライン</td><td>マイルストーンと期間</td></tr>
+                        <tr><td>15</td><td>詳細ファクター概要</td><td>主要な詳細要因</td></tr>
+                        <tr><td>16</td><td>付録</td><td>詳細ダイブのための補足資料</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
             <h3>最初のユースケースの選定基準</h3>
 
             <div class="assess-grid">
@@ -1971,7 +2415,15 @@
                 </div>
             </div>
 
-            <p>Sandersonが発表したフレームワーク（Manifesto・LinkedIn投稿・Gable.aiトーク）とGoCardless事例から構築された実践的8ステップ。</p>
+            <p>本書のフレームワークは、<span class="highlight">John P. Kotter の「Kotter's 8-Step Change Management Framework」（<em>Leading Change</em>, Harvard Business Review Press）</span>に基づいて構成されている。Kotterの経営変革モデルをデータコントラクト採用に適用したものだ。</p>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// Kotter's 8-Step Framework の要点</div>
+                <p><strong>Step 1:</strong> Complacency（自己満足）の除去——組織は現状が受け入れられないと認識する必要がある</p>
+                <p><strong>Step 5:</strong> Detection component（検知コンポーネント）がボトルネックになりやすい——大企業のITスプロールで特に顕著</p>
+                <p><strong>Step 7:</strong> Self-serviceとdiscoverability——DevOpsのボトムアップ発見パターンが参照モデル</p>
+                <p><strong>Step 8:</strong> Target Operating Model（人・プロセス・技術）——シフトレフトの実践が「唯一の合理的なやり方」として文化に定着する</p>
+            </div>
 
             <div class="steps-grid">
                 <div class="step-card">
@@ -2051,6 +2503,126 @@
 
             <p>第12章はPart IIIを締めくくり、あらゆるエグゼクティブスポンサーと予算保有者が必ず問う質問に答える：<span class="highlight">「機能していると、どうやって分かるのか？」</span></p>
 
+            <h3>3 Measurement Categories — 測定の3カテゴリ（書籍版）</h3>
+
+            <p>書籍はFigure 12-1として<span class="highlight">Venn図</span>形式で3つの測定カテゴリが重なり合うことを示す：</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">T</div>
+                    <div class="char3-label">Technical</div>
+                    <h4>技術的カテゴリ</h4>
+                    <p>データコントラクト実装のカバレッジ・信頼性・機能性を示す指標。テスト実行時間、カバーされたアセット数、CI/CD実行結果など。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">T</div>
+                    <div class="char3-label">Team</div>
+                    <h4>チームカテゴリ</h4>
+                    <p>データプロダクトおよびデータコントラクトに関連するチームの効率・行動・ワークロードの運用メトリクス。インシデント解決時間、オンコール頻度など。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">B</div>
+                    <div class="char3-label">Business</div>
+                    <h4>ビジネスカテゴリ</h4>
+                    <p>データコントラクト実装のビジネス価値を直接示すボトムラインメトリクス。コスト削減額、収益への影響、意思決定品質の向上など。</p>
+                </div>
+            </div>
+
+            <h3>POSIWID（Stafford Beer）— 測定が実施されない理由</h3>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">// POSIWID: The Purpose Of a System Is What It Does</div>
+                <p>Stafford Beerが提唱した概念。<strong>「測定は重要」と言われながら実際には行われない</strong>現象を説明するレンズ。</p>
+                <p>典型的な回避理由：</p>
+                <ul>
+                    <li>「すでに問題は分かっている」— 測定せずに問題の存在を前提にする</li>
+                    <li>「定量化するには曖昧すぎる」— 曖昧さを測定しない言い訳にする</li>
+                    <li>「ベースラインがないと改善を測れない」— ベースライン未作成を放置する</li>
+                    <li>「そのメトリクスを信頼しない」— メトリクス自体の信頼性を否定する</li>
+                </ul>
+            </div>
+
+            <h3>Hubbard の Clarification Chain — 「測定不可能」を崩す論理</h3>
+
+            <p>Douglas Hubbard（<em>How to Measure Anything</em>, Wiley）の論理：測定不可能に見えるものでも、以下の連鎖で必ず測定可能であることを示せる。</p>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// Hubbard's Clarification Chain — データコントラクトへの適用</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">01</div>
+                            <div class="phase-content">
+                                <h4>あるプロセスを重視するなら → 何らかの価値がある</h4>
+                                <p>データプロダクトが「ビジネスクリティカル」であれば、価値は検知可能だ。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">02</div>
+                            <div class="phase-content">
+                                <h4>価値があるなら → 検知可能</h4>
+                                <p>検知可能であれば観察可能な量として表現できる。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">03</div>
+                            <div class="phase-content">
+                                <h4>観察可能なら → より多く観察可能</h4>
+                                <p>例：「インシデントチケットが月15件から3件に減少した」</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">04</div>
+                            <div class="phase-content">
+                                <h4>より多く観察可能なら → <strong>測定可能</strong></h4>
+                                <p>「測定不可能」は言い訳に過ぎない。必要なのは適切な観察指標の選択だ。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>MVMT（Minimum Viable Metric Trees）— 最小限のメトリクスツリー</h3>
+
+            <p><span class="highlight">MVMT</span>は、Abhi Sivasailam（2023 Data Council）、DuPont分析（1920年代）、Bernie SmithのKPIツリー（2010年代）にインスパイアされた軽量メトリクス構造だ。North Star Metricから下位メトリクス・レバーへの分解を行う。</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>MVMT構築の6ステップ</th>
+                            <th>内容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Step 1:</strong> North Star Metricへの合意</td>
+                            <td>組織全体で共有する最上位指標を定める（例：Total Supply Chain Cost）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Step 2:</strong> インプットの分解</td>
+                            <td>ガイディングビジネス成果を貢献メトリクス/レバーに分解する</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Step 3:</strong> データコントラクト交差点のマッピング</td>
+                            <td>各メトリクスノードにデータコントラクト取り組みがどう影響するか符号化する</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Step 4:</strong> メトリクスの検証</td>
+                            <td>各メトリクスが論理的に積み上がることを確認する</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Step 5:</strong> 反復的コラボレーション</td>
+                            <td>定期的なステークホルダーフィードバックで継続改善する</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Step 6:</strong> モニタリングとレポーティング</td>
+                            <td>識別したステークホルダーへの一貫した簡潔なコミュニケーション</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
             <h3>測定すべき指標の4カテゴリ</h3>
 
             <div class="table-wrap">
@@ -2122,6 +2694,77 @@
                 <div>
                     <span class="chapter-tag">Ch.12 / Three Phases</span>
                     <h2>Ch.12: 採用3フェーズでの測定</h2>
+                </div>
+            </div>
+
+            <p>書籍（Ch.12）は採用の成熟段階に応じた3フェーズの測定フレームワークを提供する。これは<span class="highlight">Viability（実行可能性）→ Repeatability（再現性）→ Scalability（スケーラビリティ）</span>という進化を辿る。Great Expectationsが定式化した3フェーズモデル（口頭→文書→自動化）と組み合わせて理解することで、より完全な測定ロードマップが得られる。</p>
+
+            <h3>書籍版3フェーズ — Viability / Repeatability / Scalability</h3>
+
+            <div class="phase-maturity-grid">
+                <div class="phase-maturity-card">
+                    <div class="phase-maturity-header">
+                        <div class="phase-maturity-label">Phase 1 / 実行可能性フェーズ</div>
+                        <div class="phase-maturity-name">Viability（実行可能性の測定）</div>
+                    </div>
+                    <div class="phase-maturity-body">
+                        <p><strong>目的</strong>：POCとしてのデータコントラクトが機能することを証明する。スティールスレッドへの適用が鍵。</p>
+                        <p><strong>主要メトリクス</strong>：検出データアセット数、ドラフト/承認/実装/変更/アーカイブされたコントラクト数（ファネルビュー）、初回コントラクトまでの時間、オンボード開発者数、CI/CD実行結果、アラート精度、開発者満足度（Likertスケール）</p>
+                        <p><strong>指導する問い</strong>：「軽減または予防しようとするビジネスリスクは何か？」「どのメトリクスが既存で追跡・体感されているか？」</p>
+                        <div class="phase-maturity-metaphor">POCがビジネスクリティカルなデータプロダクトで機能することを証明</div>
+                    </div>
+                </div>
+                <div class="phase-maturity-card">
+                    <div class="phase-maturity-header">
+                        <div class="phase-maturity-label">Phase 2 / 再現性フェーズ</div>
+                        <div class="phase-maturity-name">Repeatability（再現性の測定）</div>
+                    </div>
+                    <div class="phase-maturity-body">
+                        <p><strong>目的</strong>：複数のチーム・ドメインで機能することを証明する。自然な早期採用者から、より広い対象へシフト。</p>
+                        <p><strong>主要メトリクス</strong>：チーム横断インシデント解決時間、コントラクト仕様内のオーナーチーム数、顧客vs内部エスカレーション数、繰返しエスカレーション減少率、違反管理時間、リアクティブオンコール減少、四半期エンジニアリング時間節約</p>
+                        <p><strong>注意点</strong>：成功したPOC後に急ぎすぎない。測定努力を早期に標準化・硬直化しすぎない。コミュニケーションを怠らない。</p>
+                        <div class="phase-maturity-metaphor">複数のチーム・ドメインへの拡張を証明</div>
+                    </div>
+                </div>
+                <div class="phase-maturity-card">
+                    <div class="phase-maturity-header">
+                        <div class="phase-maturity-label">Phase 3 / スケーラビリティフェーズ</div>
+                        <div class="phase-maturity-name">Scalability（スケーラビリティの測定）</div>
+                    </div>
+                    <div class="phase-maturity-body">
+                        <p><strong>目的</strong>：組織の運用ファブリックに組み込む。価値証明から体系的モニタリングへのシフト。</p>
+                        <p><strong>主要メトリクス</strong>：全スティールスレッドのコントラクト適用率、四半期コスト節約、全社データアセットのコントラクトカバレッジ率、MTTR、新チームオンボーディング時間、繰返し違反量、エスカレーションなし解決率</p>
+                        <p><strong>注意点</strong>：初期フェーズの動機付けプレッシャーが薄れる（Kotterのステップ1：コンプレイセンシーへの回帰リスク）。報告はされているが行動を促さなくなったメトリクスに注意。</p>
+                        <div class="phase-maturity-metaphor">組織の運用ファブリックへの統合</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Campbell の英雄の旅 — ストーリーテリングフレームワーク</h3>
+
+            <p>書籍は、データコントラクトの成果を組織に伝えるために、Joseph Campbellの<span class="highlight">英雄の旅（Monomyth）</span>（<em>The Hero with a Thousand Faces</em>, Princeton University Press）を適用する。George Lucasがスター・ウォーズの物語構造にこの概念をクレジットしていることでも知られる。</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Act 1 — Departure（旅立ち）</div>
+                    <h4>現状確立と緊急性の喚起</h4>
+                    <p>現状（=データ品質の痛み）を確立し、聴衆が何を失うかを理解させる。「最も受け入れられないデータプロダクトの非効率・痛み・リスクは何か？誰が感じているか？」</p>
+                    <div class="char3-impact">→ 変革への緊急性を喚起する障害の導入</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Act 2 — Transformation（変容）</div>
+                    <h4>データコントラクトが「魔法の薬」</h4>
+                    <p>変革の必要性は信頼できるデータで裏付ける。「現実を変えられる具体的な実施事項は何か？変化への抵抗はあるか？」</p>
+                    <div class="char3-impact">→ 変革の信頼性をデータで裏付け</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Act 3 — Return（帰還）</div>
+                    <h4>測定可能な成果で物語を解決</h4>
+                    <p>変革後の世界をメトリクスで描写する。「データコントラクト実装が行われたら何が永遠に変わるか？どのメトリクスがこれを最もよく捉えるか？」</p>
+                    <div class="char3-impact">→ 変革後の世界を指標で描写</div>
                 </div>
             </div>
 
@@ -2284,6 +2927,53 @@
                     <h4>AIガバナンスインフラ</h4>
                     <p>データの形状・意味・用途・倫理的境界・コンプライアンス・保持・文脈的推論限界を統括する<em>AIコントラクト</em>へと進化。</p>
                 </div>
+            </div>
+
+            <h3>MCP（Model Context Protocol）— データカタログの果たせなかった約束</h3>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// MCP: Model Context Protocol とデータコントラクトの交点</div>
+                <p><span class="highlight">Model Context Protocol（MCP）</span>はLLMにアプリケーションからのコンテキストを提供するプロトコルだ。書籍はこれを「<strong>データカタログの果たせなかった約束</strong>」と位置づける。</p>
+                <p>データカタログはデータ<em>について</em>教えてくれる（誰が使ったか、アクセス頻度、定義）——しかし<strong>データがどこから来たかは教えてくれない</strong>。</p>
+                <p>「意味はデータを見ても導出できない——データを生成し消費したコードを調べることでのみ捕捉できる」</p>
+                <p>LLMs + MCP + データコントラクトの組み合わせ → データのエコシステム全体のパスをトレースし、変更時のsource of truthを説明可能にする。</p>
+            </div>
+
+            <h3>AIエージェントの確率的性質と未解決の問い</h3>
+
+            <p>AIエージェントは<span class="highlight">確率的（probabilistic）</span>であり、静的な結果を持つマシンとは異なり行動を保証できない。これがデータ品質をAIエンジニアリングプログラムの<strong>最も本質的な要素</strong>にする。</p>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">OPEN Q 01</div>
+                    <h4>モデルの決定の理解</h4>
+                    <p>モデルがなぜその決定を下したかをどう理解するか？説明可能性の問題はデータ品質問題でもある。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">OPEN Q 02</div>
+                    <h4>影響分析のトレース</h4>
+                    <p>モデルの決定がどのシステムに影響するか、影響分析をどうトレースするか？データリネージュなしには不可能だ。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">OPEN Q 03</div>
+                    <h4>コーディングパターンの検証</h4>
+                    <p>適切なコーディングパターンが守られているかどう確認するか？契約（コントラクト）なしには検証できない。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">OPEN Q 04</div>
+                    <h4>エラーの複合防止</h4>
+                    <p>エラーが時間とともに複合しないようどう保証するか？継続的なコントラクト検証が唯一の答えだ。</p>
+                </div>
+            </div>
+
+            <h3>手動定義から2030年代の自動化へ</h3>
+
+            <div class="alert alert-deep">
+                <div class="alert-title">// データコントラクトの未来予測（書籍 Conclusion）</div>
+                <p>「<strong>データコントラクトの手動定義は2020年代のアーティファクトになる。</strong>」</p>
+                <p>LLMとエージェントが期待値を推論できるようになるにつれ、コントラクトは必要に応じて<span class="highlight">自動生成</span>される。</p>
+                <p>自動生成されたコントラクトは下流システムに<span class="highlight">動的に伝播</span>し、変更を先取りした管理が可能になる。</p>
+                <p>「データの未来はコードだ」——コードこそが変更が起きる場所であり、所有権が確立され、理解が導出される場所だ。</p>
             </div>
 
             <h3>LLMによる自動データコントラクト生成</h3>
@@ -2562,6 +3252,48 @@
                     <div class="source-text">
                         <strong>Intellectyx</strong> — "Automatic Data Contracts with LLMs: How to Ensure Compliance and Mitigate Potential Risks" (September 18, 2025) — Conclusion LLMによる自動コントラクト生成<br>
                         <a href="https://www.intellectyx.com/automatic-data-contracts-with-llms-how-to-ensure-compliance-and-mitigate-potential-risks/" target="_blank" rel="noopener">https://www.intellectyx.com/automatic-data-contracts-with-llms-how-to-ensure-compliance-and-mitigate-potential-risks/</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[11]</div>
+                    <div class="source-text">
+                        <strong>John P. Kotter</strong> — <em>Leading Change</em> (Harvard Business Review Press) — Ch.11 組織全体Shift Left採用の8ステップフレームワークの典拠<br>
+                        <a href="https://www.hbsp.harvard.edu/product/11298-PDF-ENG" target="_blank" rel="noopener">https://www.hbsp.harvard.edu/product/11298-PDF-ENG</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[12]</div>
+                    <div class="source-text">
+                        <strong>Joseph Campbell</strong> — <em>The Hero with a Thousand Faces</em> (Princeton University Press) — Ch.12 ストーリーテリングフレームワーク（英雄の旅）の典拠<br>
+                        <a href="https://press.princeton.edu/books/paperback/9780691017846/the-hero-with-a-thousand-faces" target="_blank" rel="noopener">https://press.princeton.edu/books/paperback/9780691017846/the-hero-with-a-thousand-faces</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[13]</div>
+                    <div class="source-text">
+                        <strong>Douglas W. Hubbard</strong> — <em>How to Measure Anything: Finding the Value of Intangibles in Business</em> (Wiley) — Ch.12 Clarification Chain（測定論理）の典拠<br>
+                        <a href="https://www.wiley.com/en-us/How+to+Measure+Anything%3A+Finding+the+Value+of+Intangibles+in+Business%2C+3rd+Edition-p-9781118539279" target="_blank" rel="noopener">https://www.wiley.com/en-us/How+to+Measure+Anything</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[14]</div>
+                    <div class="source-text">
+                        <strong>Gunpei Yokoi / Nintendo</strong> — 横井軍平「枯れた技術の水平思考」(1975) — Ch.10 データサプライチェーンメタファーのインスピレーション源<br>
+                        <a href="https://oreil.ly/8BZL0" target="_blank" rel="noopener">https://oreil.ly/8BZL0</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[15]</div>
+                    <div class="source-text">
+                        <strong>McKinsey & Company (Lili Duan, Emily Sheeren, Leigh M. Weiss)</strong> — Hidden Influencers研究 — Ch.9 SWEチーム内の橋渡し役特定戦術<br>
+                        <a href="https://www.mckinsey.com/capabilities/people-and-organizational-performance/our-insights/hidden-influencers" target="_blank" rel="noopener">https://www.mckinsey.com/capabilities/people-and-organizational-performance/our-insights</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[16]</div>
+                    <div class="source-text">
+                        <strong>McKinsey & Company / BCG</strong> — Hypothesis-Led Approach フレームワーク — Ch.10 戦略策定（Pyramid Principle, SCQA/SCR）<br>
+                        <a href="https://oreil.ly/GBjUe" target="_blank" rel="noopener">https://oreil.ly/GBjUe</a>
                     </div>
                 </li>
             </ul>
