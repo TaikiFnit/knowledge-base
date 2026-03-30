@@ -1,0 +1,2614 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Contracts — 組織導入と未来像｜Part III 学習ノート</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #F59E0B;
+            --accent-light: #FBBF24;
+            --accent-dim: rgba(245, 158, 11, 0.15);
+            --accent-glow: rgba(245, 158, 11, 0.08);
+            --bg-deep: #0B0A07;
+            --bg-secondary: #100F0A;
+            --bg-tertiary: #1A1810;
+            --text-primary: #E8EAED;
+            --text-secondary: #9A9080;
+            --border: #2A2610;
+            --border-accent: rgba(245, 158, 11, 0.3);
+            --danger: #EF4444;
+            --indigo: #6366F1;
+            --amber-deep: #B45309;
+            --green: #34D399;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(245, 158, 11, 0.06) 0%, transparent 55%),
+                radial-gradient(circle at 85% 70%, rgba(180, 83, 9, 0.04) 0%, transparent 55%),
+                radial-gradient(circle at 50% 90%, rgba(245, 158, 11, 0.03) 0%, transparent 40%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #0D0C08 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        /* ─── Header & Navigation ─── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(11, 10, 7, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.6rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.82rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 40%, var(--amber-deep) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .book-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: rgba(26, 24, 16, 0.7);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Table of Contents ─── */
+        .toc-section {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+
+        .toc-box {
+            background: rgba(26, 24, 16, 0.6);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: color 0.2s ease;
+            padding: 0.3rem 0;
+        }
+
+        .toc-list li a:hover {
+            color: var(--accent-light);
+        }
+
+        .toc-num {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 34px;
+        }
+
+        /* ─── Main Content ─── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(26, 24, 16, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--amber-deep), transparent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 70px;
+            opacity: 0.9;
+        }
+
+        .chapter-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '//';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.4rem;
+            color: var(--text-primary);
+            line-height: 1.85;
+        }
+
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin: 1rem 0 1.5rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        /* ─── Tables ─── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(16, 15, 10, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(245, 158, 11, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(245, 158, 11, 0.04);
+        }
+
+        /* ─── Alert / Callout Boxes ─── */
+        .alert {
+            padding: 1.4rem 1.6rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-amber {
+            border-left-color: var(--accent);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-success {
+            border-left-color: var(--green);
+            background: rgba(52, 211, 153, 0.08);
+        }
+
+        .alert-danger {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-indigo {
+            border-left-color: var(--indigo);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .alert-deep {
+            border-left-color: var(--amber-deep);
+            background: rgba(180, 83, 9, 0.1);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-amber .alert-title { color: var(--accent-light); }
+        .alert-success .alert-title { color: var(--green); }
+        .alert-danger .alert-title { color: var(--danger); }
+        .alert-indigo .alert-title { color: var(--indigo); }
+        .alert-deep .alert-title { color: var(--accent); }
+
+        .alert p { margin-bottom: 0.5rem; }
+        .alert p:last-child { margin-bottom: 0; }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(16, 15, 10, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: rgba(16, 15, 10, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.12);
+        }
+
+        /* ─── Char3 Cards ─── */
+        .char3-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .char3-card {
+            background: rgba(16, 15, 10, 0.9);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.8rem;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .char3-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(245, 158, 11, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .char3-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.12;
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            line-height: 1;
+        }
+
+        .char3-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .char3-card h4 {
+            font-size: 1.15rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        .char3-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+
+        .char3-impact {
+            font-size: 0.82rem;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid var(--border);
+            padding-top: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ─── Assess Grid ─── */
+        .assess-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .assess-card {
+            background: rgba(16, 15, 10, 0.85);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            padding: 1.4rem 1.6rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .assess-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .assess-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 0.4rem;
+        }
+
+        .assess-card h4 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+        }
+
+        .assess-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .assess-card p {
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        /* ─── Phase Timeline ─── */
+        .phase-list {
+            list-style: none;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .phase-list::before {
+            content: '';
+            position: absolute;
+            left: 18px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+            opacity: 0.3;
+        }
+
+        .phase-item {
+            display: flex;
+            gap: 1.2rem;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .phase-dot {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--accent-dim);
+            border: 2px solid var(--border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--accent);
+            z-index: 1;
+        }
+
+        .phase-content h4 {
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+            color: var(--text-primary);
+        }
+
+        .phase-content p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        .phase-timing {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            margin-bottom: 0.3rem;
+        }
+
+        /* ─── Diagram Containers ─── */
+        .diagram-wrap {
+            margin: 2.5rem 0;
+            background: rgba(16, 15, 10, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .diagram-inner {
+            padding: 2rem 2.5rem;
+            position: relative;
+        }
+
+        .diagram-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* ─── Highlight Inline ─── */
+        .highlight {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .en-term {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 0.8rem 1.5rem;
+            margin: 1.5rem 0;
+            background: rgba(245, 158, 11, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        blockquote cite {
+            display: block;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-style: normal;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Stat Callout ─── */
+        .stat-callout {
+            background: rgba(16, 15, 10, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-callout-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-row-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-big {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ─── Part Link Banner ─── */
+        .part-link-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(16, 15, 10, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem 1.8rem;
+            margin: 3rem 0;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .part-link-banner .part-info {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .part-link-banner .part-info strong {
+            color: var(--text-primary);
+        }
+
+        .part-link-btn {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-light);
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .part-link-btn:hover {
+            background: rgba(245, 158, 11, 0.25);
+            text-decoration: none;
+            opacity: 1;
+        }
+
+        .part-link-btn.active {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* ─── Value Shift Table ─── */
+        .value-shift-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .shift-col {
+            background: rgba(16, 15, 10, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .shift-col-before {
+            border-top: 3px solid var(--danger);
+        }
+
+        .shift-col-after {
+            border-top: 3px solid var(--green);
+        }
+
+        .shift-col-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .shift-col-before .shift-col-title { color: var(--danger); }
+        .shift-col-after .shift-col-title { color: var(--green); }
+
+        .shift-item {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.5;
+        }
+
+        .shift-item:last-child { border-bottom: none; }
+
+        /* ─── Summary Takeaways ─── */
+        .takeaway-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .takeaway-item {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 1.2rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .takeaway-item:last-child { border-bottom: none; }
+
+        .takeaway-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 40px;
+            opacity: 0.8;
+        }
+
+        .takeaway-body strong {
+            display: block;
+            color: var(--text-primary);
+            font-size: 1.02rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .takeaway-body p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.65;
+        }
+
+        /* ─── Sources Section ─── */
+        .sources-list {
+            list-style: none;
+            margin: 0;
+        }
+
+        .sources-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .sources-list li:last-child {
+            border-bottom: none;
+        }
+
+        .source-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 28px;
+            margin-top: 0.1rem;
+        }
+
+        .source-text {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .source-text a {
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            word-break: break-all;
+        }
+
+        /* ─── Step cards for 8-step model ─── */
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .step-card {
+            background: rgba(16, 15, 10, 0.85);
+            border: 1px solid var(--border);
+            padding: 1.4rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .step-card:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+        }
+
+        .step-num-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--accent);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.15rem 0.5rem;
+            border-radius: 3px;
+            margin-bottom: 0.6rem;
+            display: inline-block;
+            letter-spacing: 1px;
+        }
+
+        .step-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.4rem;
+            color: var(--text-primary);
+        }
+
+        .step-card p {
+            font-size: 0.83rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+
+        /* ─── Phase maturity cards ─── */
+        .phase-maturity-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .phase-maturity-card {
+            background: rgba(16, 15, 10, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .phase-maturity-header {
+            padding: 1rem 1.4rem 0.8rem;
+            background: rgba(245, 158, 11, 0.08);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .phase-maturity-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .phase-maturity-name {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .phase-maturity-body {
+            padding: 1rem 1.4rem 1.2rem;
+        }
+
+        .phase-maturity-body p {
+            font-size: 0.83rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.6rem;
+            line-height: 1.6;
+        }
+
+        .phase-maturity-metaphor {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            padding: 0.3rem 0.7rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+
+        /* ─── AI future section special style ─── */
+        .ai-feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .ai-feature-card {
+            background: rgba(16, 15, 10, 0.85);
+            border: 1px solid var(--border);
+            border-top: 2px solid var(--accent);
+            padding: 1.4rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .ai-feature-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 6px 24px rgba(245, 158, 11, 0.1);
+        }
+
+        .ai-feature-icon {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 0.6rem;
+        }
+
+        .ai-feature-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.4rem;
+            color: var(--text-primary);
+        }
+
+        .ai-feature-card p {
+            font-size: 0.83rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-source {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(26, 24, 16, 0.8);
+            border: 1px solid var(--border);
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+        }
+
+        .footer-disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0.75rem auto 0;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            color: var(--accent-light);
+            background: rgba(245, 158, 11, 0.1);
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .nav-links { display: none; }
+            section { padding: 2rem 1.5rem; }
+            .section-number { font-size: 1.8rem; min-width: 50px; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .toc-list { grid-template-columns: 1fr; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 0.75rem 0.9rem; }
+            .char3-grid { grid-template-columns: 1fr; }
+            .value-shift-grid { grid-template-columns: 1fr; }
+            .phase-maturity-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .hero { padding: 3rem 1.5rem 2rem; }
+            .hero-stats { grid-template-columns: 1fr; }
+            .stat-row-grid { grid-template-columns: 1fr; }
+            .assess-grid { grid-template-columns: 1fr; }
+            .steps-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ─── Utility ─── */
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header>
+        <nav>
+            <a href="../" class="logo">
+                <!-- DC monogram: contract handshake-inspired geometric mark in amber -->
+                <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Data Contracts logo">
+                    <!-- D shape: arc on left -->
+                    <path d="M3 4 L3 18 L7 18 Q13 18 13 11 Q13 4 7 4 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+                    <!-- C shape: open arc on right -->
+                    <path d="M19 7 Q14 4 14 11 Q14 18 19 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                    <!-- Connection dot center -->
+                    <circle cx="13.5" cy="11" r="1" fill="currentColor"/>
+                </svg>
+                Data Contracts
+            </a>
+            <ul class="nav-links">
+                <li><a href="#overview">Part III 概要</a></li>
+                <li><a href="#ch9">Ch.9 シフトレフト</a></li>
+                <li><a href="#ch10">Ch.10 変革管理</a></li>
+                <li><a href="#ch11">Ch.11 初期成功</a></li>
+                <li><a href="#ch12">Ch.12 測定</a></li>
+                <li><a href="#conclusion">AI の未来</a></li>
+                <li><a href="#summary">まとめ</a></li>
+            </ul>
+            <a href="../" class="back-link">← トップに戻る</a>
+        </nav>
+    </header>
+
+    <!-- ─── Hero ─── -->
+    <div class="hero">
+        <div class="eyebrow">学習ノート / O'REILLY / Part III</div>
+        <h1>Data Contracts — 組織導入と未来像｜Part III 学習ノート</h1>
+        <p class="subtitle">Part III: Getting Leadership Buy-In For The Data Contract Architecture</p>
+        <p class="subtitle" style="font-size:1rem; margin-bottom:1.5rem;">Chad Sanderson, Mark Freeman, B.E. Schmidt著『Data Contracts』（O'Reilly, 2025）Part III 第9〜12章＋結論の要約</p>
+        <div class="book-info">
+            <span>Chad Sanderson, Mark Freeman, B.E. Schmidt</span>
+            <span style="opacity:0.4;">|</span>
+            <span>O'Reilly Media, 2025</span>
+            <span style="opacity:0.4;">|</span>
+            <span>ISBN: 978-1-098-15763-0</span>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">4+1</div>
+                <div class="stat-label">対象：第9〜12章＋Conclusion</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">1:10:100</div>
+                <div class="stat-label">品質問題の発見コスト比（設計時：実行時：消費時）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">8</div>
+                <div class="stat-label">組織全体のシフトレフト採用に向けた実践ステップ</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3</div>
+                <div class="stat-label">データコントラクト採用の成熟フェーズ（口頭→文書→自動化）</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2026-03-30 &nbsp;|&nbsp; 読了目安: ~30分 &nbsp;|&nbsp; Part III + Conclusion（結論章含む）</p>
+    </div>
+
+    <!-- ─── Table of Contents ─── -->
+    <div class="toc-section">
+        <div class="toc-box">
+            <div class="toc-title">// Table of Contents</div>
+            <ul class="toc-list">
+                <li><a href="#overview"><span class="toc-num">00</span>Part III 概要と位置づけ</a></li>
+                <li><a href="#ch9"><span class="toc-num">01</span>Ch.9：Shift Left — 文化変革</a></li>
+                <li><a href="#ch9-examples"><span class="toc-num">02</span>Ch.9：認識ギャップと3つの先行事例</a></li>
+                <li><a href="#ch9-outcomes"><span class="toc-num">03</span>Ch.9：Data as Code と5つの成果</a></li>
+                <li><a href="#ch10"><span class="toc-num">04</span>Ch.10：チェンジマネジメント</a></li>
+                <li><a href="#ch10-strategy"><span class="toc-num">05</span>Ch.10：導入戦略とサプライチェーン</a></li>
+                <li><a href="#ch11"><span class="toc-num">06</span>Ch.11：最初の成功を掴む</a></li>
+                <li><a href="#ch11-steps"><span class="toc-num">07</span>Ch.11：8ステップ採用フレームワーク</a></li>
+                <li><a href="#ch12"><span class="toc-num">08</span>Ch.12：インパクト測定</a></li>
+                <li><a href="#ch12-phases"><span class="toc-num">09</span>Ch.12：3フェーズ測定モデル</a></li>
+                <li><a href="#conclusion"><span class="toc-num">10</span>Conclusion：AIとデータコントラクトの未来</a></li>
+                <li><a href="#summary"><span class="toc-num">11</span>まとめ — Part IIIの要点</a></li>
+                <li><a href="#sources"><span class="toc-num">12</span>参考文献</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ─── Part Series Banner ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Data Contracts 学習ノート
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="data-contracts-intro.html" class="part-link-btn">Part I — なぜ今必要か</a>
+                <a href="data-contracts-impl.html" class="part-link-btn">Part II — 技術実装</a>
+                <a href="#" class="part-link-btn active">Part III — 組織導入と未来像 ◀</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Main Content ─── -->
+    <main>
+
+        <!-- Section 0: Overview -->
+        <section id="overview">
+            <div class="section-header">
+                <div class="section-number">00</div>
+                <div>
+                    <span class="chapter-tag">Part III Overview</span>
+                    <h2>Part III 概要</h2>
+                </div>
+            </div>
+
+            <p>Part III（第9〜12章＋結論）は、Parts I〜IIで確立した技術的な「何をするか」から、人間的な「どう実現するか」へと移行する。<span class="highlight">文化変革・チェンジマネジメント・組織的バイイン・成功の測定</span>という4つのテーマが軸となり、「技術的にどんなに優れた実装も、組織的・文化的な準備なしには失敗する」というメッセージを展開する。</p>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// Part III の中心的主張</div>
+                <p><span class="en-term">Shift Left</span>とは、所有権・説明責任・品質・ガバナンスを、<strong>リアクティブ（事後対応）な下流チーム</strong>から<strong>プロアクティブ（事前予防）な上流チーム</strong>へ移行することだ。</p>
+                <p>この移行は文化的変革であり、テクノロジーの埋め込みなしに「文化シフト」を命令だけで実現しようとすることはほぼ不可能である。DevOps・DevSecOps・Feature Managementが示したパターンがそれを証明している。</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Chapter 9</div>
+                    <h4>Shift Left — 文化変革の必要性</h4>
+                    <p>シフトレフトの定義、3つの先行事例（DevOps・DevSecOps・Feature Management）、認識ギャップ（Perception Gap）の3実例、「データはコードが生成するもの」概念、5つの変革成果。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 10</div>
+                    <h4>チェンジマネジメント — 人・プロセス・技術</h4>
+                    <p>変革管理の重要性、APIアナロジー、データをサプライチェーンとして捉えるモデル、データコントラクト実装レベルの成熟モデル、導入戦略の5原則。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 11</div>
+                    <h4>最初の成功を掴む</h4>
+                    <p>最初のユースケースの選定基準、三方向ビジネスケース、組織全体シフトレフト採用の8ステップ、アトリビューション（帰属）の実践。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 12</div>
+                    <h4>インパクト測定</h4>
+                    <p>何を測るべきか（4カテゴリの指標）、3フェーズ採用モデルでの測定（口頭→文書化→自動化）、ストーリーテリングによる測定インパクト、GoCardless事例。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Conclusion</div>
+                    <h4>AIとデータコントラクトの未来</h4>
+                    <p>AI時代のデータ信頼性問題、LLMによる自動データコントラクト生成、自律的・自己修復パイプラインへの進化、AIガバナンスインフラとしてのデータコントラクト。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: Ch.9 Shift Left -->
+        <section id="ch9">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <div>
+                    <span class="chapter-tag">Ch.9 / Shift Left</span>
+                    <h2>Ch.9: Shift Left — データコントラクトに必要な文化変革</h2>
+                </div>
+            </div>
+
+            <p>第9章は、Parts I〜IIが「技術的にどう実装するか」を論じてきたのに対し、<span class="highlight">なぜ組織的・文化的変革が技術実装の前提条件か</span>を論じる。著者の核心的主張は明快だ——「文化シフト」はテクノロジーの埋め込みなしには不可能であり、DevOps・DevSecOps・Feature Managementという3つの先行事例がそれを既に証明している。</p>
+
+            <h3>シフトレフトの定義</h3>
+
+            <blockquote>
+                「Shifting Left means moving ownership, accountability, quality and governance from reactive downstream teams, to proactive upstream teams.」
+                <cite>— Chad Sanderson, Shift Left Data Manifesto (Substack, March 2025)</cite>
+            </blockquote>
+
+            <p>集中管理型のデータ管理モデル——専任データチームが品質に単独責任を持つ体制——は、クラウドインフラ・マイクロサービス・疎結合エンジニアリング組織の拡大とともに維持不可能になった。シフトレフトは、分散化された組織全体でオーナーシップを分散させるメカニズムとして登場した。</p>
+
+            <div class="value-shift-grid">
+                <div class="shift-col shift-col-before">
+                    <div class="shift-col-title">従来モデル（リアクティブ）</div>
+                    <div class="shift-item">品質はデータチームの専任責任</div>
+                    <div class="shift-item">問題は下流で検知（消費時 $100コスト）</div>
+                    <div class="shift-item">エンジニアはデータへの影響を意識しない</div>
+                    <div class="shift-item">コンプライアンスはWikiやチェックリストで管理</div>
+                    <div class="shift-item">データチームが「詰まり」の原因に</div>
+                </div>
+                <div class="shift-col shift-col-after">
+                    <div class="shift-col-title">シフトレフト後（プロアクティブ）</div>
+                    <div class="shift-item">品質はプロデューサー・プラットフォーム・コンシューマーの共有責任</div>
+                    <div class="shift-item">問題はCI/CDで早期検知（設計時 $1コスト）</div>
+                    <div class="shift-item">エンジニアが自分のコードのデータ影響を把握</div>
+                    <div class="shift-item">コンプライアンスはCI/CDパイプラインにコード化</div>
+                    <div class="shift-item">データチームがガバナンス設計に参加</div>
+                </div>
+            </div>
+
+            <h3>1-10-100コスト問題</h3>
+
+            <p>シフトレフトの経済的根拠は明快だ。品質問題の発見コストは発見タイミングに依存する：</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>発見タイミング</th>
+                            <th>相対コスト</th>
+                            <th>従来のデータ現場</th>
+                            <th>シフトレフト後</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>設計時</strong>（CI/CDまたは出荷前）</td>
+                            <td><code>$1</code></td>
+                            <td>ほとんど対処なし</td>
+                            <td>大部分のフォーカス（予防・先手）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>実行時</strong>（出荷後・顧客未影響）</td>
+                            <td><code>$10</code></td>
+                            <td>一部対処</td>
+                            <td>一部</td>
+                        </tr>
+                        <tr>
+                            <td><strong>消費時</strong>（顧客・ダッシュボード・AI影響後）</td>
+                            <td><code>$100</code></td>
+                            <td>ほぼ全フォーカス</td>
+                            <td>わずか（リアクティブ）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>現在のデータチームは、ほぼ全力を$100ステージに費やしている。シフトレフトとは、労力を$1ステージに前倒しすることで品質担保を安価にする戦略的転換だ。</p>
+
+            <h3>シフトレフトが解決する3つのコア問題</h3>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Problem 01</div>
+                    <h4>常態化する障害（Outages）</h4>
+                    <p>上流の変更が下流のシステム・パイプライン・コンシューマーを破壊し続ける。不信感が蔓延し、大規模チームが検証・バリデーションに75〜80%以上の時間を費やす。</p>
+                    <div class="char3-impact">→ テスト・バリデーションコストの圧縮</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Problem 02</div>
+                    <h4>要件の欠落（Missing Requirements）</h4>
+                    <p>データチームが新機能やAIシステムが必要とするものを知るのが遅すぎる。大量の手戻りが発生し、成功評価が遅延する。</p>
+                    <div class="char3-impact">→ 早期フィードバックループの確立</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Problem 03</div>
+                    <h4>エコシステムの複雑性</h4>
+                    <p>マイクロサービスのスパゲッティコード。データフロー・コンシューマー・価値の追跡が困難。長期マイグレーション・停滞するイニシアチブを引き起こす。</p>
+                    <div class="char3-impact">→ コードレベルのリネージュ可視化</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Ch.9 Perception Gap & Precedents -->
+        <section id="ch9-examples">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <div>
+                    <span class="chapter-tag">Ch.9 / Perception Gap</span>
+                    <h2>Ch.9: 認識ギャップと3つの先行事例</h2>
+                </div>
+            </div>
+
+            <h3>認識ギャップ（Perception Gap）</h3>
+
+            <p><span class="highlight">認識ギャップ</span>とは、ソフトウェアエンジニアがデータをどう認識するか（コードの副産物であり、自分の責任範囲外）と、データチームがデータをどう認識するか（ガバナンスと管理が必要な重要プロダクト）の間の根本的な断絶を指す。</p>
+
+            <blockquote>
+                「What I found in my swim upstream were well-meaning engineers modifying services unaware that something as simple as dropping a field could have major implications on dashboards (or other consumers) downstream.」
+                <cite>— Andrew Jones, GoCardless（Monte Carlo Data、2022年7月）</cite>
+            </blockquote>
+
+            <h3>採用の「曲がり角」——9ステップの険しい旅</h3>
+
+            <p>Sandersonが観察した典型的な失敗パターンは、ほぼすべての組織で同じ9ステップを辿る：</p>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// データコントラクト採用の険しい旅（Chad Sanderson, LinkedIn 2025）</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">01</div>
+                            <div class="phase-content">
+                                <h4>予期せぬデータ変更の痛みを感じる</h4>
+                                <p>スキーマ変更・フィールド削除が通知なしに行われ、下流に影響。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">02</div>
+                            <div class="phase-content">
+                                <h4>変換ロジックで応急処置</h4>
+                                <p>データパイプラインにパッチを当てて当座をしのごうとする。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">03</div>
+                            <div class="phase-content">
+                                <h4>応急処置が技術的負債に変化</h4>
+                                <p>パッチが積み重なり、元の問題を増幅させる負の連鎖が始まる。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">04</div>
+                            <div class="phase-content">
+                                <h4>データコントラクトの承認・下流実装</h4>
+                                <p>バイインを取り付け、下流側にデータコントラクトを素早く実装。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">05</div>
+                            <div class="phase-content">
+                                <h4>クイックウィン：ビジネスユーザーへの影響前に問題検知</h4>
+                                <p>問題がビジネスユーザーに到達する前にフラグが立つ、初の成功体験。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">06</div>
+                            <div class="phase-content">
+                                <h4>データ変更が蓄積し、コントラクトがボトルネックに</h4>
+                                <p>変更は検知できても「防止」できない。コントラクトが詰まりの原因に。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">07</div>
+                            <div class="phase-content">
+                                <h4>上流での変更防止が必要だと気づく</h4>
+                                <p>検知だけでなく、上流での「予防」が必要だと理解し始める。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">08</div>
+                            <div class="phase-content">
+                                <h4>上流チームが採用しない——要件に含めていなかった</h4>
+                                <p>上流エンジニアリングチームが最初の要件定義に含まれていなかった。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">09</div>
+                            <div class="phase-content">
+                                <h4>真実の発見：2つの前提条件を理解する</h4>
+                                <p><strong>A) リーダーシップのバイイン（トップダウン指令）</strong>と<strong>B) 既存開発ワークフローへの統合</strong>の両方が不可欠だと認識。ステップ1〜8は多くのチームが1年以上かけて辿り着く。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>シフトレフトの3つの先行事例</h3>
+
+            <p>Sandersonはデータ業界がシフトレフトを「理論」として扱うことをやめ、現実として受け入れるよう求める。ソフトウェアエンジニアリングでは既に3回、同じパターンが実現している：</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">2007–2008</div>
+                    <h4>DevOps</h4>
+                    <p>開発とIT運用のサイロを解消。以前はコードを書いて運用チームに渡すだけだったが、CI/CDパイプライン・IaC・リアルタイム監視により開発と運用が一体化。今や意味ある規模でDevOps機能なしに動かす組織は事実上存在しない。</p>
+                    <div class="char3-impact">→ 開発者が自分のユニット/統合テストを書くことが標準に</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">≈2015</div>
+                    <h4>DevSecOps</h4>
+                    <p>セキュリティは事後対応だったが、SDLC全体への自動継続的組み込みへ転換。SAST・SCA・DAST・IaCスキャン・シークレットスキャンが常時実行される。開発速度を落とさずにセキュリティを担保するオートメーションが鍵。</p>
+                    <div class="char3-impact">→ セキュリティがゲートキーパーから組み込み機能へ</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">≈2018+</div>
+                    <h4>Feature Management</h4>
+                    <p>機能ロールアウト・実験・計装が開発サイクルの後半（下流チーム）に行われていたが、フィーチャーフラグ・SDLCへの計装組み込み・実験フレームワークにより、エンジニアが開発中に計装を追加することが標準に。</p>
+                    <div class="char3-impact">→ 実験とA/Bテストがデフォルト機能に</div>
+                </div>
+            </div>
+
+            <div class="alert alert-deep">
+                <div class="alert-title">// パターンの本質</div>
+                <p>これら3つの事例が示す共通パターン：<strong>ビジネスに不可欠な機能がサイロ化された下流に置かれる → ツールと手法を左（上流）に押し込むことで、仕事のやり方そのものが逆転する</strong>。増分的な改善ではなく、ステップ関数的な改善が起きる。</p>
+                <p>データについても同じ逆転が起きる。それを加速させているのがAIだ。</p>
+            </div>
+        </section>
+
+        <!-- Section 3: Ch.9 Data as Code, 5 Outcomes -->
+        <section id="ch9-outcomes">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <div>
+                    <span class="chapter-tag">Ch.9 / Data as Code</span>
+                    <h2>Ch.9: Data as Code と5つの変革成果</h2>
+                </div>
+            </div>
+
+            <h3>Data as Code — コアコンセプト</h3>
+
+            <blockquote>
+                「A core idea behind shifting Data Left is simple but often overlooked: data is code. Or more accurately — data is produced by code. It's not just some downstream artifact that lives in tables and gets piped into dashboards and spreadsheets. Every record, event, or log starts somewhere — created, updated, or deleted by a line of code.」
+                <cite>— Chad Sanderson, Shift Left Data Manifesto (Substack, March 2025)</cite>
+            </blockquote>
+
+            <p>Sandersonはこれを<span class="highlight">機械アナロジー</span>で説明する：</p>
+
+            <blockquote>
+                「Imagine you're in charge of a machine that produces a high-value product every day. Your job is to ensure quality. If something starts breaking, you don't sit around analyzing boxes of defective products — you inspect the machine. <strong>Code is the machine.</strong>」
+                <cite>— Chad Sanderson, Shift Left Data Manifesto</cite>
+            </blockquote>
+
+            <p>データが「コードの生成物」と理解されれば、データ品質問題のほとんどは<span class="highlight">コード品質問題</span>に帰結する。根本原因は2種類しかない：</p>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">ROOT CAUSE 01</div>
+                    <h4>判断の失敗</h4>
+                    <span class="assess-en">Lapse in Judgment</span>
+                    <p>エンジニアがテストを書かずにバグを見逃す。ソフトウェアエンジニアリングの課題であり、ソフトウェアエンジニアリングの手法（自動テスト）で解決できる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">ROOT CAUSE 02</div>
+                    <h4>壊れた依存関係</h4>
+                    <span class="assess-en">Broken Dependency</span>
+                    <p>エンジニアが下流チームが依存していたものを知らずに変更。これもソフトウェアエンジニアリングの問題であり、コントラクトテストで解決できる。</p>
+                </div>
+            </div>
+
+            <h3>組織がシフトレフトを正しく実践した時の5つの成果</h3>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Outcome 01</div>
+                    <h4>データチームの上流化</h4>
+                    <p>コントラクト・リネージュ・バリデーションがコードレベルで行われることで、データチームはデータの消費者ではなく<strong>データの創造への積極的参加者</strong>になる。「壊れたダッシュボード」のSlackメッセージから、「破損を防ぐルール」の作成へ。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Outcome 02</div>
+                    <h4>コンプライアンスのコード化</h4>
+                    <p>ポリシーはWikiやチェックリストではスケールしない。CI/CDへの直接コード化でスケールする。<span class="en-term">Contracts as code</span>により、PII タギング・スキーマ検証・保持ルールを自動強制。コンプライアンス違反はプルリクエストで検出。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Outcome 03</div>
+                    <h4>エンジニアへの早期フィードバック</h4>
+                    <p>エンジニアはテスト失敗をマージ前に検知することを期待している——データも同様であるべきだ。スキーマ・データペイロードの変更がMLモデルやレポートパイプラインを壊すなら、マージ前に知らせる。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">4</div>
+                    <div class="char3-label">Outcome 04</div>
+                    <h4>品質の共有責任化</h4>
+                    <p>データ品質は「全員の問題であり、誰の責任でもない」状態を脱する。データコントラクトをAPIコントラクトと同様に扱い、問題をコード問題として捉えることで、責任が原因に最も近いチームへ自然に移動する。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">5</div>
+                    <div class="char3-label">Outcome 05</div>
+                    <h4>言語の変化</h4>
+                    <p>データ問題をコード問題として表現することで会話が変わる。エンジニアが新しいツールや語彙を習得不要——コードベースの他の部分と同じテスト・コントラクト・CIチェックとして見える。「データ品質」がデータチームの問題からソフトウェアエンジニアリングのベストプラクティスへ。</p>
+                </div>
+            </div>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// シフトレフトは漸進でなく逆転</div>
+                <p>「The teams that succeed with data are not gonna be the ones trying to apply more centralized data management methodologies to systems that are becoming increasingly more federated and fragmented.」</p>
+                <p>DevOps・DevSecOps・Feature Managementの教訓は同じだ：<strong>ビジネスに不可欠な問題をソースに組み込む手法の埋め込みが、唯一スケールするアプローチ</strong>だ。これは増分的な価値変化ではなく、仕事のやり方の逆転だ。</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Ch.10 Change Management -->
+        <section id="ch10">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <div>
+                    <span class="chapter-tag">Ch.10 / Change Management</span>
+                    <h2>Ch.10: チェンジマネジメント — 人・プロセス・技術の要</h2>
+                </div>
+            </div>
+
+            <p>第10章は第9章の文化的哲学を組織的・運営的に具体化する。「チェンジマネジメント」とは2つの意味を持つ：<span class="highlight">技術的意味</span>（コントラクトを通じたスキーマ・データ変更の管理）と<span class="highlight">組織的意味</span>（大規模にデータコントラクトを導入するために必要な人間的・プロセス的変革の管理）。</p>
+
+            <h3>変革管理がコア問題である理由</h3>
+
+            <p>データ信頼性の解決策はチェンジマネジメントだ。それなしでは：</p>
+            <ul>
+                <li>破壊的な変更が見逃される</li>
+                <li>防ぎ得るデータインシデントが常態化する</li>
+                <li>人がすべての変更をレビューすることはスケールしない（コストが高く、スピードが出ず、エラーが多い）</li>
+            </ul>
+
+            <p>理論上、チェンジマネジメントは純粋にプロセスとして実現できる。実際には不可能だ。現代ソフトウェアシステムにおける変更のボリュームは、人間のレビューが処理できる量を超えている。<strong>チェンジマネジメントは自動化されなければならない。</strong></p>
+
+            <h3>APIアナロジー</h3>
+
+            <p>ソフトウェアエンジニアリングにおけるAPIは安定したインターフェースのモデルだ。APIが安定しているのはチェンジマネジメントを使用しているから——滅多に変更されず、変更があれば移行パスとともに新バージョンが作られる。API の背後ではシステムが頻繁に変更される。インターフェースが変更を吸収する。</p>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// データにAPIアナロジーを適用する</div>
+                <p>データも同じモデルが必要だ：</p>
+                <p>・上流データベースに直接依存するアーキテクチャから脱却<br>
+                ・上流の変動性を吸収するインターフェース（DWHのテーブル、Kafkaストリーム、データレイクの構造化ファイル）を作成<br>
+                ・<strong>データコントラクトがそのインターフェースを定義する</strong></p>
+            </div>
+
+            <h3>変更管理された5つの技術ステップ</h3>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// チェンジ管理インターフェースを提供する5ステップ（Andrew Jones, GoCardless）</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">01</div>
+                            <div class="phase-content">
+                                <h4>インターフェースを人間・機械可読フォーマットで定義する</h4>
+                                <p>データコントラクトをコードとして記述（Jsonnet、Protobuf等）。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">02</div>
+                            <div class="phase-content">
+                                <h4>定義に対してチェンジ管理チェックを実装する</h4>
+                                <p>CI/CDパイプライン内で自動検証。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">03</div>
+                            <div class="phase-content">
+                                <h4>定義からインターフェースをプロビジョニング・管理する</h4>
+                                <p>インターフェース自体にチェンジ管理を適用。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">04</div>
+                            <div class="phase-content">
+                                <h4>データ生成サービスをそのインターフェースへ公開するよう変更する</h4>
+                                <p>プロデューサーチームがコントラクト定義済みのインターフェースにデータを送信。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">05</div>
+                            <div class="phase-content">
+                                <h4>データコンシューマーはそのインターフェースのみから消費する</h4>
+                                <p>すべての消費を単一の管理されたインターフェース経由に統一。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Ch.10 Supply Chain & Strategy -->
+        <section id="ch10-strategy">
+            <div class="section-header">
+                <div class="section-number">05</div>
+                <div>
+                    <span class="chapter-tag">Ch.10 / Supply Chain + Strategy</span>
+                    <h2>Ch.10: データをサプライチェーンとして捉え、導入戦略を立てる</h2>
+                </div>
+            </div>
+
+            <h3>データ・サプライチェーン・メンタルモデル</h3>
+
+            <p>本書の「データをサプライチェーンとして捉える」概念は、データフローへの考え方を再定義する。物理的サプライチェーンに品質管理が各段階に存在するように、データパイプラインにも：</p>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// データ・サプライチェーンの構造</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:1.2rem; line-height:1.4;">プロデューサー</div>
+                        <div class="stat-desc">ソフトウェアエンジニアリングチーム・SaaSプラットフォーム・イベントソース</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:2rem;">→</div>
+                        <div class="stat-desc">各段階での品質チェック</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:1.2rem; line-height:1.4;">変換レイヤー</div>
+                        <div class="stat-desc">ETL/ELT・dbtモデル・ストリーミングプロセッサー</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:2rem;">→</div>
+                        <div class="stat-desc">データコントラクトで定義</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:1.2rem; line-height:1.4;">コンシューマー</div>
+                        <div class="stat-desc">アナリティクス・データサイエンス・AI/MLシステム・ビジネスダッシュボード</div>
+                    </div>
+                </div>
+            </div>
+
+            <blockquote>
+                「GoCardless's ETL approach focuses on treating data like an API. They codify data needs in a data contract and schemas from consumers up front, and then deliver the data pre-modeled into the data warehouse.」
+                <cite>— Barr Moses, Monte Carlo Data（GoCardless/Andrew Jones事例）</cite>
+            </blockquote>
+
+            <h3>実装レベルの成熟モデル</h3>
+
+            <p>Monte Carloのリサーチが示す複数の実世界実装アーキテクチャは、異なる成熟度レベルを表している：</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>レベル</th>
+                            <th>企業事例</th>
+                            <th>実装方法</th>
+                            <th>特徴</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>高所有権型</strong></td>
+                            <td>GoCardless</td>
+                            <td>Jsonnet形式のコントラクト、GitマージでKubernetes自動デプロイ</td>
+                            <td>最高ガバナンス・最厳格な変更管理</td>
+                        </tr>
+                        <tr>
+                            <td><strong>高所有権型</strong></td>
+                            <td>Convoy</td>
+                            <td>Protobuf形式、Docker Compose・Kafka Schema Registry・Debeziumによる強制</td>
+                            <td>サービスコードに組み込まれた強制</td>
+                        </tr>
+                        <tr>
+                            <td><strong>dbt as Contract</strong></td>
+                            <td>Mode</td>
+                            <td>dbtがスキーマ検証・変換・本番環境昇格の各段階を自動テスト</td>
+                            <td>既存dbtインフラを活用</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Gitハンドシェイク</strong></td>
+                            <td>Microsoft</td>
+                            <td>メタストア保管＋Gitソース管理、カスタム「データプロダクトサイドカー」</td>
+                            <td>既存GitOpsワークフローを活用</td>
+                        </tr>
+                        <tr>
+                            <td><strong>PRプロセス</strong></td>
+                            <td>Datafold</td>
+                            <td>PRがスキーマ変更・データ変更・下流アセットへの影響を検証</td>
+                            <td>軽量・低摩擦</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>導入戦略の5原則</h3>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">PRINCIPLE 01</div>
+                    <h4>変化の時期に導入する</h4>
+                    <span class="assess-en">Introduce During Times of Change</span>
+                    <p>最良の採用は、既存サービスの移行ではなく新しいデータストリームを求めるチームから生まれる。データメッシュ推進時など、変化が起きている瞬間が最大のチャンス。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">PRINCIPLE 02</div>
+                    <h4>セルフサービスを簡単にする</h4>
+                    <span class="assess-en">Make Self-Service Easy</span>
+                    <p>習慣は変わりにくく、変化への抵抗は自然だ。プロセスを可能な限り簡単・自動化することでボトルネックを排除し、自律性というインセンティブを提供する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">PRINCIPLE 03</div>
+                    <h4>社内ロードショーを実施する</h4>
+                    <span class="assess-en">Conduct Roadshows</span>
+                    <p>他のデータエンジニアリングチームからフィードバックを収集し、ユースケースを理解する。バイインはチームが一緒にブレインストーミングを始めた瞬間に生まれる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">PRINCIPLE 04</div>
+                    <h4>分類とガバナンスを最初から焼き込む</h4>
+                    <span class="assess-en">Bake in Governance from the Start</span>
+                    <p>所有権と分類を最初から正しく設定することで、後の複雑な問題を回避。初期テンプレート作成は大変そうに見えるが、始めれば案外シンプルだ。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">PRINCIPLE 05</div>
+                    <h4>早期採用者から始める</h4>
+                    <span class="assess-en">Focus on Early Adopters First</span>
+                    <p>サービス間依存関係を持つチーム（他のサービスによって動くサービス）が最大の早期採用者。最もニーズが高く、成功体験が共有責任感を生む。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Ch.11 First Wins -->
+        <section id="ch11">
+            <div class="section-header">
+                <div class="section-number">06</div>
+                <div>
+                    <span class="chapter-tag">Ch.11 / First Wins</span>
+                    <h2>Ch.11: データコントラクトで最初の成功を掴む</h2>
+                </div>
+            </div>
+
+            <p>第11章は戦略から戦術へ——具体的に、組織モメンタムを構築する<span class="highlight">早期・目に見える・証明可能な成功</span>をどう生み出すか。核心的前提は：早期成果は単なるROI証明ではなく、組織全体の採用を拡大するための<span class="highlight">一次的メカニズム</span>であるということだ。</p>
+
+            <h3>最初のユースケースの選定基準</h3>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">CRITERIA 01</div>
+                    <h4>最高価値・最高痛みから始める</h4>
+                    <span class="assess-en">Highest Value, Highest Pain First</span>
+                    <p>データ信頼性が最重要で、インシデントが頻繁な本番パイプラインやデータプロダクトから開始する。痛みが大きいほど、チームの動機と経営陣のバイインが得やすい。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">CRITERIA 02</div>
+                    <h4>レガシー移行ではなく新規ストリームで</h4>
+                    <span class="assess-en">New Streams, Not Legacy Migrations</span>
+                    <p>最良の採用は、既存本番サービスの移行ではなく新しいデータストリームを求めるチームから。変化への抵抗が低く、ブランクスレートがある。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">CRITERIA 03</div>
+                    <h4>サービス間依存を持つチームを狙う</h4>
+                    <span class="assess-en">Inter-Service Dependencies</span>
+                    <p>他のサービスによって動くサービスを持つチームが最大の早期採用者だ。信頼性・適時性・高品質データへのニーズが最も切実。</p>
+                </div>
+            </div>
+
+            <h3>GoCardlessの実績数値（6ヶ月後）</h3>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// GoCardless 初期実装成果（Andrew Jones / Monte Carlo, 2022）</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big">30+</div>
+                        <div class="stat-desc">導入されたデータコントラクト数（6ヶ月以内）</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">60%</div>
+                        <div class="stat-desc">非同期サービス間通信イベントのカバレッジ</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">↓</div>
+                        <div class="stat-desc">上流データインシデントが激減する見通し（フル移行後）</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>三方向ビジネスケースの構築</h3>
+
+            <p>健全なビジネスケースは3つのステークホルダー次元を同時に説得する：</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">T</div>
+                    <div class="char3-label">Engineering</div>
+                    <h4>技術面：エンジニアリングリーダーシップ向け</h4>
+                    <p>スキーマ変更による爆発半径（blast radius）の縮小。データ問題の遡及的デバッグの排除。本番に達する前の破壊的変更への早期フィードバック。</p>
+                    <div class="char3-impact">→ 技術的な文脈でROIを語る</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">D</div>
+                    <div class="char3-label">Data Team</div>
+                    <h4>データ面：データ/アナリティクスリーダーシップ向け</h4>
+                    <p>インシデント対応・データ検証に費やす時間の削減。リアクティブな消火活動からプロアクティブなガバナンスへのシフト。実装の副産物としてのリネージュ・コントラクト文書。</p>
+                    <div class="char3-impact">→ データチームの価値向上を語る</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">B</div>
+                    <div class="char3-label">Business</div>
+                    <h4>ビジネス面：経営幹部向け</h4>
+                    <p>ビジネス意思決定に影響するデータダウンタイムの削減。定量化可能な成果（インシデント減少・解決時間短縮・レポート信頼性向上）。AIへの準備性（AIシステムが信頼できるデータに依存可能）。</p>
+                    <div class="char3-impact">→ ビジネスアウトカムで語る</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Ch.11 Eight Steps -->
+        <section id="ch11-steps">
+            <div class="section-header">
+                <div class="section-number">07</div>
+                <div>
+                    <span class="chapter-tag">Ch.11 / Eight Steps</span>
+                    <h2>Ch.11: 組織全体のShift Left採用に向けた8ステップ</h2>
+                </div>
+            </div>
+
+            <p>Sandersonが発表したフレームワーク（Manifesto・LinkedIn投稿・Gable.aiトーク）とGoCardless事例から構築された実践的8ステップ。</p>
+
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 01</div>
+                    <h4>エグゼクティブスポンサーを確保する</h4>
+                    <p>トップダウン指令が必須。個々のデータチームは、リーダーシップのマンデートなしにエンジニアリング参加を強制できない。データとエンジニアリング組織の橋渡しができるエグゼクティブスポンサーを特定する。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 02</div>
+                    <h4>社内ロードショーを実施する</h4>
+                    <p>全エンジニアリングチームと対話。データコントラクトとは何かを説明し、メリットを伝え、設計へのフィードバックを求める。バイインはチームが一緒にブレインストーミングを始めた瞬間に生まれる。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 03</div>
+                    <h4>最高インパクトの早期採用者を特定する</h4>
+                    <p>サービス間依存（他のサービスで動くサービス）を持つチーム、最もデータ品質の痛みが大きいチーム、APIコントラクトや自動テストで考えているチームを狙う。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 04</div>
+                    <h4>セルフサービスインフラを実装する</h4>
+                    <p>採用の摩擦をゼロに近づける。データコントラクトのプロセスを可能な限り簡単・自動化し、品質保証とチームの自律性の両方を提供。セルフサービスモデルはデータチームをボトルネックから解放する。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 05</div>
+                    <h4>既存開発ワークフローに統合する</h4>
+                    <p>データコントラクトはエンジニアが既に使うツール・ワークフロー（GitHub/GitLab PR・CI/CDパイプライン・既存テストフレームワーク）に適合しなければならない。別途ツールや独立したプロセスを要求するコントラクトは採用を維持できない。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 06</div>
+                    <h4>レガシー移行ではなく新規ストリームから始める</h4>
+                    <p>既存の本番サービスの移行から始めない。最初から最低限のコントラクトで始められる新しいデータストリームを選ぶ。抵抗が最も少ないパスが最初の成功をもたらす。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 07</div>
+                    <h4>早期成果を実証・公表する</h4>
+                    <p>追跡・報告：防止したインシデント・節約した時間・安定したパイプライン数。成功を可視化・帰属させる。目標は内部検証だけでなく、次の採用波を促す組織的なストーリーテリング。</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num-badge">STEP 08</div>
+                    <h4>証明された成功で採用を拡大する</h4>
+                    <p>早期成果を隣接チームへの採用拡大、最終的にすべての新データフローのデフォルト化へのビジネスケースに使う。能力と意欲に応じてレガシーパイプラインを段階的に移行する。</p>
+                </div>
+            </div>
+
+            <h3>アトリビューション（帰属）の実践</h3>
+
+            <p>早期成功は、データコントラクトに具体的に帰属させなければ意味をなさない。帰属なしでは：</p>
+            <ul>
+                <li>ステークホルダーが改善をイニシアチブに結びつけられない</li>
+                <li>拡大のための予算・リソース確保が難しくなる</li>
+                <li>初期PoC後の採用モメンタムが停滞する</li>
+            </ul>
+
+            <blockquote>
+                「I am proud of how the team and organization has responded to the challenge and believe we will ultimately fully migrate to this system by the middle of next year — and as a result will see upstream data incidents plummet.」
+                <cite>— Andrew Jones, GoCardless（Monte Carlo Data、2022年）</cite>
+            </blockquote>
+
+            <p>この前向きなコミットメントそのものが帰属の一形態だ——測定可能な成果を約束することで説明責任が生まれる。</p>
+
+            <div class="alert alert-success">
+                <div class="alert-title">// 採用トレードオフの透明な開示</div>
+                <p><strong>スピード vs スプロール</strong>：スピードを優先して分散チームが独自インフラをプロビジョニングできるようにすることで、スプロールの可能性が生まれる。ガバナンスで軽減するが、以前の状態（頻繁に変化する本番データの強制使用）より小さな弊害として許容される。</p>
+                <p><strong>コミットメント vs 変化</strong>：コントラクト変更プロセスは意図的に重くなっている。これは双方が行った投資へのコミットメントを反映しているからだ。スキーマの安定性については、GoCardlessの知見：ほとんどのユーザーのニーズは頻繁には変わらない。スキーマは予想より安定している。</p>
+            </div>
+        </section>
+
+        <!-- Section 8: Ch.12 Measuring Impact -->
+        <section id="ch12">
+            <div class="section-header">
+                <div class="section-number">08</div>
+                <div>
+                    <span class="chapter-tag">Ch.12 / Measuring Impact</span>
+                    <h2>Ch.12: データコントラクトのインパクト測定</h2>
+                </div>
+            </div>
+
+            <p>第12章はPart IIIを締めくくり、あらゆるエグゼクティブスポンサーと予算保有者が必ず問う質問に答える：<span class="highlight">「機能していると、どうやって分かるのか？」</span></p>
+
+            <h3>測定すべき指標の4カテゴリ</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>カテゴリ</th>
+                            <th>主要指標</th>
+                            <th>期待トレンド</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>インシデント・信頼性</strong></td>
+                            <td>月次データインシデント数、MTTD（平均検知時間）、MTTR（平均解決時間）、設計時/実行時/消費時の問題検知比率</td>
+                            <td>↓ インシデント数、↑ 設計時検知率</td>
+                        </tr>
+                        <tr>
+                            <td><strong>カバレッジ・採用</strong></td>
+                            <td>アクティブデータコントラクト数、重要パイプラインのカバレッジ率、初日からコントラクト付きで起動した新規ストリーム率、エンジニアチームの参加率</td>
+                            <td>↑ 全指標</td>
+                        </tr>
+                        <tr>
+                            <td><strong>品質・信頼性</strong></td>
+                            <td>PR/CIレベルで防止されたスキーマドリフトインシデント、データ鮮度SLAコンプライアンス、コントラクト違反率の経時推移</td>
+                            <td>↓ 違反率、↑ SLAコンプライアンス</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ビジネスインパクト</strong></td>
+                            <td>ダッシュボード/レポート信頼性、データ関連エンジニアリングチケット量、インシデント対応に費やすデータチーム時間、AI/MLモデルの信頼性</td>
+                            <td>↓ チケット数・インシデント対応時間</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>ストーリーテリングで測定インパクトを高める</h3>
+
+            <p>測定フレームワークはデータを生成するが、組織変革にはナラティブが必要だ。数値は重要だが、ストーリーが人を動かす。データコントラクトのストーリーが刺さる4つの要素：</p>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">STORY 01</div>
+                    <h4>具体的・名指しの痛みと結びつける</h4>
+                    <p>「データインシデントが減少した」ではなく「先月4回オンコールエンジニアを起こした午前3時のアラートが止まった」。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">STORY 02</div>
+                    <h4>ビジネス用語で定量化する</h4>
+                    <p>「コントラクト違反をCIでブロック」ではなく「注文サービスのフィールド名変更が——役員四半期レビューを壊したはずだった——マージ前に検知された」。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">STORY 03</div>
+                    <h4>反事実を示す</h4>
+                    <p>コントラクトなしに何が起きていたか？検知に何時間かかっていたか？コストはいくらか？</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">STORY 04</div>
+                    <h4>前向きなコミットメント（GoCardlessパターン）</h4>
+                    <p>回顧的なダッシュボードより、「[日付]までに完全移行し、上流インシデントの激減を期待する」という前向きな宣言が採用モチベーションを高める。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 9: Ch.12 Three-Phase Model -->
+        <section id="ch12-phases">
+            <div class="section-header">
+                <div class="section-number">09</div>
+                <div>
+                    <span class="chapter-tag">Ch.12 / Three Phases</span>
+                    <h2>Ch.12: 採用3フェーズでの測定</h2>
+                </div>
+            </div>
+
+            <p>Great Expectationsが定式化した3フェーズモデルは、採用成熟度にマッピングされた測定フレームワークを提供する。本書の「採用3フェーズを通じた測定」セクションはこのモデルを基盤とする。</p>
+
+            <div class="phase-maturity-grid">
+                <div class="phase-maturity-card">
+                    <div class="phase-maturity-header">
+                        <div class="phase-maturity-label">Phase 1 / 口頭段階</div>
+                        <div class="phase-maturity-name">口頭コントラクト</div>
+                    </div>
+                    <div class="phase-maturity-body">
+                        <p><strong>概要</strong>：会話を通じた極めてインフォーマルで一時的な合意。アーティファクトは存在しない。意図的でなくても、ほぼすべての企業がこの段階から始まる。</p>
+                        <p><strong>特徴</strong>：高速・軽量だが不精確・検証不能。暗黙知が蓄積するにつれて劣化する。</p>
+                        <p><strong>この段階での測定</strong>：事実上、測定不可能。ベースラインを確立できない。重要な指標は口頭コントラクトが失敗していることの認識。</p>
+                        <p><strong>次フェーズへの信号</strong>：暗黙知の蓄積量とデータ問題の頻度がインフォーマルな整合維持能力を超えた時。</p>
+                        <div class="phase-maturity-metaphor">気体のように形がなく空間を満たす</div>
+                    </div>
+                </div>
+                <div class="phase-maturity-card">
+                    <div class="phase-maturity-header">
+                        <div class="phase-maturity-label">Phase 2 / 文書段階</div>
+                        <div class="phase-maturity-name">文書コントラクト</div>
+                    </div>
+                    <div class="phase-maturity-body">
+                        <p><strong>概要</strong>：データ辞書・ドキュメント・Wiki・データカタログの説明・SQLファイルのコメント。大企業ではガバナンス/コンプライアンスチームがレビュー・強制。</p>
+                        <p><strong>特徴</strong>：検査可能・精確・客観的検証可能（SQLクエリ実行可）。広範なバイインと継続性を可能にする。しかし強制は手動。</p>
+                        <p><strong>この段階での測定</strong>：文書化率・ドキュメントの鮮度・コンプライアンス違反を測定できる。ただし強制は依然手動。</p>
+                        <p><strong>一般的失敗パターン</strong>：「慢性的に古いデータWiki」または「レビューなしに変更できないデータパイプライン」のどちらかに陥る。</p>
+                        <div class="phase-maturity-metaphor">固体のように密度があり不変だが基盤となる</div>
+                    </div>
+                </div>
+                <div class="phase-maturity-card">
+                    <div class="phase-maturity-header">
+                        <div class="phase-maturity-label">Phase 3 / 自動化段階</div>
+                        <div class="phase-maturity-name">自動化コントラクト</div>
+                    </div>
+                    <div class="phase-maturity-body">
+                        <p><strong>概要</strong>：データコントラクトが会社のデータスタック・CI/CD・モニタリングワークフローに直接統合。自己強制。コンパイル時とバッチ時の両方でデータに対してテスト実行。</p>
+                        <p><strong>特徴</strong>：CI/CDとデータ監視へのintegrationにより自己強制。テストとドキュメントが同期を保つ。</p>
+                        <p><strong>この段階での完全な測定</strong>：コントラクトカバレッジ率・チーム/パイプライン/データドメイン別の違反率・設計時vs実行時vs消費時の問題検知割合・インシデント率の経時推移</p>
+                        <div class="phase-maturity-metaphor">水力システムの液体のように流動的だが荷重を支える</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>測定成熟度アーク（統合フレームワーク）</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>フェーズ</th>
+                            <th>測定フォーカス</th>
+                            <th>主要指標</th>
+                            <th>成功シグナル</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>口頭</strong></td>
+                            <td>痛みの認識</td>
+                            <td>インシデント頻度（非公式）・チームフラストレーション</td>
+                            <td>形式化の決断</td>
+                        </tr>
+                        <tr>
+                            <td><strong>文書化</strong></td>
+                            <td>カバレッジとベースライン</td>
+                            <td>文書化データセット率・手動監査合格率</td>
+                            <td>ベースライン確立・スケーリング課題の可視化</td>
+                        </tr>
+                        <tr>
+                            <td><strong>自動化</strong></td>
+                            <td>予防とインパクト</td>
+                            <td>設計時検知率・インシデント削減・MTTR・パイプライン信頼性・カバレッジ率</td>
+                            <td>リアクティブからプロアクティブへの転換・ROIの実証可能性</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>全体統合 — Data DevOpsからビジネスコンテキストまで</h3>
+
+            <blockquote>
+                「The teams that succeed are not the ones applying more centralized data management methodologies to increasingly federated and fragmented systems. They are the ones who push responsibility upstream and make quality easy — at the point of creation, by the people who create it.」
+                <cite>— Chad Sanderson, Gable.ai/Shift Left Data Conference Talk 2025</cite>
+            </blockquote>
+
+            <p>最終統合フレームワーク：</p>
+            <ul>
+                <li><strong>Data DevOps</strong>（右側・コード重視・ソフトウェアエンジニア）がエントリーポイント</li>
+                <li>そこに<strong>オブザーバビリティ</strong>（データコンテンツ・テーブル・メトリクス）を重ねる</li>
+                <li>さらに<strong>ビジネスコンテキスト</strong>（ドメイン・データプロダクト・ワークフロー）を重ねる</li>
+            </ul>
+            <p>3層すべてが重要であり、連携して機能しなければならない。成功する組織は、ますます連邦化・断片化するシステムに集中管理型の手法を適用しようとする組織ではなく、責任を上流に押し込み、<span class="highlight">創造の瞬間に、創造する人たちが品質を容易に担保できる</span>組織だ。</p>
+        </section>
+
+        <!-- Section 10: Conclusion -->
+        <section id="conclusion">
+            <div class="section-header">
+                <div class="section-number">10</div>
+                <div>
+                    <span class="chapter-tag">Conclusion / AI Future</span>
+                    <h2>Conclusion: AIとデータコントラクトの未来</h2>
+                </div>
+            </div>
+
+            <p>本書の結論は、データコントラクトフレームワークを近未来へと拡張する。AI——特に自律的AIエージェント——はデータコントラクトの採用を同時に<span class="highlight">必要とし、加速させる</span>。シフトレフトと同じ文化的・技術的議論が適用される：AIシステムは消費するデータと同程度にしか信頼できず、構造化され意味的に一貫したコントラクトに支配されたデータなしに、AIはスケールにおいて予測不可能かつ危険になる。</p>
+
+            <h3>AI時代のデータ信頼性問題</h3>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// データコントラクトなきAIの失敗</div>
+                <p>あるデータセットで「Customer（顧客）」は別のデータセットで「prospect（見込み客）」になる。「Active order（アクティブ注文）」は「pending（保留中）」と表記される。プロダクト属性が名称変更またはサイレントに削除される。フィールドが現れ、消え、型を変える。</p>
+                <p>こうした不整合はBIダッシュボードなら致命的ではない。しかし<strong>自律的に動作するエージェント型AI——意思決定し、ワークフローをトリガーし、顧客と対話する——にとっては壊滅的だ。</strong></p>
+            </div>
+
+            <blockquote>
+                「AI doesn't fail because algorithms are weak. It fails because data breaks promises that were never made explicit.」
+                <cite>— Workato, "Data Contracts: The Missing Bridge Between AI, Automation, and Trust" (February 2026)</cite>
+            </blockquote>
+
+            <blockquote>
+                「It's going to be exceptionally hard for AI to be adopted at scale for the most important use cases in the world, unless you have a strong framework for data management. And I think data management today is broken.」
+                <cite>— Chad Sanderson, Gable.ai/Shift Left Data Conference Talk 2025</cite>
+            </blockquote>
+
+            <h3>AIシステムがデータコントラクトを必要とする理由</h3>
+
+            <p>AIシステムは新入社員のようなものだ：ルールが明確なときは見事に機能するが、明確でないときに「創造性を発揮する（＝危険を冒す）」。データコントラクトが可能にすること：</p>
+
+            <div class="ai-feature-grid">
+                <div class="ai-feature-card">
+                    <div class="ai-feature-icon">[def]</div>
+                    <h4>ビジネス意味の定義</h4>
+                    <p>すべてのエンティティと属性が共有された定義を持つ。「顧客」は組織全体で同じ意味を指す。</p>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-feature-icon">[sch]</div>
+                    <h4>構造とスキーマの一貫性を保証</h4>
+                    <p>型・フォーマット・列挙型が強制される。AIが予期した入力を受け取ることを保証。</p>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-feature-icon">[obs]</div>
+                    <h4>オブザーバビリティの有効化</h4>
+                    <p>コントラクト違反が悪データの拡散前にアラートとガードレールをトリガー。</p>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-feature-icon">[AI]</div>
+                    <h4>信頼できるAI推論の支援</h4>
+                    <p>モデルとエージェントが意味的に一貫した検証済みの入力で動作。AIの信頼性・説明可能性・責任可能性を実現。</p>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-feature-icon">[RAG]</div>
+                    <h4>ナレッジベースの統合性維持</h4>
+                    <p>RAG・LLMコパイロット・エンタープライズ知識アシスタントのためのデータが標準化された定義・構造的一貫性・意味的意味・鮮度SLAを維持。</p>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-feature-icon">[gov]</div>
+                    <h4>AIガバナンスインフラ</h4>
+                    <p>データの形状・意味・用途・倫理的境界・コンプライアンス・保持・文脈的推論限界を統括する<em>AIコントラクト</em>へと進化。</p>
+                </div>
+            </div>
+
+            <h3>LLMによる自動データコントラクト生成</h3>
+
+            <p>LLMは新しい道を示す：人間の継続的介入なしにスキーマと品質ルールを生成・維持する自動データコントラクト。</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-label">LLM Capabilities</div>
+                    <h4>LLMが得意とすること</h4>
+                    <p>生データソースからのスキーマ推論、バリデーションルール提案（「customer_id は常に一意かつ非null」）、プロデューサー・コンシューマー向けドキュメント生成、データ進化に伴うコントラクト維持。</p>
+                    <div class="char3-impact">→ コントラクト生成が数週間から数分に</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-label">Benefits</div>
+                    <h4>LLM活用のメリット</h4>
+                    <p>スピードと俊敏性（データと同じ速さでコントラクトが進化）、チーム間の一貫性（スキーマ・ルールの統一適用）、コラボレーション改善、コンフルエンスの古いページに代わる自動最新ドキュメント。</p>
+                    <div class="char3-impact">→ 「ドキュメントがタダで付いてくる」</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-label">Risks</div>
+                    <h4>管理すべきリスク</h4>
+                    <p>誤った仮定とハルシネーション（特にエッジケースや汚れたデータ）、偽の安全感（自動化≠正確）、チーム間の信頼ギャップ（「ブラックボックスAI」への抵抗）、ガバナンスの盲点（誰がコントラクトを所有するか）。</p>
+                    <div class="char3-impact">→ Human-in-the-Loopが必須</div>
+                </div>
+            </div>
+
+            <h3>自律的コントラクトへの進化</h3>
+
+            <p>進化は自動化コントラクトで止まらない。コントラクトはオブザーバビリティ・コンテキスト・自動修復を組み合わせた<span class="highlight">インテリジェント/自律的動作</span>へと進化している。</p>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// 自己修復データエコシステムのワークフロー</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">01</div>
+                            <div class="phase-content">
+                                <h4>コントラクト違反の検知</h4>
+                                <p>データペイロードがコントラクトに違反する（例：上流SaaSアップデートによるフィールド名変更）。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">02</div>
+                            <div class="phase-content">
+                                <h4>イベントストリームが違反を検出</h4>
+                                <p>リアルタイム監視システムが異常をキャプチャ。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">03</div>
+                            <div class="phase-content">
+                                <h4>AIエージェントが原因を解釈</h4>
+                                <p>エージェントが違反の文脈的原因を分析・理解。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">04</div>
+                            <div class="phase-content">
+                                <h4>エージェントがデータを修復またはチケットを作成</h4>
+                                <p>可能な場合はデータを自動修復、不可能な場合は適切な担当者に通知。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">05</div>
+                            <div class="phase-content">
+                                <h4>自己修復データエコシステムの実現</h4>
+                                <p>問題が特定・説明・自動修正される自律的なシステムが完成。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>未来ビジョン</h3>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">FUTURE 01</div>
+                    <h4>モダンアーキテクチャとの統合</h4>
+                    <span class="assess-en">Modern Architecture Integration</span>
+                    <p>レイクハウス・データメッシュ・イベント駆動システムがコントラクトファースト設計を標準採用。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">FUTURE 02</div>
+                    <h4>業界全体の標準化</h4>
+                    <span class="assess-en">Industry Standardization</span>
+                    <p>AI生成コントラクトの業界全体フォーマットが出現し、相互運用性が改善される。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">FUTURE 03</div>
+                    <h4>アダプティブコントラクト</h4>
+                    <span class="assess-en">Adaptive Contracts</span>
+                    <p>データパターンが変化するにつれてリアルタイムで進化するコントラクト。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">FUTURE 04</div>
+                    <h4>自己修復パイプライン</h4>
+                    <span class="assess-en">Self-Healing Pipelines</span>
+                    <p>スキーマドリフトを検知するだけでなく、コントラクトを自動で再交渉・強制するAIエージェント。</p>
+                </div>
+            </div>
+
+            <div class="alert alert-deep">
+                <div class="alert-title">// 最終テーゼ</div>
+                <p>AIの未来は、より大きなモデル・より多くのデータ・より速いエージェントにあるのではない。それは<strong>信頼・コンテキスト・一貫性</strong>にある。そしてデータコントラクトはこの3つを体現し、AIを信頼でき・説明可能で・責任持てて・行動可能なものにする。</p>
+                <p>Ralph Kimballの原則の進化形として：コントラクトはAPI・SaaS・イベントストリームを横断して期待値をモデル化する。モデリングを運用可能・強制可能・機械可読・自律的にする——APIファースト・AI時代のKimballだ。</p>
+            </div>
+        </section>
+
+        <!-- Section 11: Summary -->
+        <section id="summary">
+            <div class="section-header">
+                <div class="section-number">11</div>
+                <div>
+                    <span class="chapter-tag">Part III Summary</span>
+                    <h2>まとめ — Part III の要点と全シリーズ統合</h2>
+                </div>
+            </div>
+
+            <p>Part III（第9〜12章＋結論）は、技術的に優れたデータコントラクト実装がなぜ組織的・文化的変革なしに失敗するのかを解き明かし、その変革を実現するための実践的フレームワークを提供した。</p>
+
+            <h3>Part III 核心的テイクアウェイ</h3>
+
+            <ul class="takeaway-list">
+                <li class="takeaway-item">
+                    <div class="takeaway-num">01</div>
+                    <div class="takeaway-body">
+                        <strong>「文化シフト」はテクノロジーなしに不可能</strong>
+                        <p>DevOps・DevSecOps・Feature Managementが証明済みだ。データ品質へのオーナーシップを命令だけで移転することはできない。ツールとチェックをエンジニアの既存ワークフローに埋め込むことが唯一スケールするアプローチだ。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">02</div>
+                    <div class="takeaway-body">
+                        <strong>認識ギャップが最大の障壁</strong>
+                        <p>エンジニアはデータを自分の責任範囲外と見なす。データチームはデータを管理が必要な重要プロダクトと見なす。この断絶を解消するには技術的ツールと組織的変革の両方が必要だ。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">03</div>
+                    <div class="takeaway-body">
+                        <strong>リーダーシップのバイインは交渉不可能な前提条件</strong>
+                        <p>Sandersonの「険しい旅」の最終認識（ステップ9）：上流エンジニアリングチームの採用にはA)トップダウン指令と B)既存ワークフローへの統合の両方が必要だ。一方だけでは機能しない。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">04</div>
+                    <div class="takeaway-body">
+                        <strong>早期成功は戦略であり副産物ではない</strong>
+                        <p>最初の成功は組織全体への採用拡大の一次メカニズムだ。高痛み・高価値のユースケースを選択し、成功を可視化し、具体的にデータコントラクトに帰属させることが次の波のモメンタムを生む。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">05</div>
+                    <div class="takeaway-body">
+                        <strong>測定はダッシュボードではなくストーリー</strong>
+                        <p>メトリクスは証拠を生成するが、組織変革にはナラティブが必要だ。数値をビジネス結果に接続し、具体的な痛みに名指しで結びつけ、反事実を示すことが組織的サポートを持続させる。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">06</div>
+                    <div class="takeaway-body">
+                        <strong>AIがシフトレフトの緊急性を指数関数的に高める</strong>
+                        <p>AIエージェントは認識ギャップ問題を新たな危険な形で増幅する。AIシステムはデータが破るプロミスで失敗する。データコントラクトはAIの信頼性・説明可能性・ガバナンスの基盤インフラだ。</p>
+                    </div>
+                </li>
+            </ul>
+
+            <h3>シリーズ全体の統合</h3>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-label">Part I (Ch.1–4)</div>
+                    <h4>なぜ今データコントラクトが必要か</h4>
+                    <p>データ負債の蓄積メカニズム、GIGOサイクル、アーキテクチャ進化史、データ品質の再定義、スケーリングの課題、データコントラクトの基本定義。</p>
+                    <div class="char3-impact">→ <a href="data-contracts-intro.html">Part I 学習ノートを読む</a></div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-label">Part II (Ch.5–8)</div>
+                    <h4>技術実装</h4>
+                    <p>コントラクトの設計・スキーマ・SLA定義、CI/CDへの組み込み、データオブザーバビリティとの統合、バージョン管理と変更管理の技術実装。</p>
+                    <div class="char3-impact">→ <a href="data-contracts-impl.html">Part II 学習ノートを読む</a></div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-label">Part III (Ch.9–12+)</div>
+                    <h4>組織導入と未来像</h4>
+                    <p>シフトレフトの文化変革、チェンジマネジメントの実践、初期成功の創出、インパクト測定、AIとデータコントラクトの共進化。</p>
+                    <div class="char3-impact">→ 本記事（読了）</div>
+                </div>
+            </div>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// シリーズの中心的洞察</div>
+                <p>データコントラクトは単なるスキーマ検証ツールでも、組織変革のスローガンでもない。それは<strong>ソフトウェアエンジニアリングの最良実践をデータへと拡張する、スケール可能な変更管理の仕組み</strong>だ。</p>
+                <p>技術（Part I・II）と組織（Part III）の両輪がなければ成功しない。そしてAI（結論）はその緊急性を取り除けない外圧として作用している。今こそ、データ管理のシフトレフトが始まる時だ。</p>
+            </div>
+        </section>
+
+        <!-- Section 12: Sources -->
+        <section id="sources">
+            <div class="section-header">
+                <div class="section-number">12</div>
+                <div>
+                    <span class="chapter-tag">References</span>
+                    <h2>参考文献</h2>
+                </div>
+            </div>
+
+            <ul class="sources-list">
+                <li>
+                    <div class="source-num">[01]</div>
+                    <div class="source-text">
+                        <strong>Chad Sanderson, Mark Freeman, B.E. Schmidt</strong> — "Data Contracts: Developing Production-Grade Pipelines at Scale" (O'Reilly, 2025, ISBN 978-1-098-15763-0)<br>
+                        <a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/" target="_blank" rel="noopener">https://learning.oreilly.com/library/view/data-contracts/9781098157623/</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[02]</div>
+                    <div class="source-text">
+                        <strong>Chad Sanderson</strong> — "The Shift Left Data Manifesto" (Substack, Data Products, March 26, 2025) — Ch.9 一次資料<br>
+                        <a href="https://dataproducts.substack.com/p/the-shift-left-data-manifesto" target="_blank" rel="noopener">https://dataproducts.substack.com/p/the-shift-left-data-manifesto</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[03]</div>
+                    <div class="source-text">
+                        <strong>Chad Sanderson</strong> — "A Perilous Journey to Adoption" (LinkedIn, October 9, 2025) — Ch.9–10 認識ギャップ・リーダーシップバイイン<br>
+                        <a href="https://www.linkedin.com/posts/chad-sanderson_ive-talked-extensively-about-why-data-contracts-activity-7382094121903206400-O9gh" target="_blank" rel="noopener">https://www.linkedin.com/posts/chad-sanderson_data-contracts</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[04]</div>
+                    <div class="source-text">
+                        <strong>Chad Sanderson</strong> — "Shifting Left with Data DevOps" talk transcript (Gable.ai / Shift Left Data Conference, 2025) — Ch.9 Data DevOpsフレームワーク<br>
+                        <a href="https://www.gable.ai/blog/shifting-left-with-data-devops-chad-sanderson-shift-left-data-conference-2025" target="_blank" rel="noopener">https://www.gable.ai/blog/shifting-left-with-data-devops-chad-sanderson-shift-left-data-conference-2025</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[05]</div>
+                    <div class="source-text">
+                        <strong>Andrew Jones</strong> — "Implementing Change Management with Data Contracts" (andrew-jones.com, November 2024) — Ch.10 チェンジマネジメント<br>
+                        <a href="https://andrew-jones.com/daily/2024-11-01-implementing-change-management-with-data-contracts/" target="_blank" rel="noopener">https://andrew-jones.com/daily/2024-11-01-implementing-change-management-with-data-contracts/</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[06]</div>
+                    <div class="source-text">
+                        <strong>Barr Moses / Monte Carlo Data</strong> — "Data Contracts: 7 Critical Implementation Lessons Learned" (GoCardless/Andrew Jones case study, July 2022) — Ch.10–11 実装レベル・最初の成功<br>
+                        <a href="https://www.montecarlodata.com/blog-data-contracts/" target="_blank" rel="noopener">https://www.montecarlodata.com/blog-data-contracts/</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[07]</div>
+                    <div class="source-text">
+                        <strong>Gable.ai</strong> — Data Contracts Book Overview Page — Ch.11 確認済みカバレッジ<br>
+                        <a href="https://www.gable.ai/data-contracts-book" target="_blank" rel="noopener">https://www.gable.ai/data-contracts-book</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[08]</div>
+                    <div class="source-text">
+                        <strong>Great Expectations</strong> — "The 3 Phases of Data Contracts" (December 2022) — Ch.12 3フェーズ採用モデル<br>
+                        <a href="https://greatexpectations.io/blog/the-3-phases-of-data-contracts/" target="_blank" rel="noopener">https://greatexpectations.io/blog/the-3-phases-of-data-contracts/</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[09]</div>
+                    <div class="source-text">
+                        <strong>Workato</strong> — "Data Contracts: The Missing Bridge Between AI, Automation, and Trust" (February 13, 2026) — Conclusion AIとデータコントラクト<br>
+                        <a href="https://www.workato.com/the-connector/data-contracts/" target="_blank" rel="noopener">https://www.workato.com/the-connector/data-contracts/</a>
+                    </div>
+                </li>
+                <li>
+                    <div class="source-num">[10]</div>
+                    <div class="source-text">
+                        <strong>Intellectyx</strong> — "Automatic Data Contracts with LLMs: How to Ensure Compliance and Mitigate Potential Risks" (September 18, 2025) — Conclusion LLMによる自動コントラクト生成<br>
+                        <a href="https://www.intellectyx.com/automatic-data-contracts-with-llms-how-to-ensure-compliance-and-mitigate-potential-risks/" target="_blank" rel="noopener">https://www.intellectyx.com/automatic-data-contracts-with-llms-how-to-ensure-compliance-and-mitigate-potential-risks/</a>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- ─── Footer ─── -->
+    <footer>
+        <div class="footer-source">Data Contracts 学習ノート — Part III (Ch.9–12 + Conclusion)</div>
+        <p>本記事は Chad Sanderson, Mark Freeman, B.E. Schmidt 著『Data Contracts: Developing Production-Grade Pipelines at Scale』（O'Reilly, 2025）の学習ノートです。</p>
+        <p class="footer-disclaimer">本ノートは公開されている著者の発表・論文・ケーススタディを参照して作成した学習目的の要約です。書籍の直接的な複製ではありません。原著は O'Reilly Learning (<a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/" style="color:var(--accent-light);">learning.oreilly.com</a>) でご参照ください。</p>
+    </footer>
+
+    <script>
+        // Smooth scroll offset adjustment for sticky header
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href === '#') return;
+                e.preventDefault();
+                const target = document.querySelector(href);
+                if (target) {
+                    const offset = 80;
+                    const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
+                    window.scrollTo({ top, behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Subtle entrance animation on sections
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.05 });
+
+        document.querySelectorAll('section').forEach(section => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(16px)';
+            section.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            observer.observe(section);
+        });
+    </script>
+
+</body>
+</html>
