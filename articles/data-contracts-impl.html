@@ -1,0 +1,2697 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Contracts — 実装アーキテクチャの全体像｜Part II 学習ノート</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #6366F1;
+            --accent-light: #818CF8;
+            --accent-dim: rgba(99, 102, 241, 0.15);
+            --accent-glow: rgba(99, 102, 241, 0.08);
+            --bg-deep: #070710;
+            --bg-secondary: #0A0B14;
+            --bg-tertiary: #111228;
+            --text-primary: #E8EAED;
+            --text-secondary: #8C90B6;
+            --border: #1A1B30;
+            --border-accent: rgba(99, 102, 241, 0.3);
+            --danger: #EF4444;
+            --indigo-deep: #4338CA;
+            --amber: #F59E0B;
+            --success: #34D399;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(99, 102, 241, 0.07) 0%, transparent 55%),
+                radial-gradient(circle at 85% 70%, rgba(67, 56, 202, 0.05) 0%, transparent 55%),
+                radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.04) 0%, transparent 40%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #080812 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        /* ─── Header & Navigation ─── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(7, 7, 16, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 40%, var(--indigo-deep) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .book-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: rgba(17, 18, 40, 0.7);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Table of Contents ─── */
+        .toc-section {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+
+        .toc-box {
+            background: rgba(17, 18, 40, 0.6);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: color 0.2s ease;
+            padding: 0.3rem 0;
+        }
+
+        .toc-list li a:hover {
+            color: var(--accent-light);
+        }
+
+        .toc-num {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 34px;
+        }
+
+        /* ─── Main Content ─── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(17, 18, 40, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--indigo-deep), transparent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 70px;
+            opacity: 0.9;
+        }
+
+        .chapter-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '//';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.4rem;
+            color: var(--text-primary);
+            line-height: 1.85;
+        }
+
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin: 1rem 0 1.5rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        /* ─── Tables ─── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(10, 11, 20, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(99, 102, 241, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(99, 102, 241, 0.04);
+        }
+
+        /* ─── Alert / Callout Boxes ─── */
+        .alert {
+            padding: 1.4rem 1.6rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-indigo {
+            border-left-color: var(--accent);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .alert-success {
+            border-left-color: var(--success);
+            background: rgba(52, 211, 153, 0.08);
+        }
+
+        .alert-danger {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-amber {
+            border-left-color: var(--amber);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-purple {
+            border-left-color: #A78BFA;
+            background: rgba(167, 139, 250, 0.08);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-indigo .alert-title { color: var(--accent-light); }
+        .alert-success .alert-title { color: var(--success); }
+        .alert-danger .alert-title { color: var(--danger); }
+        .alert-amber .alert-title { color: var(--amber); }
+        .alert-purple .alert-title { color: #A78BFA; }
+
+        .alert p { margin-bottom: 0.5rem; }
+        .alert p:last-child { margin-bottom: 0; }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(10, 11, 20, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: rgba(10, 11, 20, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.12);
+        }
+
+        /* ─── Char3 Cards (3-column feature blocks) ─── */
+        .char3-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .char3-card {
+            background: rgba(10, 11, 20, 0.9);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.8rem;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .char3-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .char3-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.12;
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            line-height: 1;
+        }
+
+        .char3-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .char3-card h4 {
+            font-size: 1.15rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        .char3-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+
+        .char3-impact {
+            font-size: 0.82rem;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid var(--border);
+            padding-top: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ─── Assess Grid ─── */
+        .assess-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .assess-card {
+            background: rgba(10, 11, 20, 0.85);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            padding: 1.4rem 1.6rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .assess-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .assess-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 0.4rem;
+        }
+
+        .assess-card h4 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+        }
+
+        .assess-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .assess-card p {
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        /* ─── Phase Timeline ─── */
+        .phase-list {
+            list-style: none;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .phase-list::before {
+            content: '';
+            position: absolute;
+            left: 18px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+            opacity: 0.3;
+        }
+
+        .phase-item {
+            display: flex;
+            gap: 1.2rem;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .phase-dot {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--accent-dim);
+            border: 2px solid var(--border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--accent);
+            z-index: 1;
+        }
+
+        .phase-content h4 {
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+            color: var(--text-primary);
+        }
+
+        .phase-content p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        .phase-timing {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            margin-bottom: 0.3rem;
+        }
+
+        /* ─── Diagram Containers ─── */
+        .diagram-wrap {
+            margin: 2.5rem 0;
+            background: rgba(10, 11, 20, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .diagram-inner {
+            padding: 2rem 2.5rem;
+            position: relative;
+        }
+
+        .diagram-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* ─── Highlight Inline ─── */
+        .highlight {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .en-term {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 0.8rem 1.5rem;
+            margin: 1.5rem 0;
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        blockquote cite {
+            display: block;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-style: normal;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Stat Callout ─── */
+        .stat-callout {
+            background: rgba(10, 11, 20, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-callout-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-row-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-big {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ─── Part Link Banner ─── */
+        .part-link-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(10, 11, 20, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem 1.8rem;
+            margin: 3rem 0;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .part-link-banner .part-info {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .part-link-banner .part-info strong {
+            color: var(--text-primary);
+        }
+
+        .part-link-btn {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-light);
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .part-link-btn:hover {
+            background: rgba(99, 102, 241, 0.25);
+            text-decoration: none;
+            opacity: 1;
+        }
+
+        .part-link-btn-active {
+            background: var(--accent);
+            border: 1px solid var(--accent);
+            color: #fff;
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .part-link-btn-inactive {
+            background: rgba(26, 27, 48, 0.5);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            opacity: 0.5;
+            cursor: default;
+            white-space: nowrap;
+        }
+
+        /* ─── Value Shift Table ─── */
+        .value-shift-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .shift-col {
+            background: rgba(10, 11, 20, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .shift-col-before {
+            border-top: 3px solid var(--danger);
+        }
+
+        .shift-col-after {
+            border-top: 3px solid var(--success);
+        }
+
+        .shift-col-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .shift-col-before .shift-col-title { color: var(--danger); }
+        .shift-col-after .shift-col-title { color: var(--success); }
+
+        .shift-item {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.5;
+        }
+
+        .shift-item:last-child { border-bottom: none; }
+
+        /* ─── Summary Takeaways ─── */
+        .takeaway-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .takeaway-item {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 1.2rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .takeaway-item:last-child { border-bottom: none; }
+
+        .takeaway-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 40px;
+            opacity: 0.8;
+        }
+
+        .takeaway-body strong {
+            display: block;
+            color: var(--text-primary);
+            font-size: 1.02rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .takeaway-body p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.65;
+        }
+
+        /* ─── Code blocks ─── */
+        pre {
+            background: rgba(7, 7, 16, 0.95);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            line-height: 1.7;
+            color: #A5B4FC;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            color: var(--accent-light);
+            background: rgba(99, 102, 241, 0.1);
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+            font-size: inherit;
+        }
+
+        /* ─── Sources Section ─── */
+        .sources-list {
+            list-style: none;
+            margin: 0;
+        }
+
+        .sources-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .sources-list li:last-child {
+            border-bottom: none;
+        }
+
+        .source-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 28px;
+            margin-top: 0.1rem;
+        }
+
+        .source-text {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .source-text a {
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            word-break: break-all;
+        }
+
+        /* ─── Step List ─── */
+        .step-list {
+            list-style: none;
+            margin: 1.5rem 0;
+            counter-reset: step-counter;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 1.2rem;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            counter-increment: step-counter;
+        }
+
+        .step-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .step-content {
+            flex: 1;
+            padding-top: 0.35rem;
+        }
+
+        .step-content strong {
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .step-content p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+            margin-top: 0.2rem;
+        }
+
+        /* ─── Comp boxes ─── */
+        .comp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .comp-box {
+            background: rgba(10, 11, 20, 0.85);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .comp-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent);
+            opacity: 0.7;
+        }
+
+        .comp-letter {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.15;
+            position: absolute;
+            top: 0.6rem;
+            right: 1rem;
+            line-height: 1;
+        }
+
+        .comp-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .comp-box h4 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .comp-box p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.65;
+        }
+
+        /* ─── Case Study Company Banner ─── */
+        .company-banner {
+            background: rgba(10, 11, 20, 0.95);
+            border: 1px solid var(--border-accent);
+            border-radius: 10px;
+            padding: 2rem 2.5rem;
+            margin: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .company-banner::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--accent);
+        }
+
+        .company-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent-light);
+            margin-bottom: 0.3rem;
+        }
+
+        .company-desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.2rem;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-source {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(17, 18, 40, 0.8);
+            border: 1px solid var(--border);
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+        }
+
+        .footer-disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0.75rem auto 0;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .nav-links { display: none; }
+            section { padding: 2rem 1.5rem; }
+            .section-number { font-size: 1.8rem; min-width: 50px; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .toc-list { grid-template-columns: 1fr; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 0.75rem 0.9rem; }
+            .char3-grid { grid-template-columns: 1fr; }
+            .value-shift-grid { grid-template-columns: 1fr; }
+            .comp-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .hero { padding: 3rem 1.5rem 2rem; }
+            .hero-stats { grid-template-columns: 1fr; }
+            .stat-row-grid { grid-template-columns: 1fr; }
+            .assess-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ─── Utility ─── */
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header>
+        <nav>
+            <a href="../" class="logo">
+                <!-- DC monogram: contract handshake-inspired geometric mark in indigo -->
+                <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Data Contracts logo">
+                    <!-- D shape: arc on left -->
+                    <path d="M3 4 L3 18 L7 18 Q13 18 13 11 Q13 4 7 4 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+                    <!-- C shape: open arc on right -->
+                    <path d="M19 7 Q14 4 14 11 Q14 18 19 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                    <!-- Connection dot center -->
+                    <circle cx="13.5" cy="11" r="1" fill="currentColor"/>
+                </svg>
+                Data Contracts
+            </a>
+            <ul class="nav-links">
+                <li><a href="#overview">Part II 概要</a></li>
+                <li><a href="#ch5">Ch.5 構成要素①</a></li>
+                <li><a href="#ch6">Ch.6 構成要素②</a></li>
+                <li><a href="#ch7">Ch.7 実装</a></li>
+                <li><a href="#ch8">Ch.8 事例</a></li>
+                <li><a href="#summary">まとめ</a></li>
+            </ul>
+            <a href="../" class="back-link">← トップに戻る</a>
+        </nav>
+    </header>
+
+    <!-- ─── Hero ─── -->
+    <div class="hero">
+        <div class="eyebrow">学習ノート / O'REILLY / Part II</div>
+        <h1>Data Contracts — 実装アーキテクチャの全体像</h1>
+        <p class="subtitle">Part II: Implementation — データコントラクト実装の4コンポーネントと本番ケーススタディ</p>
+        <p class="subtitle" style="font-size:1rem; margin-bottom:1.5rem;">Chad Sanderson, Mark Freeman, B.E. Schmidt著『Data Contracts』（O'Reilly, 2025）Part II 第5〜8章の要約</p>
+        <div class="book-info">
+            <span>Chad Sanderson, Mark Freeman, B.E. Schmidt</span>
+            <span style="opacity:0.4;">|</span>
+            <span>O'Reilly Media, 2025</span>
+            <span style="opacity:0.4;">|</span>
+            <span>ISBN: 978-1-098-15763-0</span>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">4</div>
+                <div class="stat-label">対象章（第5〜8章）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">4TB</div>
+                <div class="stat-label">Adevinta Spainの1日あたりデータ量</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">13</div>
+                <div class="stat-label">エンドツーエンドCI/CDワークフローのステップ数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">3社</div>
+                <div class="stat-label">本番環境ケーススタディ（Convoy・Glassdoor・Adevinta Spain）</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2026-03-30 &nbsp;|&nbsp; 読了目安: ~30分</p>
+    </div>
+
+    <!-- ─── Table of Contents ─── -->
+    <div class="toc-section">
+        <div class="toc-box">
+            <div class="toc-title">// Table of Contents</div>
+            <ul class="toc-list">
+                <li><a href="#overview"><span class="toc-num">00</span>Part II 概要</a></li>
+                <li><a href="#ch5"><span class="toc-num">01</span>Ch.5：データアセットとコントラクト定義</a></li>
+                <li><a href="#ch6"><span class="toc-num">02</span>Ch.6：検出と予防</a></li>
+                <li><a href="#ch7"><span class="toc-num">03</span>Ch.7：データコントラクトの実装</a></li>
+                <li><a href="#ch8"><span class="toc-num">04</span>Ch.8：本番環境のケーススタディ</a></li>
+                <li><a href="#summary"><span class="toc-num">05</span>Part II まとめ</a></li>
+                <li><a href="#sources"><span class="toc-num">06</span>参考文献</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ─── Part Series Banner ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Data Contracts 学習ノート
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="data-contracts-intro.html" class="part-link-btn">Part I — なぜ今必要か</a>
+                <span class="part-link-btn-active">Part II — 実装アーキテクチャ ◀</span>
+                <span class="part-link-btn-inactive">Part III — 組織採用（近刊）</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Main Content ─── -->
+    <main>
+
+        <!-- Section 0: Overview -->
+        <section id="overview">
+            <div class="section-header">
+                <div class="section-number">00</div>
+                <div>
+                    <span class="chapter-tag">Part II Overview</span>
+                    <h2>Part II 概要</h2>
+                </div>
+            </div>
+
+            <p>Part II（第5〜8章）は、データコントラクトの「どうやって」を実践的に確立する。Part I が「なぜ」と「何か」を問いかけたとすれば、Part II は設計図を具体的なツール・コード・本番事例へと変換する。</p>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// Part II の中心的テーマ</div>
+                <p>データコントラクト・アーキテクチャは<strong>4つのコンポーネント</strong>で構成される：<span class="en-term">データアセット</span>（基盤）、<span class="en-term">コントラクト定義</span>（仕様）、<span class="en-term">検出</span>（Detection）、<span class="en-term">予防</span>（Prevention）。Part IIはこれら4コンポーネントを詳細に解説し、実装サンドボックスと3社のケーススタディで「机上の理論」を「動くシステム」へとつなぐ。</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="char3-label">Chapter 5</div>
+                    <h4>データアセットとコントラクト定義</h4>
+                    <p>4つのデータアセットカテゴリ（分析DB・トランザクションDB・イベントソーシング・サードパーティ）と、コントラクト定義の3サブコンポーネント（スペック・ビジネスロジック・スキーマレジストリ）。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 6</div>
+                    <h4>検出と予防</h4>
+                    <p>7つの検出手法（データ隔離・CDC・ストリーム処理・ソースコードフローグラフ・データリネージ・静的コード解析・ライブモニタリング）と、WAP/CI/CD/5W1Hアラートによる予防。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 7</div>
+                    <h4>実装チュートリアル</h4>
+                    <p>ミュージアムアプリケーションのモックシナリオ。PostgreSQL + Alembic + GitHub Actions + Python を使った13ステップのエンドツーエンドワークフローを段階的に実装。</p>
+                </div>
+                <div class="card">
+                    <div class="char3-label">Chapter 8</div>
+                    <h4>本番事例：3社のジャーニー</h4>
+                    <p>Convoy（Kafkaの転換点）、Glassdoor（WAP + SCA + LLM）、Adevinta Spain（4原則・2段階実装・GDPR自動化）——それぞれの採用パターンと横断的な5つの教訓。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: Ch.5 -->
+        <section id="ch5">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <div>
+                    <span class="chapter-tag">Ch.5 / Data Assets &amp; Contract Definition</span>
+                    <h2>Ch.5: データコントラクトの構成要素①<br>— データアセットとコントラクト定義</h2>
+                </div>
+            </div>
+
+            <p>第5章は理論から実践への最初の橋渡しだ。第1〜4章がデータコントラクトの「なぜ」を確立したのに対し、第5章は4つのコンポーネント構成のうち最初の2つ——<span class="highlight">データアセット</span>と<span class="highlight">コントラクト定義</span>——を詳解する。</p>
+
+            <h3>4つのデータアセットカテゴリ</h3>
+
+            <p>データコントラクト・アーキテクチャの基盤は<span class="en-term">データアセット</span>——つまりデータベースだ。組織内のあらゆるデータソースは以下の4つに分類される：</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Analytics DB</div>
+                    <h4>分析データベース</h4>
+                    <p>レスポンスタイムよりも<strong>スループット</strong>を優先（広範なSQLクエリを分で処理）。モダンデータスタック（MDS）の台頭により<strong>ELT</strong>パターンが定着した。Snowflake・BigQuery・Databricksなどが代表例。多くのチームはdbtによる変換レイヤーで課題をパッチするが、それは根本原因（ブレイキングチェンジ）を解決しない。</p>
+                    <div class="char3-impact">スループット重視 / ELT / OLAP</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Transactional DB</div>
+                    <h4>トランザクションデータベース</h4>
+                    <p>ソフトウェア開発者が上流で操作する。CRUD操作・ACID準拠・第3正規形（3NF）が特徴。<strong>最新の運用データの真実ソース</strong>——データが最初に生まれる場所だ。ゆえにデータコントラクトの理想的な配置場所でもある。ML予測のデータパイプラインや、サードパーティデータの取り込み口としても機能する。</p>
+                    <div class="char3-impact">ACID / 3NF / 真実ソース / OLTP</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">Event Sourcing</div>
+                    <h4>イベントソーシング & ストリーム</h4>
+                    <p>Apache Kafkaに代表されるパブリッシュ・サブスクライブモデル。イベントソーシングは<strong>すべてのイベントの不変ログ</strong>を作成し、任意時点のデータを再現可能にする。ストリーム処理は高ボリュームのリアルタイムデータを集計する。多くの組織が両方を使用し、リアルタイムまたはマイクロバッチで分析DBに供給する。</p>
+                    <div class="char3-impact">不変ログ / Pub-Sub / リアルタイム</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">4</div>
+                    <div class="char3-label">Third-Party</div>
+                    <h4>ファーストパーティデータ / サードパーティプラットフォーム</h4>
+                    <p>Salesforceデータ → Fivetran → BigQuery のようなシナリオ。サードパーティへのコントラクト強制は<strong>通常不可能</strong>（レバレッジ不足）。CI/CDによる予防も通常利用できない。代わりに継続的モニタリングとバッチレプリケーションジョブのキュー管理が中心となる。</p>
+                    <div class="char3-impact">モニタリング重視 / CI/CD制限あり</div>
+                </div>
+            </div>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// 実際の現場での教訓（Mark Freeman）</div>
+                <p>あるHRテックスタートアップでの経験：チームが小規模なうちは変更を口頭で伝えていた。会社の成長とともに口頭コミュニケーションは途絶え、ブレイキングチェンジとデータ品質問題が頻発するようになった。データ問題が発生するかどうかではなく、<strong>「いつ」発生するか</strong>の問題だ——スコープが広がるほど確率は高まる。</p>
+            </div>
+
+            <h3>コントラクト定義の3サブコンポーネント</h3>
+
+            <p>データアセットの基盤の上に配置されるのが<span class="highlight">コントラクト定義</span>——特定データアセットに対するスキーマとビジネスロジックの期待値を埋め込む「インターフェース」だ。3つのサブコンポーネントで構成される：</p>
+
+            <div class="comp-grid">
+                <div class="comp-box">
+                    <div class="comp-letter">A</div>
+                    <span class="comp-tag">Sub-Component 1</span>
+                    <h4>データコントラクト スペック</h4>
+                    <p>JSON Schema + YAMLを推奨。5つの要件：①技術非依存 ②人間が読める形式 ③スキーマとセマンティクスの両方をカバー ④セマンティクスバージョニング ⑤技術的異質性への対応。</p>
+                </div>
+                <div class="comp-box">
+                    <div class="comp-letter">B</div>
+                    <span class="comp-tag">Sub-Component 2</span>
+                    <h4>ビジネスロジック</h4>
+                    <p>データを処理するルール・条件・操作の定義。静的ではなく<strong>常に進化</strong>する。4ステップライフサイクルで管理される。制度的知識をコードとして形式化する役割。</p>
+                </div>
+                <div class="comp-box">
+                    <div class="comp-letter">C</div>
+                    <span class="comp-tag">Sub-Component 3</span>
+                    <h4>スキーマレジストリ & データカタログ</h4>
+                    <p>コントラクトスペックが「期待値」を定義するのに対し、スキーマレジストリとデータカタログは「実際の」スキーマを管理する。DatabricksのUnity Catalog・SnowflakeのPolaris Catalogなどが例。</p>
+                </div>
+            </div>
+
+            <h3>データコントラクト スペック：JSON Schema + YAML</h3>
+
+            <p>本書は特定の独自スペックを推奨するのではなく（xkcdの927番のコミックが示すように無数の標準が氾濫する）、<span class="en-term">JSON Schema</span>と<span class="en-term">YAML</span>の組み合わせを出発点として推奨する。以下は第7章の実装で使用されるコントラクトスペックの構造例だ：</p>
+
+            <pre><code>{
+  "spec-version": "1.0.0",
+  "name": "object_images_contract_spec",
+  "namespace": "museum_application",
+  "dataAssetResourceName": "postgres://db/museum_database",
+  "doc": "metadata for museum objects, including primary images,
+          additional images, and creation timestamps.",
+  "owner": {
+    "name": "data_engineering_team",
+    "contact": "data-eng@museum-app.io"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "objectID": {
+        "type": "integer",
+        "examples": [437133],
+        "constraints": {
+          "required": true,
+          "unique": false,
+          "primaryKey": true
+        }
+      },
+      "primary_image": {
+        "type": "string",
+        "constraints": {
+          "required": false,
+          "nullable": true
+        }
+      },
+      "additional_images": {
+        "type": "array",
+        "items": { "type": "string" },
+        "constraints": {
+          "required": false,
+          "nullable": true
+        }
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "constraints": {
+          "required": true,
+          "nullable": false
+        }
+      }
+    }
+  }
+}</code></pre>
+
+            <h4>コントラクト管理フィールドの意味</h4>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>フィールド</th>
+                            <th>役割</th>
+                            <th>備考</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>spec-version</code></td>
+                            <td>スペック自体のバージョン</td>
+                            <td>データアセットではなくスペック形式の変更を追跡</td>
+                        </tr>
+                        <tr>
+                            <td><code>name</code></td>
+                            <td>ユーザー定義のコントラクト名</td>
+                            <td>name + namespace = 複合ユニークID</td>
+                        </tr>
+                        <tr>
+                            <td><code>namespace</code></td>
+                            <td>コントラクト集合の上位グループ名</td>
+                            <td>論理的な「フォルダ」のような役割</td>
+                        </tr>
+                        <tr>
+                            <td><code>dataAssetResourceName</code></td>
+                            <td>対象データソースのURLパス</td>
+                            <td>例: <code>s3://path/file</code> または <code>postgres://db/name</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>doc</code></td>
+                            <td>コントラクトの文書化</td>
+                            <td>何を表し・何を強制し・その他情報</td>
+                        </tr>
+                        <tr>
+                            <td><code>owner</code></td>
+                            <td>責任者と連絡先</td>
+                            <td>個人またはチーム。違反時の通知先</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>ビジネスロジック ライフサイクル（4ステップ）</h3>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// ビジネスロジックの4ステップ ライフサイクル</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">01</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Business Domains → ビジネスドメイン</div>
+                                <h4>ビジネスロジックの確立</h4>
+                                <p>組織のビジネスドメインがロジック（機能・手続き）を定義する。「顧客とは誰か？」「アクティブなユーザーとは？」などの問いに答える。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">02</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Upstream Engineers → 上流エンジニア</div>
+                                <h4>ビジネスロジックの運用化</h4>
+                                <p>上流エンジニアがビジネスロジックをコード化し、ステップとタイムスタンプをトランザクションデータベースに格納する。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">03</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Replication Pipelines → レプリケーションパイプライン</div>
+                                <h4>分析DBへの移行</h4>
+                                <p>レプリケーションパイプラインがトランザクションDBとその他ソースから分析DBへデータを移動する。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">04</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Downstream Data Teams → 下流データチーム</div>
+                                <h4>推奨と情報提供</h4>
+                                <p>下流のデータチームが推奨を行い、ビジネスロジックの適用方法を組織全体に伝達する。制度的知識はここで初めて可視化される。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>スキーマレジストリとデータカタログ</h3>
+
+            <p>コントラクトスペックが「<em>期待される</em>」スキーマを定義するのに対し、スキーマレジストリとデータカタログは「<em>実際の</em>」スキーマと業務ロジックを組織のデータシステム内で管理する仕組みだ。</p>
+
+            <blockquote>
+                「Schema Registry provides a centralized repository for managing and validating schemas for topic messages, and for serialization and deserialization of the data over the network. Producers and consumers to Kafka topics can use schemas to ensure data consistency and compatibility as schemas evolve.」
+                <cite>— Confluent Documentation, Schema Registry</cite>
+            </blockquote>
+
+            <div class="value-shift-grid">
+                <div class="shift-col" style="border-top: 3px solid var(--accent);">
+                    <div class="shift-col-title" style="color: var(--accent-light);">Schema Registry</div>
+                    <div class="shift-item">Kafkaのトピックメッセージのスキーマを管理</div>
+                    <div class="shift-item">シリアライズ・デシリアライズをサポート</div>
+                    <div class="shift-item">CI/CDワークフローでの自動スキーマ検証</div>
+                    <div class="shift-item">プロデューサー・コンシューマー間のスキーマ互換性保証</div>
+                </div>
+                <div class="shift-col" style="border-top: 3px solid #A78BFA;">
+                    <div class="shift-col-title" style="color: #A78BFA;">Data Catalog</div>
+                    <div class="shift-item">メタデータの集中インベントリ</div>
+                    <div class="shift-item">発見可能性とガバナンスを重視</div>
+                    <div class="shift-item">PII保護・データリネージの高度ユースケース</div>
+                    <div class="shift-item">例: Databricks Unity Catalog, Snowflake Polaris</div>
+                </div>
+            </div>
+
+            <div class="alert alert-success">
+                <div class="alert-title">// Ch.5 まとめ：推奨アプローチ</div>
+                <p>「クロール→ウォーク→ラン（Crawl, Walk, Run）」のアプローチを推奨。まずスキーマ検証（型チェック）から始め、セマンティクス（ビジネスロジック）へと段階的に進む。データカタログやスキーマレジストリは後から追加可能だ。</p>
+            </div>
+        </section>
+
+        <!-- Section 2: Ch.6 -->
+        <section id="ch6">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <div>
+                    <span class="chapter-tag">Ch.6 / Detection &amp; Prevention</span>
+                    <h2>Ch.6: データコントラクトの構成要素②<br>— 検出と予防</h2>
+                </div>
+            </div>
+
+            <p>第6章は4コンポーネント構成の後半2つ——<span class="highlight">検出（Detection）</span>と<span class="highlight">予防（Prevention）</span>——を解説する。第5章と合わせて、データコントラクト・アーキテクチャの完全な基盤が整う。</p>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// 検出（Detection）の定義</div>
+                <p>データコントラクトの文脈での検出とは、<strong>データアセットのコントラクトに関連するメタデータを検出し、関連するステークホルダーにその情報を提示する能力</strong>だ。3つの活動を含む：①コード変更がコントラクトのスキーマ・セマンティクスにどう影響するかを検出 ②ソース〜ターゲット間のライブデータを監査してコントラクトスペックとの整合性を確認 ③新たなコントラクトを遡及的に適用したときの既存違反を検出。</p>
+            </div>
+
+            <h3>7つの検出手法</h3>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">DETECT-01</div>
+                    <h4>データ隔離</h4>
+                    <span class="assess-en">Data Quarantining</span>
+                    <p>コントラクトスペックに違反するデータを隔離するメカニズム。別名「デッドレタキュー（Dead Letter Queue）」。サードパーティがスキーマを事前通知なく変更するシナリオで特に有効。より詳細な障害説明と自動化された外部通知が可能になる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">DETECT-02</div>
+                    <h4>変更データキャプチャ</h4>
+                    <span class="assess-en">Change Data Capture (CDC)</span>
+                    <p>上流DBのCRUD操作を監視し、変更をリアルタイムで下流DBに伝播する技術。WAPパターンと組み合わせることで、データが下流に移動する前に違反を検出できる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">DETECT-03</div>
+                    <h4>ストリーム処理</h4>
+                    <span class="assess-en">Stream Processing</span>
+                    <p>データ生成時点でリアルタイムに処理・分析する技術。WAPパターンと組み合わせることで、ストリーミングデータがダウンストリームに到達する前に品質違反を検出できる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">DETECT-04</div>
+                    <h4>ソースコードフローグラフ</h4>
+                    <span class="assess-en">Source Code Flow Graphs</span>
+                    <p>コードベース内でオブジェクト/ファイルがどのように参照し合っているかを示す有向グラフ。データリネージと組み合わせることで<strong>エンドツーエンドリネージ</strong>を形成する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">DETECT-05</div>
+                    <h4>データリネージ</h4>
+                    <span class="assess-en">Data Lineage</span>
+                    <p>データがデータインフラ内でどのようにソース化・変換・移動されるかを示す有向グラフ。OpenLineage（openlineage.io）がオープンスタンダードとして存在する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">DETECT-06</div>
+                    <h4>静的コード解析</h4>
+                    <span class="assess-en">Static Code Analysis (SCA)</span>
+                    <p>コードを実際に実行せずにその動作を推論するソフトウェアエンジニアリングの特殊分野。<strong>最重要の検出手法</strong>。MetaのPysa（Python）・Infer（Java/C）などが代表例。CI/CDに組み込まれ、PRレベルで問題を捕捉する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">DETECT-07</div>
+                    <h4>ライブデータモニタリング</h4>
+                    <span class="assess-en">Live Data Monitoring</span>
+                    <p>リアルタイムデータのみを観察・分析する技術。コードは変更されていないがビジネスロジックが現実と乖離する「<strong>データドリフト（Data Drift）</strong>」の検出に特に有効。</p>
+                </div>
+            </div>
+
+            <h3>DAMAデータ品質 9次元</h3>
+
+            <p>どの検出手法で何をチェックするかを決める際の枠組みとして、DAMA（Data Management Association）のデータ品質9次元が参照される：</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>次元（英語）</th>
+                            <th>日本語</th>
+                            <th>説明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td><code>Conformity</code></td>
+                            <td>適合性</td>
+                            <td>データが期待されるビジネスロジックに準拠しているか（例：タイムスタンプが営業時間中を示しているか）</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td><code>Completeness</code></td>
+                            <td>完全性</td>
+                            <td>値が必要な情報をすべて持っているか（例：生年月日が日・月・年を含むか）</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td><code>Consistency</code></td>
+                            <td>一貫性</td>
+                            <td>同一カラム内で値の構造が統一されているか（例：<code>[1,2,3]</code>と<code>["one","two","three"]</code>が混在しないか）</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><code>Validity</code></td>
+                            <td>妥当性</td>
+                            <td>値がもっともらしいか（例：サンフランシスコがフランスに関連付けられていないか）</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td><code>Timeliness</code></td>
+                            <td>適時性</td>
+                            <td>データがビジネスニーズに対して期待される時間枠内に届いているか（例：24時間以内に着地する契約）</td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td><code>Currency</code></td>
+                            <td>最新性</td>
+                            <td>現在時刻と比較してデータがどれほど新鮮か（例：最終更新が6ヶ月以上前）</td>
+                        </tr>
+                        <tr>
+                            <td>7</td>
+                            <td><code>Cardinality</code></td>
+                            <td>カーディナリティ</td>
+                            <td>カラムに存在できる値の集合（例：月は最大12値）</td>
+                        </tr>
+                        <tr>
+                            <td>8</td>
+                            <td><code>Uniqueness</code></td>
+                            <td>一意性</td>
+                            <td>カラム内のすべての値が一意か（例：<code>user_id</code>はすべてユニーク）</td>
+                        </tr>
+                        <tr>
+                            <td>9</td>
+                            <td><code>Accuracy</code></td>
+                            <td>正確性</td>
+                            <td>ビジネスロジックに基づく値の正確さ（例：アルコール配達サービスが州内で運営されているか）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>WAP（Write-Audit-Publish）パターン</h3>
+
+            <p><span class="en-term">Write-Audit-Publish</span>パターンは、CDC・ストリーム処理・ライブデータモニタリングと組み合わせることで、データが下流に移動する<em>前に</em>コントラクト違反を検出するための中核的パターンだ：</p>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// WAP（Write-Audit-Publish）フロー</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot" style="background: rgba(99,102,241,0.2);">W</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Step 1 — Write（書き込み）</div>
+                                <h4>ステージングDBへ書き込み</h4>
+                                <p>新しいデータをステージングデータベース（本番環境とは隔離）に書き込む。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot" style="background: rgba(99,102,241,0.2);">A</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Step 2 — Audit（監査）</div>
+                                <h4>コントラクトスペックに対して監査</h4>
+                                <p>ステージングDB内のデータに対して各種データ品質チェックとセマンティクステストを実施。コントラクトスペックとの整合性を検証する。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot" style="background: rgba(52,211,153,0.2); border-color: rgba(52,211,153,0.5); color: #34D399;">P</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Step 3a — Publish（公開）✓ パス</div>
+                                <h4>本番DBへ昇格</h4>
+                                <p>監査チェックに合格したデータは下流コンシューマーのための本番DBへ昇格する。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot" style="background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5); color: #EF4444;">✗</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Step 3b — Dead Letter Queue（失敗）</div>
+                                <h4>デッドレタキューへ隔離</h4>
+                                <p>監査チェックに失敗したデータはデッドレタキューへ送られ、ブレイキングチェンジの下流への伝播を防ぐ。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>エンドツーエンドリネージ：根本原因追跡の変革</h3>
+
+            <p>Markが以前のデータエンジニアリングの職で、下流のデータ品質問題を上流のコードまで手動で追跡する際には以下の<strong>最大10ステップ</strong>が必要だった：</p>
+
+            <ul>
+                <li>ステップ1〜5：データリネージを使ったデータアセットレベルの調査</li>
+                <li>ステップ6〜10：ソースコードフローグラフを使ったコードレベルの調査（<code>git blame</code>、差分確認、PRレビュー、ドキュメント確認、上流エンジニアとの対話）</li>
+            </ul>
+
+            <p>このプロセスは<strong>最善でも数日、最悪では数週間</strong>を要した。データコントラクト・アーキテクチャでは、ソースコードフローグラフとデータリネージのメタデータを接続することで、データ品質問題の根本原因をコードまで自動的に追跡できるようになる。</p>
+
+            <h3>静的コード解析（SCA）が最重要な理由</h3>
+
+            <p>SCAがデータコントラクト検出において最も重要な手法とされる3つの理由：</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">1</div>
+                    <div class="char3-label">Shift Left</div>
+                    <h4>問題を最上流で捕捉</h4>
+                    <p>データ品質問題は分析DBの遥か手前で発生する。SCAはパイプラインの最も早い段階でメタデータを抽出し、問題が伝播する前に捕捉する。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">2</div>
+                    <div class="char3-label">Visibility</div>
+                    <h4>アプリケーションコードへの可視性</h4>
+                    <p>ほとんどのデータチームはデータを生成・変換・移動するコードへの可視性を持たない。SCAはその不透明なブラックボックスを開く。</p>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">3</div>
+                    <div class="char3-label">SDLC Fit</div>
+                    <h4>開発ワークフローへの自然な統合</h4>
+                    <p>ソフトウェアエンジニアが関与するには、IDE・CI/CDパイプライン内でのリアルタイムフィードバックが必要だ。SCAはまさにその環境に収まる。</p>
+                </div>
+            </div>
+
+            <h3>予防（Prevention）の3コンポーネント</h3>
+
+            <p>予防の理想はプログラム的な自動防止だが、データパイプラインの異質性から常に実現可能なわけではない。3つのコンポーネントで構成される：</p>
+
+            <div class="comp-grid">
+                <div class="comp-box">
+                    <span class="comp-tag">Prevention 1</span>
+                    <h4>バージョン管理</h4>
+                    <p>Gitがソフトウェア開発の変更管理を変革したように、データコントラクト・アーキテクチャはデータに同じことを行う。コントラクトスペックファイルの変更履歴とSDLC統合の基盤を提供する。</p>
+                </div>
+                <div class="comp-box">
+                    <span class="comp-tag">Prevention 2</span>
+                    <h4>CI/CD</h4>
+                    <p>最も重要な予防コンポーネント。新しいコードブランチのたびにデータコントラクト違反検出ワークフローをトリガーし、違反が検出された場合はmainブランチへのマージをブロックする。データチームのニーズをSDLCに後付けではなく<strong>組み込む</strong>。</p>
+                </div>
+                <div class="comp-box">
+                    <span class="comp-tag">Prevention 3</span>
+                    <h4>監視とアラート</h4>
+                    <p>技術的な問題であると同時に<strong>人と運用の問題</strong>でもある。5W1Hフレームワークで意味のあるアラートを設計し、アラート疲れを回避する。</p>
+                </div>
+            </div>
+
+            <h3>5W1Hアラートフレームワーク</h3>
+
+            <p>ジャーナリズムの「5つのW と1つのH」を応用して、意味のある違反アラートを設計する：</p>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>問い</th>
+                            <th>内容</th>
+                            <th>例</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Who（誰）</strong></td>
+                            <td>通知すべき最も関連するステークホルダーは誰か</td>
+                            <td>コード変更を行った開発者、影響を受けるデータチーム、ビジネスドメインエキスパート</td>
+                        </tr>
+                        <tr>
+                            <td><strong>What（何）</strong></td>
+                            <td>提示された違反に対して最も関連する情報</td>
+                            <td>違反しているコードの具体的な行、影響を受けるデータアセット、コントラクトスペック</td>
+                        </tr>
+                        <tr>
+                            <td><strong>When（いつ）</strong></td>
+                            <td>違反アラートをいつ発行すべきか</td>
+                            <td>管理するデータアセットへの影響時、アクティブな業務ワークフローへの影響時</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Where（どこで）</strong></td>
+                            <td>どのチャネルで通知するか</td>
+                            <td>PRコメント、Slack、メール、ダッシュボード、プロダクト内通知</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Why（なぜ）</strong></td>
+                            <td>このステークホルダーがなぜ気にすべきか</td>
+                            <td>自分が担当するキーメトリクスへの影響、ビジネス機能への差し迫ったリスク</td>
+                        </tr>
+                        <tr>
+                            <td><strong>How（どうやって）</strong></td>
+                            <td>違反をどのように解決すべきか</td>
+                            <td>マージ前にコードを更新、PRで開発者をサポート、ドメイン知識を提供</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">// アラート疲れへの警告：Epic Sepsis Modelの教訓</div>
+                <p>Epic（米国最大病院EHRベンダー）が展開した敗血症予測MLモデル（ESM）は、入院患者の<strong>18%</strong>でアラートを発した。しかしアラートの陽性予測値はわずか18%——8人中7人はアラートが発せられても敗血症を発症しなかった。<em>JAMA</em>の外部検証研究はこれを厳しく批判した。</p>
+                <p><strong>教訓：</strong>ターゲットステークホルダーにとって意味のないアラートは、アラート疲れと<strong>システムへの信頼の喪失</strong>を生む。データコントラクトのアラートも同様のリスクがある。5W1Hフレームワークはこのリスクを軽減するための設計指針だ。</p>
+            </div>
+        </section>
+
+        <!-- Section 3: Ch.7 -->
+        <section id="ch7">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <div>
+                    <span class="chapter-tag">Ch.7 / Implementing Data Contracts</span>
+                    <h2>Ch.7: データコントラクトの実装</h2>
+                </div>
+            </div>
+
+            <p>第7章は理論を実際のコードへと変換する。オープンソースツールを使ったデータコントラクト実装の完全なガイドとして、<span class="highlight">ミュージアムアプリケーション</span>というモックシナリオを通じてエンドツーエンドのワークフローを示す。</p>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// GitHubリポジトリ</div>
+                <p>第7章には公開サンドボックス環境が付属する：<a href="https://github.com/data-contract-book/chapter-7-implementing-data-contracts">github.com/data-contract-book/chapter-7-implementing-data-contracts</a><br>
+                ローカルまたはGitHub Codespacesで実行可能。3つのアプローチ：①サンドボックス探索（読み進めながら確認）、②フォローアラング（並行して実施）、③自作実装（第5〜6章を元に作成、比較）。</p>
+            </div>
+
+            <h3>モックシナリオ：ミュージアムアプリケーション</h3>
+
+            <p>あなたは<strong>データプラットフォームエンジニア</strong>として、世界中の主要美術館のアートメタデータと画像を集約するアプリケーションを構築するバックエンドチームを支援している。長期ビジョンは、テーマ・ムード・トピックでアートを横断検索できるAIアプリだ（例：「青い色調のすべてのゴッホ作品を見つけて」）。</p>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// シナリオのスペック</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big">406K+</div>
+                        <div class="stat-desc">Metropolitan Museum of Art Open Accessデータセットの高解像度画像数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">470K+</div>
+                        <div class="stat-desc">アートワーク件数（サンドボックス: ~3,000レコードのサンプル）</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">Postgres</div>
+                        <div class="stat-desc">トランザクションDB（Museum APIデータを格納）</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">object_id</div>
+                        <div class="stat-desc">すべてのテーブルのプライマリキー</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>プロジェクトリポジトリ構造</h3>
+
+            <pre><code>/workspace
+├── .devcontainer.json          # VS Code dev container config
+├── docker-compose.test.yml     # Docker compose for testing（CI/CD用）
+├── docker-compose.yml          # Docker compose for development
+├── requirements.txt            # Python依存関係
+├── .github/
+│   └── workflows/
+│       └── docker-image.yml    # GitHub Actions ワークフロー
+└── data_contract_components/
+    ├── contract_definition/    # データコントラクト仕様
+    │   └── object_images_contract_spec.json
+    ├── data_assets/            # データ管理とアセット
+    │   ├── seed_db.py          # DBシード
+    │   ├── alembic.ini         # Alembicマイグレーション設定
+    │   └── db_migrations/
+    │       └── versions/       # マイグレーションファイル
+    ├── detection/              # コントラクト違反検出
+    │   ├── contract_coverage_detector.py
+    │   └── contract_violation_detector.py
+    └── prevention/             # 違反予防
+        └── test_data_contract_violations.py</code></pre>
+
+            <h3>4つの実装コンポーネント</h3>
+
+            <div class="comp-grid">
+                <div class="comp-box">
+                    <div class="comp-letter">A</div>
+                    <span class="comp-tag">Component A</span>
+                    <h4>データアセット</h4>
+                    <p>Alembicによるデータベースマイグレーション。<strong>重要な洞察：</strong>データコントラクト実装に必要なのはメタデータのみ——セキュリティ要件とリソース要件の障壁を大幅に下げる。<code>docker-compose.test.yml</code>がDocker内にPostgresとPythonコンテナを起動し、マイグレーションを実行する。</p>
+                </div>
+                <div class="comp-box">
+                    <div class="comp-letter">B</div>
+                    <span class="comp-tag">Component B</span>
+                    <h4>コントラクト定義</h4>
+                    <p><code>object_images_contract_spec.json</code>にspec-version・name・namespace・dataAssetResourceName・doc・owner・schemaを定義。<strong>出発点として現在のスキーマをベースラインとして使用</strong>することを推奨。Linux Foundation下のOpen Data Contract Standard（ODCS）も参照可能。</p>
+                </div>
+                <div class="comp-box">
+                    <div class="comp-letter">C</div>
+                    <span class="comp-tag">Component C</span>
+                    <h4>検出</h4>
+                    <p>3ステップ：①データカタログから現状スキーマを取得、②コントラクトスペックからの期待値を読み込み、③2者を比較して違反を表面化。<code>contract_coverage_detector.py</code>（アセット存在確認）と<code>contract_violation_detector.py</code>（カラムレベルの制約検証）の2スクリプト。</p>
+                </div>
+                <div class="comp-box">
+                    <div class="comp-letter">D</div>
+                    <span class="comp-tag">Component D</span>
+                    <h4>予防</h4>
+                    <p>GitHub Actions（<code>docker-image.yml</code>）がCI/CDワークフローを駆動。<code>test_data_contract_violations.py</code>がPython unittestで検出スクリプトを実行し、違反があれば<code>test_output.log</code>をPRコメントとして出力し、CIチェックを失敗させてマージをブロックする。</p>
+                </div>
+            </div>
+
+            <h3>検出スクリプト：コードで見る実装</h3>
+
+            <h4>contract_coverage_detector.py — カバレッジ確認（左結合）</h4>
+            <pre><code>def detect_coverage_in_data_catalog(self) -> List[str]:
+    """コントラクトに定義されたアセットがデータカタログに存在するか確認"""
+    coverage = self.get_contract_spec_coverage()
+    coverage_df = pd.DataFrame(coverage)
+    catalog_df = get_data_catalog()
+
+    # 左結合で、カタログに存在しないアセットを特定
+    merged = coverage_df.merge(
+        catalog_df,
+        on=['table_catalog', 'table_schema', 'table_name'],
+        how='left',
+        indicator=True
+    )
+    # 左側のみ（コントラクトにあるがカタログにない）= 欠損アセット
+    missing_assets_df = merged[merged['_merge'] == 'left_only']
+    missing_table_names = missing_assets_df['table_name'].tolist()
+    return missing_table_names  # 空リストならOK</code></pre>
+
+            <h4>contract_violation_detector.py — カラムレベル制約検証</h4>
+            <pre><code>def detect_constraint_violations(self) -> List[Dict[str, str]]:
+    """コントラクトの制約とデータカタログの実際の制約を比較"""
+    contract_specs_df = pd.DataFrame(
+        self.transform_contract_specs_to_catalog_format()
+    )
+    catalog_df = get_data_catalog()
+
+    # カラムレベルで結合して差異を検出
+    merged = contract_specs_df.merge(
+        catalog_df,
+        on=['table_catalog', 'table_schema', 'table_name', 'column_name'],
+        how='left',
+        suffixes=('_contract', '_catalog'),
+        indicator=True
+    )
+    # 型の不一致・カラムの欠損などを violations として返す
+    ...</code></pre>
+
+            <h3>エンドツーエンドワークフロー（13ステップ）</h3>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// CI/CDトリガー → コントラクト検証 → PRへのフィードバック</div>
+                    <ul class="step-list">
+                        <li class="step-item">
+                            <div class="step-num">01</div>
+                            <div class="step-content">
+                                <strong>GitHub ActionsがCI/CDワークフローを起動</strong>
+                                <p>開発者がコード変更をプッシュすると自動トリガー</p>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">02</div>
+                            <div class="step-content">
+                                <strong><code>docker-image.yml</code>の<code>test</code>ジョブがDocker Composeを起動</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">03</div>
+                            <div class="step-content">
+                                <strong><code>docker-compose.test.yml</code>がコンテナインフラレイヤーとして使用される</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">04</div>
+                            <div class="step-content">
+                                <strong>コンテナが<code>postgres</code>サービスをビルド</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">05</div>
+                            <div class="step-content">
+                                <strong><code>postgres</code>がPostgreSQL 17 DBを起動し「healthy」シグナルを送信</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">06</div>
+                            <div class="step-content">
+                                <strong>「healthy」受信後、<code>devcontainer</code>（Python）サービスをビルド</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">07</div>
+                            <div class="step-content">
+                                <strong><code>devcontainer</code>がAlembicでDBマイグレーションを実行</strong>
+                                <p>提案されたコード変更のスキーマをDBに適用</p>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">08</div>
+                            <div class="step-content">
+                                <strong>依存関係のインストールとDB確認後、<code>test_data_contract_violations.py</code>を実行</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">09</div>
+                            <div class="step-content">
+                                <strong>Pythonの<code>unittest</code>が2つの検出スクリプトを実行</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">10</div>
+                            <div class="step-content">
+                                <strong>検出スクリプトがDBとコントラクトスペックのメタデータを比較</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">11</div>
+                            <div class="step-content">
+                                <strong><code>object_images_contract_spec.json</code>を参照してDB実態とスペック期待値を照合</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">12</div>
+                            <div class="step-content">
+                                <strong>違反検出時、<code>test_output.log</code>として保存</strong>
+                            </div>
+                        </li>
+                        <li class="step-item">
+                            <div class="step-num">13</div>
+                            <div class="step-content">
+                                <strong>テスト失敗の場合、ログをGitHub PRのコメントとして投稿</strong>
+                                <p>フィールドレベルの違反詳細（例：型変更 <code>text → integer</code>）を含む</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>コントラクト違反シナリオ：ウォークスルー</h3>
+
+            <p><strong>シナリオ：</strong><code>object_images</code>テーブルの正規化リクエストが届いた。<code>additional_images</code>（配列型）をアンネストし、<code>primary_image</code>を<code>image</code>にリネームし、<code>is_primary_image</code>（ブール型）を追加してほしいという依頼だ。</p>
+
+            <div class="value-shift-grid">
+                <div class="shift-col shift-col-before">
+                    <div class="shift-col-title">現在の object_images</div>
+                    <div class="shift-item"><code>PK: object_id</code> (Integer)</div>
+                    <div class="shift-item"><code>primary_image</code> (Text)</div>
+                    <div class="shift-item"><code>additional_images</code> (ARRAY[text])</div>
+                    <div class="shift-item"><code>created_at</code> (DateTime)</div>
+                </div>
+                <div class="shift-col shift-col-after">
+                    <div class="shift-col-title">要求された変更後</div>
+                    <div class="shift-item"><code>PK: object_id</code> (Integer)</div>
+                    <div class="shift-item"><code>image</code> (Text) — 名称変更</div>
+                    <div class="shift-item"><code>is_primary_image</code> (Boolean) — 新規追加</div>
+                    <div class="shift-item"><code>created_at</code> (DateTime)</div>
+                </div>
+            </div>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">// Step 3: ユニットテスト実行 → コントラクト違反検出</div>
+                <p>マイグレーションを更新してローカルテストを実行すると：</p>
+                <pre style="margin:0.8rem 0 0; font-size:0.79rem;"><code>test_data_contracts_against_data_catalog ... FAIL
+
+1. Contract: object_images_contract_spec  Table: object_images
+   Issue: Column 'primary_image' is defined in contract but missing from data catalog
+
+2. Contract: object_images_contract_spec  Table: object_images
+   Issue: Column 'additional_images' is defined in contract but missing from data catalog
+
+2 tests in 0.240s (failures=1)</code></pre>
+            </div>
+
+            <h3>解決への道：コントラクト駆動の意思決定</h3>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// コントラクト違反から解決までの10ステップ</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">5</div>
+                            <div class="phase-content">
+                                <h4>変更を一時リバート</h4>
+                                <p><code>git revert HEAD &amp;&amp; git push</code> — CIテストが再び通過。コントラクトスペックのオーナーを特定する。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">6</div>
+                            <div class="phase-content">
+                                <h4>下流チームと協議</h4>
+                                <p>データサイエンスチームが先週から<code>object_images</code>でモデル訓練を開始。旧構造への依存あり。正規化には賛成だが<strong>最低1ヶ月の移行期間</strong>が必要。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">7</div>
+                            <div class="phase-content">
+                                <h4>意思決定：並行テーブル戦略</h4>
+                                <p>①旧<code>object_images</code>を1ヶ月間維持（DSチーム移行期間）、②新<code>object_images_normalized</code>を作成、③新テーブル用の新コントラクトスペックを追加。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">10</div>
+                            <div class="phase-content">
+                                <h4>全テスト通過 → PRマージ</h4>
+                                <p>新テーブルと新コントラクトスペックを追加した後、すべてのCI/CDチェックが通過。コードレビューを経てmainブランチへマージ。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert alert-success">
+                <div class="alert-title">// Ch.7 の核心的価値</div>
+                <p>コントラクト違反が自動的に検出されたことで、データエンジニアリングチームは<strong>下流のデータサイエンスチームとの潜在的な断絶を本番前に回避</strong>できた。コードベースのコントラクト管理がチーム間の非同期コミュニケーションを置き換えた——これがデータコントラクトの実際の価値だ。</p>
+            </div>
+        </section>
+
+        <!-- Section 4: Ch.8 -->
+        <section id="ch8">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <div>
+                    <span class="chapter-tag">Ch.8 / Real-World Case Studies</span>
+                    <h2>Ch.8: 本番環境のケーススタディ</h2>
+                </div>
+            </div>
+
+            <p>第8章はPart IIとPart IIIの橋渡しに位置する。技術的実装から、持続的な採用に必要な人的・組織的側面へとシフトする。3つの独立した組織が、データ管理の現状維持がもはや機能しないという現実に直面し、データコントラクトへと独自に辿り着いた軌跡を描く。</p>
+
+            <p>これらのストーリーは孤立した事例ではなく、<span class="highlight">業界全体でより深く起きているシフトのシグナル</span>だ。</p>
+
+            <!-- Case Study 1: Convoy -->
+            <div class="company-banner">
+                <div class="company-name">Case Study 1: Convoy</div>
+                <div class="company-desc">物流テック / プロプライエタリなソフトウェアプラットフォームによる貨物マッチング</div>
+
+                <h4>背景</h4>
+                <p>Convoyは即時予約・透明な価格設定・貨物荷主とトラック運送業者の自動マッチングを可能にするプラットフォームだ。ChadがConvoyに加入した時点で250名の従業員、Series C直後——その後1,500名以上にスケールし、データチームも6〜8名から<strong>80名超のデータプロフェッショナル</strong>へと拡大した。</p>
+
+                <h4>技術的転換点：Kafkaの導入</h4>
+                <blockquote>
+                    「The actual big driving point was the introduction of Kafka and trying to get our developers and our engineering team to start emitting more semantic events… And what ended up happening was that we would have people trying to reverse engineer real-world events…」
+                    <cite>— Adrian Kreuziger（データエンジニア）at Convoy</cite>
+                </blockquote>
+                <p>Kafkaへの移行でセマンティックイベントの発行が求められるようになった。しかし誰もが懸命に働いていたにもかかわらず、<strong>全体像を把握している人は誰もいなかった</strong>。修正は定着せず、問題は繰り返された。</p>
+
+                <h4>根本原因の発見</h4>
+                <p>Convoyのデータチームは、パイプラインの可視性向上を試みる中で、ファーストプリンシプルから重要な洞察に到達した：<strong>Convoyにはデータセットのフルライフサイクルを所有するチームが存在しない</strong>。そのため、ソースでデータ品質を強制するメカニズムがなかった。これがChadとConvoyチームをデータコントラクトのパイロット実装へと導いた。</p>
+
+                <h4>実装と心理的シフト</h4>
+                <blockquote>
+                    「It basically made data much more like a first-class citizen in developers' minds… By going through this exercise with a team of saying, 'Hey, let's rethink your data model, let's fix it up,' you had buy-in from the developer going forward.」
+                    <cite>— Adrian Kreuziger, Convoy</cite>
+                </blockquote>
+                <p>コントラクトを独立したリポジトリでバージョン管理することで、より安定・予測可能なデータ環境が生まれた。これは技術的な改善にとどまらず——<span class="highlight">データ所有権と責任についての根本的に異なる考え方</span>への変革だった。</p>
+
+                <h4>教訓</h4>
+                <blockquote>
+                    「From my experience, you need to make the data contracts part of the normal developer flow. They need to be something that's part of the standard process… rather than an afterthought that teams get stuck with.」
+                    <cite>— Adrian Kreuziger, Convoy</cite>
+                </blockquote>
+            </div>
+
+            <!-- Case Study 2: Glassdoor -->
+            <div class="company-banner">
+                <div class="company-name">Case Study 2: Glassdoor</div>
+                <div class="company-desc">求人・企業レビュープラットフォーム / ブランド価値 = データへの信頼</div>
+
+                <h4>背景</h4>
+                <p>Glassdoorは求人リストと従業員・求職者による雇用主レビューのプラットフォームだ。ビジネスモデルの根幹は<strong>信頼</strong>——プラットフォームのデータが不正確であれば価値提案は崩壊する。データコントラクトを最初期から公開ドキュメントで実装した企業のひとつだ。</p>
+                <p>（出典：Zakariah Siyaji「Data Quality at Petabyte Scale: Building Trust in the Data Lifecycle」— Glassdoor Engineering Blog）</p>
+
+                <h4>採用の「完璧な嵐」</h4>
+                <p>Glassdoorのデータエンジニアリングチームは歴史的に<strong>リアクティブ</strong>だった——問題が発生してからのみ気づく状態。採用を後押しした3条件：<em>痛みが存在した</em>、<em>痛みが有意義な収益インパクトにつながった</em>、<em>痛みが特定可能な根本原因に帰結した</em>。</p>
+
+                <h4>実装：5つのコンポーネント</h4>
+
+                <div class="char3-grid">
+                    <div class="char3-card">
+                        <div class="char3-num">1</div>
+                        <div class="char3-label">WAP</div>
+                        <h4>Write-Audit-Publish</h4>
+                        <p>各バッチデータが本番環境への移動前にステージングエリアでレビューを受ける。Blue-Green Deploymentとも説明される。</p>
+                    </div>
+                    <div class="char3-card">
+                        <div class="char3-num">2</div>
+                        <div class="char3-label">SCA</div>
+                        <h4>静的コード解析</h4>
+                        <p>CI/CDワークフロー内に埋め込まれたSCA。フロントエンドコードの変更がバックエンドシステムに与える影響を自動検出。PRレベルで問題をブロックする。</p>
+                    </div>
+                    <div class="char3-card">
+                        <div class="char3-num">3</div>
+                        <div class="char3-label">LLM</div>
+                        <h4>異常検出へのLLM活用</h4>
+                        <p>コントラクトとSCAで得たメタデータにLLMを適用し、ビジネスコンテキストと影響を理解する。セマンティック制約の検証に特に強力。</p>
+                    </div>
+                    <div class="char3-card">
+                        <div class="char3-num">4</div>
+                        <div class="char3-label">RT</div>
+                        <h4>リアルタイムモニタリング</h4>
+                        <p>DataDogを使用したリアルタイムモニタリング。Kafkaのリアルタイムデータと組み合わせて、データ関連のソフトウェア障害を即座に検出。</p>
+                    </div>
+                </div>
+
+                <h4>文化的変化</h4>
+                <blockquote>
+                    「Proactive data quality isn't about imposing rules at the last minute; it's about instilling confidence in the data… by addressing the psychological dimension of trust through shared responsibility, trust and accountability are distributed across all stakeholders.」
+                    <cite>— Glassdoor Engineering Blog</cite>
+                </blockquote>
+                <p>両上流・下流チームがGlassdoorのプロダクト内でのデータ価値について既に整合していた。プロダクトエンジニアはデータコントラクトスペックを参照してデータ期待値を理解し、他の開発チェックと同様にそれに対して責任を負うようになった。</p>
+            </div>
+
+            <!-- Case Study 3: Adevinta Spain -->
+            <div class="company-banner">
+                <div class="company-name">Case Study 3: Adevinta Spain</div>
+                <div class="company-desc">バルセロナ / 欧州向けオンラインマーケットプレイス群 / 1日4TB</div>
+
+                <h4>背景</h4>
+                <p>Adevinta Spainは欧州向けの人気オンラインマーケットプレイスを運営する。Segment（現在も使用中）でリアルタイムイベントデータをKafka経由で取り込み、中央データレイクへ格納する。1日あたり約<strong>4テラバイト</strong>のデータを処理する。</p>
+                <p>（出典：Sergio Couto「Creating Source-Aligned Data Products in Adevinta Spain」— Medium。Shift Left Data Conference 2025でも発表。）</p>
+
+                <h4>元のアーキテクチャの課題</h4>
+                <ul>
+                    <li>正規表現でトピック名をマッチングしていたため、プレフィックスに合致するすべてのトピックが取り込まれた → <strong>ユースケースのないデータを取り込み → ストレージ・処理コストの増大</strong></li>
+                    <li>スキーマ検証なし——スキーマはイベント初回到着時にのみ出力テーブルを作成するために使用されていたが、<strong>1イベントごとのスキーマ検証は行われていなかった</strong></li>
+                </ul>
+                <blockquote>
+                    「We're consuming a lot of events and the typical daily state of engineering is that… something breaks every day.」
+                    <cite>— Sergio Couto, Adevinta Spain</cite>
+                </blockquote>
+
+                <h4>4つの指導原則</h4>
+                <div class="comp-grid">
+                    <div class="comp-box">
+                        <span class="comp-tag">原則 1</span>
+                        <h4>プッシュアーキテクチャへの移行</h4>
+                        <p>データプロデューサーは公開して終わりではなく、メンテナンスする製品としてデータアセットを扱う。</p>
+                    </div>
+                    <div class="comp-box">
+                        <span class="comp-tag">原則 2</span>
+                        <h4>アナリストの手動検証に依存しない</h4>
+                        <p>内部データプロダクトのデータ品質検証をアナリストの手作業に頼らない。</p>
+                    </div>
+                    <div class="comp-box">
+                        <span class="comp-tag">原則 3</span>
+                        <h4>手動ガバナンスよりコードへの組み込み</h4>
+                        <p>手動ガバナンスはコード自体にガバナンスを組み込むことより効果が低い。</p>
+                    </div>
+                    <div class="comp-box">
+                        <span class="comp-tag">原則 4</span>
+                        <h4>コードと同様にデータを扱う</h4>
+                        <p>厳密なテスト・バージョニング・継続的改善をデータにも適用する。</p>
+                    </div>
+                </div>
+
+                <h4>2段階の実装</h4>
+
+                <div class="diagram-wrap">
+                    <div class="diagram-inner">
+                        <div class="diagram-title">// 定義時（Definition Time） → ランタイム取り込み（Runtime Ingestion）</div>
+                        <div class="value-shift-grid">
+                            <div class="shift-col" style="border-top: 3px solid var(--accent);">
+                                <div class="shift-col-title" style="color: var(--accent-light);">Stage 1: 定義時（Definition Time）</div>
+                                <div class="shift-item">①データプロデューサーがJSON Schemaを定義しGitHubのスキーマリポジトリへアップロード</div>
+                                <div class="shift-item">②<strong>生成AI</strong>がスキーマをコントラクトスペック提案に変換</div>
+                                <div class="shift-item">③プロデューサーとコンシューマーが制約に合意 → 自動化ワークフローを起動</div>
+                                <div class="shift-item">④バリデーション通過時、<strong>Airflow DAGが自動生成</strong></div>
+                                <div class="shift-item">⑤コンシューマーがDAGをマージ・有効化して運用開始</div>
+                            </div>
+                            <div class="shift-col" style="border-top: 3px solid #A78BFA;">
+                                <div class="shift-col-title" style="color: #A78BFA;">Stage 2: ランタイム取り込み</div>
+                                <div class="shift-item">①各イベントがAirflow DAGを起動 → KafkaパイプラインをDatabricksへ取り込み</div>
+                                <div class="shift-item">②S3からコントラクトスペックを取得・フィルタリング</div>
+                                <div class="shift-item">③定義済みスキーマをデータに適用 → 違反は<strong>デッドレタキュー（隔離）</strong>へ</div>
+                                <div class="shift-item">④<strong>PII処理</strong>：非分析用PIIは削除、残りはGDPR準拠で分離</div>
+                                <div class="shift-item">⑤PII/非PIIを分析DB（<strong>Delta Lake</strong>）に格納</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h4>テックスタック全体像</h4>
+                <pre><code>Segment → Kafka → Airflow DAG（イベント毎トリガー）
+       → Databricks（Spark処理）
+       → S3（コントラクトスペック格納）
+       → スキーマ検証
+       → 隔離（Dead Letter Queue）または
+       → 分析DB（Delta Lake / タイムトラベル機能付き）</code></pre>
+
+                <h4>GDPRコンプライアンスの自動化</h4>
+                <p>Adevinta Spainにとって、データコントラクトの最大の副次的価値は<span class="highlight">GDPRコンプライアンスの自動化</span>だった。以前は手作業に大きく依存していたGDPRプロセスが、コントラクトベースのPIIフィールド識別とルーティングによって自動化された。より広い組織もこれを成功事例として評価した。</p>
+
+                <div class="alert alert-amber">
+                    <div class="alert-title">// 採用における課題</div>
+                    <p>データプラットフォームチームは複雑なMVPを説明することに苦労した。全チームがデータコントラクトの価値を理解していたが、<strong>スキーマ検証の概念</strong>が直感的ではなかった。チームは自分たちの仕事がコアビジネス成果にどのように結びついているかを組織全体に教育する必要があった。</p>
+                </div>
+            </div>
+
+            <h3>5つの横断的パターン：3社に共通するシグナル</h3>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// Chapter 8 まとめ：すべての事例に流れる5つのパターン</div>
+                <ul class="takeaway-list" style="margin:0;">
+                    <li class="takeaway-item">
+                        <div class="takeaway-num">01</div>
+                        <div class="takeaway-body">
+                            <strong>リアクティブなトリアージに失われた時間とフォーカス</strong>
+                            <p>どの組織のデータチームも、プロアクティブに価値を創出するのではなく、発生した問題に反応することに膨大なエネルギーを費やしていた。</p>
+                        </div>
+                    </li>
+                    <li class="takeaway-item">
+                        <div class="takeaway-num">02</div>
+                        <div class="takeaway-body">
+                            <strong>リアクティブなトリアージの効果は著しく制限されていた</strong>
+                            <p>憶測・試行錯誤・限られた可視性への依存。根本原因の特定に数日〜数週間を費やすことが常態化していた。</p>
+                        </div>
+                    </li>
+                    <li class="takeaway-item">
+                        <div class="takeaway-num">03</div>
+                        <div class="takeaway-body">
+                            <strong>データプロデューサーとコンシューマーの上流ミスアライメント</strong>
+                            <p>ほぼすべての問題の根本原因は、上流の変更が下流のコンシューマーへ通知されないことにあった。</p>
+                        </div>
+                    </li>
+                    <li class="takeaway-item">
+                        <div class="takeaway-num">04</div>
+                        <div class="takeaway-body">
+                            <strong>適切な人が痛みを感じるまで組織は変化しなかった</strong>
+                            <p>リーダーシップが直接影響を受けるまで、真の組織変革は起きなかった。「完璧な嵐」が採用のトリガーになった。</p>
+                        </div>
+                    </li>
+                    <li class="takeaway-item">
+                        <div class="takeaway-num">05</div>
+                        <div class="takeaway-body">
+                            <strong>ツールや技術だけでは不十分——文化的・組織的変革が同様に重要</strong>
+                            <p>3つの組織が独立して、技術的実装だけでは十分でないことを発見した。データコントラクトの真の価値は、技術的な問題解決と<strong>組織の変革</strong>の両方にある。</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 5: Summary -->
+        <section id="summary">
+            <div class="section-header">
+                <div class="section-number">05</div>
+                <div>
+                    <span class="chapter-tag">Part II Summary</span>
+                    <h2>Part II まとめ — 実装の要点を凝縮</h2>
+                </div>
+            </div>
+
+            <p>Part II（第5〜8章）は、データコントラクトの概念を実際に動くシステムとして具現化するための完全なロードマップを提供した。以下にその本質的なメッセージを凝縮する。</p>
+
+            <ul class="takeaway-list">
+                <li class="takeaway-item">
+                    <div class="takeaway-num">01</div>
+                    <div class="takeaway-body">
+                        <strong>4コンポーネント構成が実装の骨格</strong>
+                        <p>データアセット（基盤）→ コントラクト定義（仕様）→ 検出（Detection）→ 予防（Prevention）の4層が相互に連携してコントラクト・アーキテクチャを形成する。各層は独立して実装可能であり、「クロール → ウォーク → ラン」のアプローチが現実的だ。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">02</div>
+                    <div class="takeaway-body">
+                        <strong>メタデータのみで実装可能</strong>
+                        <p>第7章の実装が示すように、データコントラクトの検証にはメタデータ（スキーマ情報）のみが必要だ。実際の本番データへのアクセスは不要——これがセキュリティ要件を大幅に緩和し、採用への障壁を下げる。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">03</div>
+                    <div class="takeaway-body">
+                        <strong>静的コード解析とCI/CDの組み合わせが最強の予防</strong>
+                        <p>SCAはコードを実行せずに動作を推論し、CI/CDに組み込まれることで本番デプロイ前に問題を捕捉する。開発者にとっての摩擦を最小化しながら、データ品質の問題を「ビルド失敗」という即時のフィードバックに変換する。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">04</div>
+                    <div class="takeaway-body">
+                        <strong>WAPパターンがランタイム保護の中核</strong>
+                        <p>Write-Audit-Publishは、リアルタイムデータパイプラインにおけるコントラクト違反を下流到達前に捕捉する普遍的なパターンだ。Glassdoorはこれを「Blue-Green Deployment for data」として実装した。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">05</div>
+                    <div class="takeaway-body">
+                        <strong>ケーススタディが示すのは「技術 + 文化」の変革</strong>
+                        <p>Convoy・Glassdoor・Adevinta Spainの3社はそれぞれ独自にデータコントラクトへ辿り着いた。3社に共通するのは、技術的実装が文化的変革——データを「ファーストクラスの市民」として扱う組織的変革——と不可分であることを学んだことだ。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">06</div>
+                    <div class="takeaway-body">
+                        <strong>採用のトリガーは「完璧な嵐」</strong>
+                        <p>3社すべてで採用のトリガーは同じパターンをたどった：痛みの存在 × 明確な収益インパクト × 特定可能な根本原因。この「完璧な嵐」が、リーダーシップを含む組織全体の変革への意志を解放した。</p>
+                    </div>
+                </li>
+            </ul>
+
+            <div class="alert alert-indigo" style="margin-top: 3rem; border-left-width: 6px;">
+                <div class="alert-title" style="font-size:1rem;">// Part II の本質的なメッセージ</div>
+                <p style="font-size:1rem; line-height:1.9;">データコントラクトは<strong>「契約としてのコード（contract as code）」</strong>だ。GitがSoftware 1.0の変更管理を変革したように、データコントラクトはData Engineering 2.0の変更管理を変革する。技術的なツールキットは本書のGitHubリポジトリで今すぐ動かせる——しかし、その真の価値はツールにあるのではなく、<span class="highlight">プロデューサーとコンシューマーの間の明示的・強制可能な合意</span>にある。</p>
+                <p style="font-size:1rem; font-weight:600; color:var(--accent-light);">「Most data quality problems are code quality problems — and now we have the tools to treat them that way.」</p>
+            </div>
+
+            <!-- Part series navigation at bottom -->
+            <div class="part-link-banner" style="margin-top: 3rem;">
+                <div class="part-info">
+                    <strong>次を読む：</strong> Part III では組織採用・リーダーシップへのビルトイン・最初の勝利の設計・インパクト測定を扱う（近刊）。
+                </div>
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                    <a href="data-contracts-intro.html" class="part-link-btn">← Part I — なぜ今必要か</a>
+                    <span class="part-link-btn-inactive">Part III — 組織採用（近刊）→</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Sources -->
+        <section id="sources">
+            <div class="section-header">
+                <div class="section-number">06</div>
+                <div>
+                    <span class="chapter-tag">References</span>
+                    <h2>参考文献</h2>
+                </div>
+            </div>
+
+            <ul class="sources-list">
+                <li>
+                    <span class="source-num">[1]</span>
+                    <div class="source-text">
+                        Chad Sanderson, Mark Freeman, B. E. Schmidt, <em>Data Contracts: Developing Production-Grade Pipelines at Scale</em>, O'Reilly Media, Inc., November 2025. ISBN: 978-1-098-15763-0<br>
+                        Ch.5: <a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch05.html">https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch05.html</a><br>
+                        Ch.6: <a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch06.html">https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch06.html</a><br>
+                        Ch.7: <a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch07.html">https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch07.html</a><br>
+                        Ch.8: <a href="https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch08.html">https://learning.oreilly.com/library/view/data-contracts/9781098157623/ch08.html</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[2]</span>
+                    <div class="source-text">
+                        Chapter 7 GitHub Repository — Data Contract Book.<br>
+                        <a href="https://github.com/data-contract-book/chapter-7-implementing-data-contracts">https://github.com/data-contract-book/chapter-7-implementing-data-contracts</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[3]</span>
+                    <div class="source-text">
+                        Zakariah Siyaji, "Data Quality at Petabyte Scale: Building Trust in the Data Lifecycle," <em>Glassdoor Engineering Blog</em>.<br>
+                        Talk: "Shifting From Reactive to Proactive at Glassdoor"
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[4]</span>
+                    <div class="source-text">
+                        Sergio Couto, "Creating Source-Aligned Data Products in Adevinta Spain," Medium.<br>
+                        Also presented at: Shift Left Data Conference 2025, Gable.ai.<br>
+                        <a href="https://www.gable.ai/blog/data-contracts-in-the-real-world-the-adevinta-spain-implementation-sergio-catoira-shift-left-data-conference-2025">https://www.gable.ai/blog/data-contracts-in-the-real-world-the-adevinta-spain-implementation-sergio-catoira-shift-left-data-conference-2025</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[5]</span>
+                    <div class="source-text">
+                        Mark Freeman II on LinkedIn — "Glassdoor has one of the most advanced [data contract implementations]..." February 19, 2025.<br>
+                        <a href="https://www.linkedin.com/posts/mafreeman2_glassdoor-has-one-of-the-most-advanced-activity-7298037033761943562-liLj">https://www.linkedin.com/posts/mafreeman2_glassdoor-has-one-of-the-most-advanced-activity-7298037033761943562-liLj</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[6]</span>
+                    <div class="source-text">
+                        Chad Sanderson at Convoy — "Data Contracts by Chad Sanderson at Convoy," YouTube, December 13, 2022.<br>
+                        <a href="https://www.youtube.com/watch?v=Gr2GIsTnsSA">https://www.youtube.com/watch?v=Gr2GIsTnsSA</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[7]</span>
+                    <div class="source-text">
+                        DAMA International, <em>DAMA Data Management Body of Knowledge (DAMA-DMBOK)</em>. — Source of Nine Dimensions of Data Quality.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[8]</span>
+                    <div class="source-text">
+                        Confluent Documentation, "Data Contracts for Schema Registry on Confluent Platform."<br>
+                        <a href="https://docs.confluent.io/platform/current/schema-registry/fundamentals/data-contracts.html">https://docs.confluent.io/platform/current/schema-registry/fundamentals/data-contracts.html</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[9]</span>
+                    <div class="source-text">
+                        Anders Møller and Michael I. Schwartzbach, <em>Static Program Analysis</em>. — Source of SCA definition.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[10]</span>
+                    <div class="source-text">
+                        Wong et al., "External Validation of a Widely Implemented Proprietary Sepsis Prediction Model in Hospitalized Patients," <em>JAMA Internal Medicine</em>. — Epic Sepsis Model alert fatigue case study.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[11]</span>
+                    <div class="source-text">
+                        OpenLineage — Open Standard for Data Lineage.<br>
+                        <a href="https://openlineage.io">https://openlineage.io</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[12]</span>
+                    <div class="source-text">
+                        Open Data Contract Standard (ODCS) under the Linux Foundation — JSON Schema specification.<br>
+                        <a href="https://github.com/datacontract/datacontract-specification/blob/main/definition.schema.json">https://github.com/datacontract/datacontract-specification/blob/main/definition.schema.json</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[13]</span>
+                    <div class="source-text">
+                        Nabin Debnath, "The 'Shift-Left' Imperative: Implementing Data Contracts in CI/CD Pipeline," DEV Community, October 17, 2025.<br>
+                        <a href="https://dev.to/nabindebnath/the-shift-left-imperative-implementing-data-contracts-in-cicd-pipeline-40cl">https://dev.to/nabindebnath/the-shift-left-imperative-implementing-data-contracts-in-cicd-pipeline-40cl</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[14]</span>
+                    <div class="source-text">
+                        Soda.io — "Guest Article: Preventing Issues with Data Contracts &amp; Testing," June 3, 2025.<br>
+                        <a href="https://soda.io/blog/preventing-issues-with-data-contracts-and-testing">https://soda.io/blog/preventing-issues-with-data-contracts-and-testing</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[15]</span>
+                    <div class="source-text">
+                        JSON Schema — "Core definitions and terminology."<br>
+                        <a href="https://json-schema.org/draft-04/draft-zyp-json-schema-04">https://json-schema.org/draft-04/draft-zyp-json-schema-04</a>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- ─── Footer ─── -->
+    <footer>
+        <div class="footer-source">
+            Chad Sanderson et al. — Data Contracts (O'Reilly, 2025) Part II Ch.5–8 学習ノート
+        </div>
+        <p>
+            <a href="../" style="color:var(--accent-light); font-family:'JetBrains Mono',monospace; font-size:0.85rem;">← トップに戻る</a>
+        </p>
+        <p class="footer-disclaimer">
+            本記事は Chad Sanderson, Mark Freeman, B.E. Schmidt 著『Data Contracts』（O'Reilly Media, 2025）の個人学習ノートです。書籍の内容を要約・解説したものであり、著作権は原著者および O'Reilly Media に帰属します。
+        </p>
+    </footer>
+
+    <script>
+        // ─── Smooth scroll for TOC ───
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // ─── Active nav link highlighting ───
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-links a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.style.color = '';
+                        if (link.getAttribute('href') === '#' + entry.target.id) {
+                            link.style.color = 'var(--accent)';
+                        }
+                    });
+                }
+            });
+        }, { threshold: 0.3 });
+
+        sections.forEach(section => observer.observe(section));
+    </script>
+
+</body>
+</html>
