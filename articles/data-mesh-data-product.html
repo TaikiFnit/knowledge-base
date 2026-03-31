@@ -34,9 +34,11 @@
 
         html {
             scroll-behavior: smooth;
+            overflow-x: hidden;
         }
 
         body {
+            overflow-x: hidden;
             font-family: 'Noto Sans JP', sans-serif;
             background-color: var(--bg-deep);
             background-image:
@@ -2099,6 +2101,22 @@
         </section>
 
     </main>
+
+    <!-- ─── Series Navigation (Bottom) ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Data Mesh 学習ノート
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="data-mesh-principles.html" class="part-link-btn" style="border-color:rgba(139,92,246,0.4); color:#C4B5FD; background:rgba(139,92,246,0.1);">Part I — 4原則</a>
+                <a href="data-mesh-why.html" class="part-link-btn" style="border-color:rgba(245,158,11,0.4); color:#FCD34D; background:rgba(245,158,11,0.1);">Part II — なぜ今？</a>
+                <a href="data-mesh-architecture.html" class="part-link-btn" style="border-color:rgba(16,185,129,0.4); color:#34D399; background:rgba(16,185,129,0.1);">Part III — アーキテクチャ設計</a>
+                <a href="#" class="part-link-btn">Part IV — データプロダクト設計 ◀</a>
+                <a href="data-mesh-getting-started.html" class="part-link-btn" style="border-color:rgba(56,189,248,0.4); color:#7DD3FC; background:rgba(56,189,248,0.1);">Part V — 導入戦略</a>
+            </div>
+        </div>
+    </div>
 
     <!-- ─── Footer ─── -->
     <footer>

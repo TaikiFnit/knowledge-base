@@ -34,9 +34,11 @@
 
         html {
             scroll-behavior: smooth;
+            overflow-x: hidden;
         }
 
         body {
+            overflow-x: hidden;
             font-family: 'Noto Sans JP', sans-serif;
             background-color: var(--bg-deep);
             background-image:
@@ -1147,13 +1149,19 @@
         </div>
     </div>
 
-    <!-- ─── Part I Link Banner ─── -->
-    <div style="max-width:1200px; margin: 0 auto; padding: 0 2rem;">
+    <!-- ─── Part Banner ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
         <div class="part-link-banner">
             <div class="part-info">
-                <strong>Part I「What Is Data Mesh?」</strong>も公開中 — 4つの原則（ドメインオーナーシップ・データをプロダクトとして扱う・セルフサーブプラットフォーム・連合型計算ガバナンス）の詳細解説
+                <strong>シリーズ：</strong> Data Mesh 学習ノート
             </div>
-            <a href="../articles/data-mesh-principles.html" class="part-link-btn">→ Part I を読む</a>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="data-mesh-principles.html" class="part-link-btn" style="border-color:rgba(139,92,246,0.4); color:#C4B5FD; background:rgba(139,92,246,0.1);">Part I — 4原則</a>
+                <a href="#" class="part-link-btn">Part II — なぜ今？ ◀</a>
+                <a href="data-mesh-architecture.html" class="part-link-btn" style="border-color:rgba(16,185,129,0.4); color:#34D399; background:rgba(16,185,129,0.1);">Part III — アーキテクチャ設計</a>
+                <a href="data-mesh-data-product.html" class="part-link-btn" style="border-color:rgba(236,72,153,0.4); color:#F9A8D4; background:rgba(236,72,153,0.1);">Part IV — データプロダクト設計</a>
+                <a href="data-mesh-getting-started.html" class="part-link-btn" style="border-color:rgba(56,189,248,0.4); color:#7DD3FC; background:rgba(56,189,248,0.1);">Part V — 導入戦略</a>
+            </div>
         </div>
     </div>
 
@@ -1585,16 +1593,25 @@
                 <p style="margin-bottom:0;">ソフトウェアエンジニアリングが DDD・マイクロサービスで解いた問題——チームの自律性・責任の局所化・明確なインターフェース——を<strong>アナリティカルデータの世界に持ち込む</strong>試みだ。テクノロジーを変えるだけでは問題は解消されない。<span class="highlight">誰がデータに責任を持つか</span>という組織設計こそが、データアーキテクチャの本質的な問いとなる。</p>
             </div>
 
-            <!-- Part navigation -->
-            <div class="part-link-banner" style="margin-top: 3rem;">
-                <div class="part-info">
-                    <strong>次のステップ：Part II「What Is Data Mesh?」</strong> — 4つの原則（ドメインオーナーシップ・データをプロダクト・セルフサーブプラットフォーム・連合型計算ガバナンス）の詳細解説
-                </div>
-                <a href="../articles/data-mesh-principles.html" class="part-link-btn">→ Part I を読む</a>
-            </div>
         </section>
 
     </main>
+
+    <!-- ─── Series Navigation (Bottom) ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Data Mesh 学習ノート
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <a href="data-mesh-principles.html" class="part-link-btn" style="border-color:rgba(139,92,246,0.4); color:#C4B5FD; background:rgba(139,92,246,0.1);">Part I — 4原則</a>
+                <a href="#" class="part-link-btn">Part II — なぜ今？ ◀</a>
+                <a href="data-mesh-architecture.html" class="part-link-btn" style="border-color:rgba(16,185,129,0.4); color:#34D399; background:rgba(16,185,129,0.1);">Part III — アーキテクチャ設計</a>
+                <a href="data-mesh-data-product.html" class="part-link-btn" style="border-color:rgba(236,72,153,0.4); color:#F9A8D4; background:rgba(236,72,153,0.1);">Part IV — データプロダクト設計</a>
+                <a href="data-mesh-getting-started.html" class="part-link-btn" style="border-color:rgba(56,189,248,0.4); color:#7DD3FC; background:rgba(56,189,248,0.1);">Part V — 導入戦略</a>
+            </div>
+        </div>
+    </div>
 
     <!-- ─── Footer ─── -->
     <footer>
