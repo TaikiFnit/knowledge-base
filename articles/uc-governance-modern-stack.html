@@ -1,0 +1,2276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unity Catalog ガバナンス — モダンガバナンススタック｜Ch.1 学習ノート</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #10B981;
+            --accent-light: #34D399;
+            --accent-dim: rgba(16, 185, 129, 0.15);
+            --accent-glow: rgba(16, 185, 129, 0.08);
+            --bg-deep: #050C0A;
+            --bg-secondary: #081210;
+            --bg-tertiary: #0F1F1A;
+            --text-primary: #E8EAED;
+            --text-secondary: #8CA6A0;
+            --border: #152A22;
+            --border-accent: rgba(16, 185, 129, 0.3);
+            --danger: #EF4444;
+            --indigo: #6366F1;
+            --amber: #F59E0B;
+            --emerald-deep: #065F46;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+
+        body {
+            overflow-x: hidden;
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(circle at 15% 30%, rgba(16, 185, 129, 0.06) 0%, transparent 55%),
+                radial-gradient(circle at 85% 70%, rgba(6, 95, 70, 0.04) 0%, transparent 55%),
+                radial-gradient(circle at 50% 90%, rgba(16, 185, 129, 0.03) 0%, transparent 40%),
+                linear-gradient(135deg, var(--bg-deep) 0%, #060E0B 50%, var(--bg-deep) 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+
+        /* ─── Header & Navigation ─── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(5, 12, 10, 0.95);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            padding: 1rem 0;
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-decoration: none;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.3s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        /* ─── Hero ─── */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 100%;
+            width: 600px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 40%, var(--emerald-deep) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .book-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: rgba(15, 31, 26, 0.7);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .stat-number {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .publish-date {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Table of Contents ─── */
+        .toc-section {
+            max-width: 1200px;
+            margin: 0 auto 3rem;
+            padding: 0 2rem;
+        }
+
+        .toc-box {
+            background: rgba(15, 31, 26, 0.6);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            padding: 2rem 2.5rem;
+            border-radius: 8px;
+        }
+
+        .toc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.5rem 2rem;
+        }
+
+        .toc-list li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: color 0.2s ease;
+            padding: 0.3rem 0;
+        }
+
+        .toc-list li a:hover {
+            color: var(--accent-light);
+        }
+
+        .toc-num {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 34px;
+        }
+
+        /* ─── Main Content ─── */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem 4rem;
+        }
+
+        section {
+            margin-bottom: 4rem;
+            background: rgba(15, 31, 26, 0.4);
+            border: 1px solid var(--border);
+            padding: 3rem;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--emerald-deep), transparent);
+            opacity: 0.6;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 70px;
+            opacity: 0.9;
+        }
+
+        .chapter-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2.5rem 0 1rem 0;
+            color: var(--accent-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3::before {
+            content: '//';
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent-light);
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1.4rem;
+            color: var(--text-primary);
+            line-height: 1.85;
+        }
+
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        a:hover {
+            opacity: 0.7;
+            text-decoration: underline;
+        }
+
+        /* ─── Lists ─── */
+        ul, ol {
+            margin: 1rem 0 1.5rem 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        /* ─── Tables ─── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(8, 18, 16, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: rgba(16, 185, 129, 0.1);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(16, 185, 129, 0.04);
+        }
+
+        /* ─── Alert / Callout Boxes ─── */
+        .alert {
+            padding: 1.4rem 1.6rem;
+            border-left: 4px solid;
+            margin: 2rem 0;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        }
+
+        .alert-sky {
+            border-left-color: var(--accent);
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .alert-success {
+            border-left-color: #34D399;
+            background: rgba(52, 211, 153, 0.08);
+        }
+
+        .alert-danger {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-indigo {
+            border-left-color: var(--indigo);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .alert-amber {
+            border-left-color: var(--amber);
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            font-size: 0.9rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-sky .alert-title { color: var(--accent-light); }
+        .alert-success .alert-title { color: #34D399; }
+        .alert-danger .alert-title { color: var(--danger); }
+        .alert-indigo .alert-title { color: var(--indigo); }
+        .alert-amber .alert-title { color: var(--amber); }
+
+        .alert p { margin-bottom: 0.5rem; }
+        .alert p:last-child { margin-bottom: 0; }
+
+        /* ─── Cards Grid ─── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: rgba(8, 18, 16, 0.9);
+            border: 1px solid var(--border);
+            padding: 1.8rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-accent);
+            background: rgba(8, 18, 16, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.12);
+        }
+
+        /* ─── Char3 Cards (3-column feature blocks) ─── */
+        .char3-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .char3-card {
+            background: rgba(8, 18, 16, 0.9);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 1.8rem;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .char3-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .char3-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            opacity: 0.12;
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            line-height: 1;
+        }
+
+        .char3-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            margin-bottom: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .char3-card h4 {
+            font-size: 1.15rem;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        .char3-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.65;
+        }
+
+        .char3-impact {
+            font-size: 0.82rem;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid var(--border);
+            padding-top: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        /* ─── Assess Grid ─── */
+        .assess-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.2rem;
+            margin: 2rem 0;
+        }
+
+        .assess-card {
+            background: rgba(8, 18, 16, 0.85);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            padding: 1.4rem 1.6rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .assess-card:hover {
+            border-color: var(--border-accent);
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .assess-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 0.4rem;
+        }
+
+        .assess-card h4 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.2rem;
+        }
+
+        .assess-en {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .assess-card p {
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        /* ─── Phase Timeline ─── */
+        .phase-list {
+            list-style: none;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+
+        .phase-list::before {
+            content: '';
+            position: absolute;
+            left: 18px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--accent), transparent);
+            opacity: 0.3;
+        }
+
+        .phase-item {
+            display: flex;
+            gap: 1.2rem;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .phase-dot {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--accent-dim);
+            border: 2px solid var(--border-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--accent);
+            z-index: 1;
+        }
+
+        .phase-content h4 {
+            font-size: 1rem;
+            margin-bottom: 0.3rem;
+            color: var(--text-primary);
+        }
+
+        .phase-content p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        .phase-timing {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--accent);
+            margin-bottom: 0.3rem;
+        }
+
+        /* ─── Diagram Containers ─── */
+        .diagram-wrap {
+            margin: 2.5rem 0;
+            background: rgba(8, 18, 16, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .diagram-inner {
+            padding: 2rem 2.5rem;
+            position: relative;
+        }
+
+        .diagram-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* ─── Highlight Inline ─── */
+        .highlight {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .en-term {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-light);
+        }
+
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 0.8rem 1.5rem;
+            margin: 1.5rem 0;
+            background: rgba(16, 185, 129, 0.05);
+            border-radius: 0 6px 6px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        blockquote cite {
+            display: block;
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            color: var(--accent);
+            font-style: normal;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ─── Stat Callout ─── */
+        .stat-callout {
+            background: rgba(8, 18, 16, 0.9);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin: 2rem 0;
+        }
+
+        .stat-callout-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stat-row-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-big {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ─── Part Link Banner ─── */
+        .part-link-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(8, 18, 16, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem 1.8rem;
+            margin: 3rem 0;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .part-link-banner .part-info {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .part-link-banner .part-info strong {
+            color: var(--text-primary);
+        }
+
+        .part-link-btn {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-accent);
+            color: var(--accent-light);
+            padding: 0.5rem 1.2rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .part-link-btn:hover {
+            background: rgba(16, 185, 129, 0.25);
+            text-decoration: none;
+            opacity: 1;
+        }
+
+        .part-link-btn-current {
+            background: var(--accent-dim);
+            border: 1px solid var(--accent);
+            color: var(--accent-light);
+            font-weight: 700;
+        }
+
+        .part-link-btn-disabled {
+            background: rgba(30, 40, 35, 0.5);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            opacity: 0.5;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        /* ─── Value Shift Table ─── */
+        .value-shift-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .shift-col {
+            background: rgba(8, 18, 16, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .shift-col-before {
+            border-top: 3px solid var(--danger);
+        }
+
+        .shift-col-after {
+            border-top: 3px solid #34D399;
+        }
+
+        .shift-col-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .shift-col-before .shift-col-title { color: var(--danger); }
+        .shift-col-after .shift-col-title { color: #34D399; }
+
+        .shift-item {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+            line-height: 1.5;
+        }
+
+        .shift-item:last-child { border-bottom: none; }
+
+        /* ─── Summary Takeaways ─── */
+        .takeaway-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .takeaway-item {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 1.2rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .takeaway-item:last-child { border-bottom: none; }
+
+        .takeaway-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 40px;
+            opacity: 0.8;
+        }
+
+        .takeaway-body strong {
+            display: block;
+            color: var(--text-primary);
+            font-size: 1.02rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .takeaway-body p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+            line-height: 1.65;
+        }
+
+        /* ─── Code blocks ─── */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            color: var(--accent-light);
+            background: rgba(16, 185, 129, 0.1);
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+        }
+
+        /* ─── Sources Section ─── */
+        .sources-list {
+            list-style: none;
+            margin: 0;
+        }
+
+        .sources-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .sources-list li:last-child {
+            border-bottom: none;
+        }
+
+        .source-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            font-weight: 600;
+            min-width: 28px;
+            margin-top: 0.1rem;
+        }
+
+        .source-text {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        .source-text a {
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            word-break: break-all;
+        }
+
+        /* ─── Footer ─── */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-source {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(15, 31, 26, 0.8);
+            border: 1px solid var(--border);
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.82rem;
+        }
+
+        .footer-disclaimer {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0.75rem auto 0;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .nav-links { display: none; }
+            section { padding: 2rem 1.5rem; }
+            .section-number { font-size: 1.8rem; min-width: 50px; }
+            .hero-stats { grid-template-columns: 1fr 1fr; }
+            .toc-list { grid-template-columns: 1fr; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 0.75rem 0.9rem; }
+            .char3-grid { grid-template-columns: 1fr; }
+            .value-shift-grid { grid-template-columns: 1fr; }
+            .diagram-inner { padding: 1.5rem; }
+        }
+
+        @media (max-width: 480px) {
+            .hero { padding: 3rem 1.5rem 2rem; }
+            .hero-stats { grid-template-columns: 1fr; }
+            .stat-row-grid { grid-template-columns: 1fr; }
+            .assess-grid { grid-template-columns: 1fr; }
+            .book-info { font-size: 0.7rem; padding: 0.5rem 1rem; }
+        }
+
+        /* ─── Utility ─── */
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- ─── Header ─── -->
+    <header>
+        <nav>
+            <a href="../index.html" class="logo">
+                <!-- UC governance shield mark in emerald -->
+                <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Unity Catalog Governance logo">
+                    <!-- Shield shape -->
+                    <path d="M11 2 L3 6 L3 12 Q3 18 11 20 Q19 18 19 12 L19 6 Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+                    <!-- Check mark inside -->
+                    <path d="M7.5 11.5 L10 14 L15 8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+                UC Governance
+            </a>
+            <ul class="nav-links">
+                <li><a href="#sec-governance">ガバナンス</a></li>
+                <li><a href="#sec-lifecycle">ライフサイクル</a></li>
+                <li><a href="#sec-unstructured">非構造化</a></li>
+                <li><a href="#sec-lakehouse-dawn">レイクハウス</a></li>
+                <li><a href="#sec-lakehouse-paradigm">パラダイム</a></li>
+                <li><a href="#sec-unity-catalog">Unity Catalog</a></li>
+                <li><a href="#sec-architecture">アーキテクチャ</a></li>
+                <li><a href="#sec-summary">まとめ</a></li>
+            </ul>
+            <a href="../index.html" class="back-link">← トップに戻る</a>
+        </nav>
+    </header>
+
+    <!-- ─── Hero ─── -->
+    <div class="hero">
+        <div class="eyebrow">UNITY CATALOG GOVERNANCE — CHAPTER 01</div>
+        <h1>Unity Catalog ガバナンス — モダンガバナンススタック</h1>
+        <p class="subtitle">Ch.1: データガバナンスの基礎、レイクハウスの進化、Unity Catalogによる統合ガバナンス — Kiran Sreekumar & Karthik Subbarao 著（O'Reilly, 2025）</p>
+        <div class="book-info">
+            <span>📘 Data Governance with Unity Catalog on Databricks — Chapter 1 of 12</span>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-number">12</div>
+                <div class="stat-label">全12章（Chapter 1 / 12）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">384</div>
+                <div class="stat-label">384ページ（書籍全体）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">2025</div>
+                <div class="stat-label">出版年（O'Reilly Media）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">UC</div>
+                <div class="stat-label">Databricks Unity Catalog</div>
+            </div>
+        </div>
+
+        <p class="publish-date">学習日: 2026-04-01 &nbsp;|&nbsp; 読了目安: ~30分</p>
+    </div>
+
+    <!-- ─── Table of Contents ─── -->
+    <div class="toc-section">
+        <div class="toc-box">
+            <div class="toc-title">// Table of Contents</div>
+            <ul class="toc-list">
+                <li><a href="#sec-governance"><span class="toc-num">01</span>データガバナンスとは</a></li>
+                <li><a href="#sec-lifecycle"><span class="toc-num">02</span>データのライフサイクル</a></li>
+                <li><a href="#sec-unstructured"><span class="toc-num">03</span>非構造化データとAIアセットのガバナンス</a></li>
+                <li><a href="#sec-regulations"><span class="toc-num">04</span>規制への対応</a></li>
+                <li><a href="#sec-lakehouse-dawn"><span class="toc-num">05</span>レイクハウスの夜明け</a></li>
+                <li><a href="#sec-lakehouse-paradigm"><span class="toc-num">06</span>レイクハウスパラダイム</a></li>
+                <li><a href="#sec-unity-catalog"><span class="toc-num">07</span>Unity Catalog: 統合ガバナンスの実現</a></li>
+                <li><a href="#sec-architecture"><span class="toc-num">08</span>Databricksプラットフォームアーキテクチャ</a></li>
+                <li><a href="#sec-sharing"><span class="toc-num">09</span>データ共有とコラボレーション</a></li>
+                <li><a href="#sec-summary"><span class="toc-num">10</span>まとめ — Ch.1の要点</a></li>
+                <li><a href="#sources"><span class="toc-num">11</span>参考文献</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ─── Chapter Series Banner (Top) ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Unity Catalog ガバナンス 学習ノート（全12章）
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <span class="part-link-btn part-link-btn-current">Ch.1 — モダンガバナンススタック ◀</span>
+                <span class="part-link-btn part-link-btn-disabled">Ch.2 — Under The Hood（Coming Soon）</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Main Content ─── -->
+    <main>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 01: データガバナンスとは -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-governance">
+            <div class="section-header">
+                <div class="section-number">01</div>
+                <div>
+                    <span class="chapter-tag">Introducing Data Governance</span>
+                    <h2>データガバナンスとは</h2>
+                </div>
+            </div>
+
+            <blockquote>
+                "Data is the new oil."
+                <cite>— Clive Humby</cite>
+            </blockquote>
+
+            <p>第1章は、データがなぜ「新しい石油」と呼ばれるほど価値を持つようになったのか、そしてその価値あるデータを<span class="highlight">適切に管理しなかった場合に何が起きるか</span>を実世界のインシデントで示すところから始まる。</p>
+
+            <h3>実世界のインシデント</h3>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">①</div>
+                    <div class="char3-label">Incident</div>
+                    <h4>Securitas事件（2021年10月）</h4>
+                    <p>SafetyDetectivesが、ストックホルム本社のSecuritasの<strong>保護されていないAmazon S3バケット</strong>を発見。100万件以上のファイルが漏洩し、空港従業員の機密データが含まれていた。</p>
+                    <div class="char3-impact">→ クラウドストレージの設定ミスによるデータ漏洩</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">②</div>
+                    <div class="char3-label">Incident</div>
+                    <h4>Capital One漏洩事件（2019年7月）</h4>
+                    <p>クラウドファイアウォール設定の脆弱性を突かれ、<strong>1億件以上の顧客レコード</strong>にアクセスされた。クラウドインフラの設定ミスがいかに大規模な影響を与えるかを示した事件。</p>
+                    <div class="char3-impact">→ ファイアウォール設定の脆弱性が原因</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">③</div>
+                    <div class="char3-label">Incident</div>
+                    <h4>S3設定ミスによる大量漏洩</h4>
+                    <p>ヒューマンエラーによる設定ミスで<strong>約2,300万件のファイル</strong>が漏洩。トルコのLPPD（個人データ保護法）違反にも該当する事案となった。</p>
+                    <div class="char3-impact">→ 人的エラーが根本原因</div>
+                </div>
+            </div>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// 重要統計データ</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big">82%</div>
+                        <div class="stat-desc">セキュリティ侵害のうち人的要素が関与<br><em>（Verizon 2022 DBIR）</em></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big">>50%</div>
+                        <div class="stat-desc">重大サイバーインシデントのうち人材不足・人的エラーが原因になるとGartnerが予測</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>データガバナンスの定義</h3>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// Core Definition</div>
+                <p><strong>Data governance</strong> とは、組織のデータを管理するための包括的なアプローチであり、データの<span class="highlight">可用性（availability）</span>、<span class="highlight">使用可能性（usability）</span>、<span class="highlight">完全性（integrity）</span>、<span class="highlight">セキュリティ（security）</span>を確保する。</p>
+            </div>
+
+            <h3>データガバナンスの主要コンポーネント</h3>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 01</div>
+                    <h4>ポリシーと標準</h4>
+                    <span class="assess-en">Policies and Standards</span>
+                    <p>データの取り扱いルール・組織横断的な標準を策定し、全従業員が遵守すべき指針を明確にする。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 02</div>
+                    <h4>データ品質管理</h4>
+                    <span class="assess-en">Data Quality Management</span>
+                    <p>データの正確性・完全性・一貫性を継続的に監視・改善する仕組み。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 03</div>
+                    <h4>メタデータ管理</h4>
+                    <span class="assess-en">Metadata Management</span>
+                    <p>データに関するデータ（スキーマ、所有者、作成日時、ビジネス定義など）を一元管理する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 04</div>
+                    <h4>アクセス制御とセキュリティ</h4>
+                    <span class="assess-en">Access Controls & Security</span>
+                    <p>暗号化、ファイアウォール、侵入検知、データ最小化、定期監査、インシデント対応計画を含む。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 05</div>
+                    <h4>データライフサイクル管理とリネージ</h4>
+                    <span class="assess-en">Lifecycle Management & Lineage</span>
+                    <p>データの生成から廃棄までの全過程を追跡し、変換履歴・依存関係を可視化する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 06</div>
+                    <h4>監査とコンプライアンス監視</h4>
+                    <span class="assess-en">Auditing & Compliance Monitoring</span>
+                    <p>すべてのデータ操作を記録し、規制要件への準拠を継続的に確認する。</p>
+                </div>
+            </div>
+
+            <h3>効果的なデータガバナンスの利点</h3>
+
+            <ul>
+                <li><strong>人的エラーの削減</strong> — 明確なポリシーと制御により、データライフサイクル全体を通じた人的エラーを軽減</li>
+                <li><strong>強力なアクセス制御</strong> — 認証とアクセス制御の統合的な実装</li>
+                <li><strong>データ分類とリスク評価</strong> — データの機密レベルに基づく適切な分類と保護</li>
+                <li><strong>データ取扱ポリシー</strong> — 保存、処理、転送、廃棄の各段階でのルール策定</li>
+                <li><strong>データ品質と信頼性の向上</strong> — 意思決定に使用されるデータの正確性を保証</li>
+                <li><strong>規制コンプライアンスの強化</strong> — GDPR、CCPA等の法規制への準拠を促進</li>
+                <li><strong>運用効率の向上とコスト削減</strong> — 重複作業・データ管理コストの低減</li>
+                <li><strong>消費者からの信頼向上</strong> — データ保護に対する信頼の獲得</li>
+            </ul>
+
+            <p>また、ガバナンスは<span class="highlight">人間中心（human-centric）</span>であることが重要だ。定期的な従業員トレーニング、明確な役割と責任の定義が、82%のセキュリティ侵害の原因となっている人的要素への対策となる。</p>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 02: データのライフサイクル -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-lifecycle">
+            <div class="section-header">
+                <div class="section-number">02</div>
+                <div>
+                    <span class="chapter-tag">Data Lifecycle</span>
+                    <h2>データのライフサイクル</h2>
+                </div>
+            </div>
+
+            <p>データには4つの主要なライフサイクルステージがある。各ステージでガバナンスが適用され、データの品質・セキュリティ・コンプライアンスが維持される必要がある。</p>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// データライフサイクルの4段階（Figure 1-1）</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">01</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Stage 1 — Creation / Ingestion</div>
+                                <h4>データの作成・取得</h4>
+                                <p>データは3つの方法で生まれる：<strong>収集</strong>（ユーザーサインアップ等）、<strong>生成</strong>（マシンシグナル・IoTセンサー等）、<strong>取り込み</strong>（サプライヤーカタログ等の外部データ）。データの「誕生」の段階から、所有者・分類・アクセス権限の定義が始まる。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">02</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Stage 2 — Processing</div>
+                                <h4>データの処理</h4>
+                                <p>取得された生データに対して、クレンジング、結合・マージ、集計といった処理が行われる。この段階ではデータの品質向上・標準化が主な目的であり、コンプライアンスに関わる匿名化処理もここで実行される。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">03</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Stage 3 — Active Duty</div>
+                                <h4>アクティブな利用</h4>
+                                <p>処理されたデータがアプリケーション、レポーティング、高度なアナリティクスで積極的に利用されるフェーズ。データの価値が最大限に発揮される段階であり、同時にアクセス制御と監視が最も重要になる。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">04</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Stage 4 — Offboarding</div>
+                                <h4>データの退役（パージ/アーカイブ）</h4>
+                                <p>規制要件とコストに基づき、データを<strong>パージ</strong>（完全削除）するか<strong>アーカイブ</strong>（長期保存）するかを決定する。GDPRの「忘れられる権利」等、法規制がこの段階の判断に直接影響する。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>処理段階の重要な概念</h3>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>Entity Resolution（エンティティ解決）</h4>
+                    <p>複数のシステムから同一のデータを統合し、冗長性を排除する処理。例：同一顧客が異なるシステムで異なるIDを持っている場合、それらを一つに統合する。</p>
+                </div>
+                <div class="card">
+                    <h4>Data Harmonization（データ調和）</h4>
+                    <p>様々なソースからのデータを一貫性のある標準化されたフォーマットに統一する処理。テーブル結合（join）を伴い、異なる命名規則・データ型の統一を行う。</p>
+                </div>
+                <div class="card">
+                    <h4>Aggregation（集約）</h4>
+                    <p>大規模データセット（例：IoTセンサーデータ）から意味のある情報を抽出する処理。個別レコードの詳細を集約し、傾向やパターンを明らかにする。</p>
+                </div>
+                <div class="card">
+                    <h4>Anonymization（匿名化）</h4>
+                    <p>コンプライアンス要件に基づくデータのマスキング処理。<strong>墨消し（redaction）</strong>または<strong>仮名化（pseudonymization）</strong>の手法を用いる。</p>
+                </div>
+            </div>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// PII と PHI の区別</div>
+                <p><strong>PII</strong>（Personally Identifiable Information）: 個人を特定できるあらゆる情報。氏名、住所、社会保障番号、メールアドレス等。</p>
+                <p><strong>PHI</strong>（Protected Health Information）: PIIのサブセットであり、医療分野における個人の健康情報。米国ではHIPAA（Health Insurance Portability and Accountability Act）により保護される。</p>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 03: 非構造化データとAIアセットのガバナンス -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-unstructured">
+            <div class="section-header">
+                <div class="section-number">03</div>
+                <div>
+                    <span class="chapter-tag">Governing the Ungoverned</span>
+                    <h2>非構造化データとAIアセットのガバナンス</h2>
+                </div>
+            </div>
+
+            <p>従来のガバナンスは<span class="highlight">構造化データ</span>（テーブル形式のデータ）を主な対象として設計されてきた。しかし現実には、組織データの大部分は構造化されていない。</p>
+
+            <div class="stat-callout">
+                <div class="stat-callout-title">// 非構造化データの現実</div>
+                <div class="stat-row-grid">
+                    <div class="stat-item">
+                        <div class="stat-big">>80%</div>
+                        <div class="stat-desc">組織データのうち非構造化データの割合<br>（メール、テキストファイル、ログ、メディアファイル等）</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-big" style="font-size:1.5rem;">Data<br>Swamp</div>
+                        <div class="stat-desc">管理されない非構造化データが蓄積され、利用不能な「データ沼」が形成される</div>
+                    </div>
+                </div>
+            </div>
+
+            <p>AIの台頭により、非構造化データの価値が急速に高まっている。組織は非構造化データを<span class="highlight">競争優位</span>に活用し始めており、ガバナンスの対象範囲を拡大する必要性が高まっている。</p>
+
+            <h3>AIが拡大するガバナンス対象</h3>
+
+            <p><span class="en-term">AI</span>は以下の技術領域をカバーする：</p>
+
+            <ul>
+                <li><strong>予測分析（Predictive Analytics）</strong> — 過去データから将来を予測</li>
+                <li><strong>処方分析（Prescriptive Analytics）</strong> — 最適なアクションを推奨</li>
+                <li><strong>従来型ML（Traditional Machine Learning）</strong> — 分類・回帰等の教師あり/なし学習</li>
+                <li><strong>生成AI（Generative AI）</strong> — テキスト・画像・コードの自動生成</li>
+            </ul>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// AIアセットという新しいガバナンス対象</div>
+                <p>データセットを用いて学習された<strong>MLモデル</strong>は、データそのものとは異なる新しい種類のアセット（<span class="en-term">AI assets</span>）だ。これらのAIアセットにもガバナンスが必要だが、既存のガバナンスソリューションの多くはAIアセットのガバナンスに<strong>対応できていない</strong>。</p>
+                <p>Unity Catalogが目指すのは、データアセットとAIアセットの<strong>両方</strong>を統合的にガバナンスすることだ。</p>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 04: 規制への対応 -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-regulations">
+            <div class="section-header">
+                <div class="section-number">04</div>
+                <div>
+                    <span class="chapter-tag">Regulatory Compliance</span>
+                    <h2>規制への対応</h2>
+                </div>
+            </div>
+
+            <p>ChatGPTがAIを一般大衆に広く普及させたことで、AIに関する規制の動きが世界的に加速している。データガバナンスはもはや「あれば良い」ではなく、<span class="highlight">法的に必須</span>な要件になりつつある。</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">EU</div>
+                    <div class="char3-label">AI Regulation</div>
+                    <h4>EU AI Act</h4>
+                    <p>2024年7月に公布されたAIの利用を規制する法律。AIシステムをリスクレベル別に分類し、高リスクAIには厳格な要件を課す。世界初の包括的AI規制として、グローバルな影響力を持つ。</p>
+                    <div class="char3-impact">→ 2024年7月公布 — 世界初の包括的AI規制</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">EU</div>
+                    <div class="char3-label">Data Protection</div>
+                    <h4>GDPR（一般データ保護規則）</h4>
+                    <p>EU域内の個人データ保護に関する規制。データ主体の権利（アクセス権、削除権「忘れられる権利」、ポータビリティ権）を包括的に定義。データガバナンスの基盤となる規制。</p>
+                    <div class="char3-impact">→ EU域内 — 個人データ保護の金字塔</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">US</div>
+                    <div class="char3-label">Privacy</div>
+                    <h4>CCPA（カリフォルニア消費者プライバシー法）</h4>
+                    <p>カリフォルニア州のプライバシー保護法。消費者にデータの収集・共有・削除に関する権利を付与。米国における最も影響力のあるプライバシー法として、他州のモデルとなっている。</p>
+                    <div class="char3-impact">→ 米国 — カリフォルニア州のプライバシー保護</div>
+                </div>
+            </div>
+
+            <p>モダンなガバナンスソリューションは、データだけでなくAIアセットを含む<span class="highlight">拡大した規制範囲</span>に包括的に対応する必要がある。第10章で詳細に解説される。</p>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 05: レイクハウスの夜明け -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-lakehouse-dawn">
+            <div class="section-header">
+                <div class="section-number">05</div>
+                <div>
+                    <span class="chapter-tag">The Dawn of the Lakehouse</span>
+                    <h2>レイクハウスの夜明け</h2>
+                </div>
+            </div>
+
+            <p>データガバナンスの必要性を理解したところで、次は<span class="highlight">データをどのように保存・処理し、価値を生み出すか</span>というアーキテクチャの話に移る。人間、マシン、その他のソースからデータを取得し、ダッシュボード・レポート・MLモデルを生成するまでの道のりだ。</p>
+
+            <h3>BI vs 高度なアナリティクス</h3>
+
+            <div class="value-shift-grid">
+                <div class="shift-col" style="border-top: 3px solid var(--accent);">
+                    <div class="shift-col-title" style="color:var(--accent);">BI（ビジネスインテリジェンス）</div>
+                    <div class="shift-item">過去・現在からのインサイト抽出</div>
+                    <div class="shift-item">レポート、ダッシュボードの作成</div>
+                    <div class="shift-item"><strong>構造化された表形式データ</strong>が対象</div>
+                    <div class="shift-item">主にデータウェアハウスで実行</div>
+                </div>
+                <div class="shift-col" style="border-top: 3px solid var(--accent-light);">
+                    <div class="shift-col-title" style="color:var(--accent-light);">ADVANCED ANALYTICS（高度なアナリティクス）</div>
+                    <div class="shift-item">予測・処方的なユースケース</div>
+                    <div class="shift-item">MLモデル、統計分析、AI推論</div>
+                    <div class="shift-item"><strong>半構造化・非構造化データ</strong>も対象</div>
+                    <div class="shift-item">データレイクで実行されることが多い</div>
+                </div>
+            </div>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// データの構造レベル</div>
+                <p><strong>構造化データ</strong>: テーブル形式（行と列）。RDBに格納。</p>
+                <p><strong>半構造化データ（Semi-structured）</strong>: パターンはあるがテーブル形式ではない。ログファイル、JSON、XMLなど。</p>
+                <p><strong>非構造化データ（Unstructured）</strong>: メディアファイル、画像、プレーンテキスト。一貫した構造を持たない。</p>
+            </div>
+
+            <h3>ビッグデータの3V</h3>
+
+            <blockquote>
+                Doug Laney（Gartner, 2001）がビッグデータの3つのV——<strong>Volume</strong>（量）、<strong>Velocity</strong>（速度）、<strong>Variety</strong>（多様性）——を定義した。
+                <cite>— Doug Laney, 3D Data Management (2001)</cite>
+            </blockquote>
+
+            <p>VolumeとVelocityはクラウドの進化によりコモディティ化された。現在最も挑戦的なのは<span class="highlight">Variety（多様性）</span>——異種混合のデータソースをいかに統合・管理するかという課題だ。</p>
+
+            <h3>データウェアハウス vs データレイク</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>観点</th>
+                            <th>Data Warehouse</th>
+                            <th>Data Lake</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>主な用途</strong></td>
+                            <td>BIとレポーティング</td>
+                            <td>高度なアナリティクス、ML</td>
+                        </tr>
+                        <tr>
+                            <td><strong>データ型</strong></td>
+                            <td>構造化データ</td>
+                            <td>半構造化・非構造化データ</td>
+                        </tr>
+                        <tr>
+                            <td><strong>代表例</strong></td>
+                            <td>Azure Synapse, Amazon Redshift, Google BigQuery</td>
+                            <td>Amazon S3, Azure Data Lake Storage, Google Cloud Storage</td>
+                        </tr>
+                        <tr>
+                            <td><strong>処理の流れ</strong></td>
+                            <td>収集 → 格納 → 変換 → 提供</td>
+                            <td>収集 → 格納 → 変換 → 提供</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// Data Mart（データマート）とは</div>
+                <p>単一のビジネスユニット（マーケティング、営業等）向けにキュレーションされたデータベース。データウェアハウスのサブセットとして機能する。</p>
+            </div>
+
+            <blockquote>
+                "If you think of a data mart as a store of bottled water — cleansed and packaged, and structured for easy consumption — the data lake is a large body of water in a more natural state."
+                <cite>— James Dixon（Pentaho元CTO）</cite>
+            </blockquote>
+
+            <h3>Hadoop: 偽りの夜明け</h3>
+
+            <p>著者Karthikは2010〜2011年頃、フィンテックスタートアップでHadoopに携わったキャリアを持つ。<span class="en-term">HDFS + MapReduce</span>は分析データのパラダイムシフトとなり、Cloudera、MapR、Hortonworksが設立された。LinkedIn、Yahoo、Facebookが採用した。</p>
+
+            <p>しかし、<strong>ディスクベース</strong>であるHadoopは現代のシステムと比較して低速であり、レガシーとなった。良い結果として、UC Berkeleyで<span class="highlight">Apache Spark</span>が誕生した——これがレイクハウスの基盤技術となる。</p>
+
+            <h3>クラウドデータレイクとデータサイロ</h3>
+
+            <p>クラウドの<span class="en-term">consumption-based model</span>（従量課金モデル）により、あらゆる種類のデータを安価でスケーラブルなオブジェクトストレージに保存できるようになった。</p>
+
+            <p>しかし、複数の事業部門が異なるツール・プラットフォームを選択することで<span class="highlight">データサイロ</span>が形成される。著者はこれをベンガルール（バンガロール）の交通に例える——素晴らしい都市だが、インフラが成長に追いついていない。</p>
+
+            <div class="alert alert-danger">
+                <div class="alert-title">// フラクチャードガバナンスの問題</div>
+                <p><strong>2つの分離されたスタック</strong>（ウェアハウス + レイク）を運用することは、<span class="highlight">分断されたガバナンス</span>（fractured governance）を生む。各スタックに異なるアクセス制御、異なるメタデータ管理、異なる監査ログが存在し、組織全体の一貫したガバナンスが不可能になる。</p>
+                <p>ビルド vs バイの意思決定が問題をさらに悪化させ、<strong>技術的負債（technical debt）</strong>が蓄積される。</p>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 06: レイクハウスパラダイム -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-lakehouse-paradigm">
+            <div class="section-header">
+                <div class="section-number">06</div>
+                <div>
+                    <span class="chapter-tag">The Lakehouse Paradigm</span>
+                    <h2>レイクハウスパラダイム</h2>
+                </div>
+            </div>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// Lakehouse の定義</div>
+                <p><strong>Lakehouse</strong> とは、データレイクとデータウェアハウスの最良の要素を組み合わせた<span class="highlight">オープンなデータ管理アーキテクチャ</span>であり、単一のプラットフォーム上で統合ガバナンスとAI駆動アナリティクスを実現する。</p>
+                <p>目標：① すべてのデータワークロード（BI、高度なアナリティクス等）② すべてのデータ型（構造化、半構造化、非構造化）③ 統合されたセキュリティとガバナンス</p>
+            </div>
+
+            <p>「<span class="en-term">data lakehouse</span>」という用語が初めて文書化されたのは2017年。先駆者としてImpala（Cloudera）とPresto（Facebook/Meta）がある。</p>
+
+            <h3>レイクハウスアーキテクチャ</h3>
+
+            <p>レイクハウスの構築は、クラウドオブジェクトストレージ（S3、ADLS、GCS）を起点とする。データレイク上でACIDトランザクションを実現するために、<span class="highlight">オープンテーブルフォーマット</span>が不可欠だ。</p>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">H</div>
+                    <div class="char3-label">Open Format</div>
+                    <h4>Apache Hudi</h4>
+                    <p>Uberが開発。ACIDトランザクション、スキーマ進化、タイムトラベル、効率的なメタデータ管理を提供するオープンソースのテーブルフォーマット。</p>
+                    <div class="char3-impact">→ Uber発のインクリメンタル処理に強み</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">I</div>
+                    <div class="char3-label">Open Format</div>
+                    <h4>Apache Iceberg</h4>
+                    <p>Netflixが開発。大規模データセット向けのテーブルフォーマット。パーティション進化、隠しパーティション等の高度な機能を提供。</p>
+                    <div class="char3-impact">→ Netflix発の大規模データ向け設計</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">Δ</div>
+                    <div class="char3-label">Open Format</div>
+                    <h4>Delta Lake</h4>
+                    <p>Databricksが開発。Apache Spark上で動作するオープンソースストレージレイヤー。ACIDトランザクション、スキーマ強制、タイムトラベルを提供。Databricksエコシステムの中核。</p>
+                    <div class="char3-impact">→ Databricks/Sparkエコシステムの基盤</div>
+                </div>
+            </div>
+
+            <h3>ACID vs BASE</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>特性</th>
+                            <th>ACID</th>
+                            <th>BASE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>正式名称</strong></td>
+                            <td>Atomicity, Consistency, Isolation, Durability</td>
+                            <td>Basically Available, Soft state, Eventually consistent</td>
+                        </tr>
+                        <tr>
+                            <td><strong>一貫性モデル</strong></td>
+                            <td>強整合性（Strong Consistency）</td>
+                            <td>結果整合性（Eventual Consistency）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>適用場面</strong></td>
+                            <td>トランザクション処理、金融データ、ガバナンスが必要な場面</td>
+                            <td>高可用性が優先される分散システム</td>
+                        </tr>
+                        <tr>
+                            <td><strong>レイクハウスでの位置付け</strong></td>
+                            <td>オープンテーブルフォーマット（Delta Lake等）がデータレイク上でACIDを実現</td>
+                            <td>従来のデータレイクのデフォルト</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>コンピュートレイヤーには<span class="en-term">Apache Spark</span>がストレージから分離（デカップル）されて配置される。データ処理レイヤーではバッチ処理、ストリーム処理、ML、高度なアナリティクスが実行される。</p>
+
+            <h3>メダリオンレイクハウスアーキテクチャ</h3>
+
+            <p><span class="en-term">Medallion architecture</span>（メダリオンアーキテクチャ）は<strong>マルチホップアーキテクチャ</strong>とも呼ばれ、データの品質が段階的に向上するレイヤード処理パターンだ。</p>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// メダリオンアーキテクチャ（Figure 1-7）</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot" style="background:rgba(205,127,50,0.2); border-color:rgba(205,127,50,0.5); color:#CD7F32;">B</div>
+                            <div class="phase-content">
+                                <div class="phase-timing" style="color:#CD7F32;">Bronze Layer — 生データ</div>
+                                <h4>ブロンズレイヤー</h4>
+                                <p>ソースシステムからの生データをそのまま格納。データの最初の着地点。変換は最小限で、元データの忠実な保存が目的。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot" style="background:rgba(192,192,192,0.2); border-color:rgba(192,192,192,0.5); color:#C0C0C0;">S</div>
+                            <div class="phase-content">
+                                <div class="phase-timing" style="color:#C0C0C0;">Silver Layer — クレンジング済み</div>
+                                <h4>シルバーレイヤー</h4>
+                                <p>検証・変換・エンリッチメントを経たデータ。重複排除、スキーマ適用、ビジネスルール適用が行われる。ACIDトランザクションが品質を保証。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot" style="background:rgba(255,215,0,0.2); border-color:rgba(255,215,0,0.5); color:#FFD700;">G</div>
+                            <div class="phase-content">
+                                <div class="phase-timing" style="color:#FFD700;">Gold Layer — ビジネス最適化</div>
+                                <h4>ゴールドレイヤー</h4>
+                                <p><strong>読み取り最適化</strong>された、効率的なクエリパフォーマンスのためのデータ。BIダッシュボード、KPIレポート、MLモデルのフィーチャーストアなど、最終消費向けのキュレーションされたデータセット。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Databricks Data Intelligence Platform</h3>
+
+            <p>DatabricksはApache Sparkに起源を持ち、すべてのアナリティクスワークロードに拡大した。<span class="highlight">統合的・オープン・インテリジェント</span>なプラットフォームとして、以下のコアコンポーネントを持つ。</p>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 01</div>
+                    <h4>コスト効率の高いオブジェクトストレージ</h4>
+                    <span class="assess-en">Object Storage for All Data/AI Assets</span>
+                    <p>すべてのデータおよびAIアセットを安価で耐久性の高いクラウドストレージに保存。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 02</div>
+                    <h4>オープンソースストレージレイヤー</h4>
+                    <span class="assess-en">Delta Lake — ACID, Schema Evolution, Time Travel</span>
+                    <p>Delta Lakeによりデータレイク上でACIDトランザクション、スキーマ進化、タイムトラベルを実現。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 03</div>
+                    <h4>統合カタログ</h4>
+                    <span class="assess-en">Unity Catalog — Metastore, ACL, Audit, Lineage</span>
+                    <p>メタストア、アクセス制御、監査、リネージを提供する統合カタログ。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 04</div>
+                    <h4>インテリジェンスエンジン</h4>
+                    <span class="assess-en">Intelligence Engine</span>
+                    <p>データ、コード、使用状況に関するコンテキスト情報を活用してインテリジェントな機能を提供。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">COMPONENT 05</div>
+                    <h4>全ワークロード対応</h4>
+                    <span class="assess-en">BI, Data Eng, Data Science, ML, Real-time</span>
+                    <p>BI、データエンジニアリング、データサイエンス、ML、リアルタイムアナリティクスを単一プラットフォームで実行。</p>
+                </div>
+            </div>
+
+            <p>Databricksの主要な能力として、データサイエンス/ML（<span class="en-term">MLflow</span>）、データウェアハウジング（<span class="en-term">Databricks SQL</span>）、ガバナンス（<span class="en-term">Unity Catalog</span>）が統合されている。</p>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 07: Unity Catalog -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-unity-catalog">
+            <div class="section-header">
+                <div class="section-number">07</div>
+                <div>
+                    <span class="chapter-tag">Unity Catalog: Unified Governance</span>
+                    <h2>Unity Catalog: 統合ガバナンスの実現</h2>
+                </div>
+            </div>
+
+            <h3>Unity Catalogのタイムライン</h3>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// Unity Catalog の歩み</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">21</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">2021 — Data and AI Summit</div>
+                                <h4>Unity Catalog発表</h4>
+                                <p>Databricksの年次カンファレンスData and AI Summit 2021でUnity Catalogが初めて発表された。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">22</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">2022 — Summit / Public Preview</div>
+                                <h4>ゲーテッドパブリックプレビュー開始</h4>
+                                <p>Summit 2022でAzure/AWS向けにゲーテッドパブリックプレビューが提供された。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">GA</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">August 2022 — General Availability</div>
+                                <h4>一般提供開始（GA）</h4>
+                                <p>2022年8月にUnity Catalogが一般提供（Generally Available）となった。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>なぜUnity Catalogが必要なのか</h3>
+
+            <p>Unity Catalog以前は、<span class="en-term">Hive Metastore</span>（HMS）がメタデータリポジトリとして使用され、アクセス制御はワークスペースごとに管理されていた。組織が数十〜数百のワークスペースを運用する段階になると、この方法は<span class="highlight">複雑で、エラーが発生しやすく、スケーラブルではない</span>という限界を露呈した。</p>
+
+            <div class="alert alert-amber">
+                <div class="alert-title">// アネクドート：「Bob」の教訓</div>
+                <p>大規模小売企業の「Bob」は、統合ガバナンスがないことの影響を想像できなかった。ワークスペースごとに分断されたアクセス制御、一貫性のないメタデータ、組織全体で追跡不能なデータリネージ——これらの問題は、ワークスペース数の増加とともに指数関数的に悪化する。</p>
+            </div>
+
+            <h3>Unity Catalogの特性</h3>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">O</div>
+                    <div class="char3-label">Characteristic</div>
+                    <h4>Operational（運用カタログ）</h4>
+                    <p>Unity Catalogは単なるメタデータカタログではなく、アクセス制御・監査・リネージを実行する<strong>運用カタログ</strong>だ。統合的かつオープンな設計で、あらゆる主要クラウドプロバイダー上で動作する。</p>
+                    <div class="char3-impact">→ メタデータ管理を超えた統合運用</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">U</div>
+                    <div class="char3-label">Characteristic</div>
+                    <h4>Unified（統合）</h4>
+                    <p>すべてのデータおよびAIアセットに対する<strong>単一のガバナンスモデル</strong>。Delta、Iceberg、Hudi、CSV、JSON、Parquet、テキスト、バイナリなど複数のフォーマットをサポート。</p>
+                    <div class="char3-impact">→ 単一モデルで全アセットをガバナンス</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">O</div>
+                    <div class="char3-label">Characteristic</div>
+                    <h4>Open（オープン）</h4>
+                    <p>オープンソースでベンダーロックインなし。<strong>Credential vending</strong>（外部アプリ向け一時的アクセス）と<strong>Catalog federation</strong>（外部カタログとのメタデータ交換）をサポート。</p>
+                    <div class="char3-impact">→ オープンソース、ベンダーロックインなし</div>
+                </div>
+            </div>
+
+            <div class="alert alert-indigo">
+                <div class="alert-title">// UC OSS vs Databricks UC</div>
+                <p><strong>UC OSS</strong>（オープンソース版）= スタンドアロンの統合データ/AIカタログ。</p>
+                <p><strong>Databricks UC</strong> = Databricksプラットフォームに組み込まれたガバナンスソリューション。OSS版の機能に加え、Databricksの管理機能が統合されている。</p>
+            </div>
+
+            <h3>データ/AIアセットの種類</h3>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>アセット種別</th>
+                            <th>英語名</th>
+                            <th>説明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>テーブル</strong></td>
+                            <td>Tables</td>
+                            <td>行と列で構成される構造化データ</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ビュー</strong></td>
+                            <td>Views</td>
+                            <td>テーブルやビューから作成される読み取り専用のデータ</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ボリューム</strong></td>
+                            <td>Volumes</td>
+                            <td>任意のファイルの論理エンティティ（非構造化データ対応）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>モデル</strong></td>
+                            <td>Models</td>
+                            <td>AIモデル（MLflowで管理）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>関数</strong></td>
+                            <td>Functions</td>
+                            <td>ユーザー定義ロジック（UDF）</td>
+                        </tr>
+                        <tr>
+                            <td><strong>外部カタログ</strong></td>
+                            <td>Foreign Catalogs</td>
+                            <td>外部DB、ウェアハウス、カタログ（例：AWS Glue）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>コアガバナンス機能（6つ）</h3>
+
+            <div class="assess-grid">
+                <div class="assess-card">
+                    <div class="assess-num">CORE 01</div>
+                    <h4>ID管理</h4>
+                    <span class="assess-en">Identity Management</span>
+                    <p>Entra ID、Google、Okta等の外部IDプロバイダーと統合。組織の既存ID基盤をそのまま活用できる。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">CORE 02</div>
+                    <h4>カタログ</h4>
+                    <span class="assess-en">Catalog (Metastore)</span>
+                    <p>すべてのデータおよびAIアセットのメタストア。統一された名前空間で組織のデータ資産を管理する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">CORE 03</div>
+                    <h4>アクセス制御</h4>
+                    <span class="assess-en">Access Control</span>
+                    <p>アイデンティティに対する認可。誰がどのデータに何を行えるかを細粒度で制御する。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">CORE 04</div>
+                    <h4>検索と発見</h4>
+                    <span class="assess-en">Search and Discovery</span>
+                    <p>カタログに登録されたアセット、メタデータ、タグに対する自然言語検索。データの発見可能性を大幅に向上。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">CORE 05</div>
+                    <h4>監査</h4>
+                    <span class="assess-en">Audit</span>
+                    <p>すべてのデータ操作を自動的にログ記録。コンプライアンス監査・インシデント調査に不可欠。</p>
+                </div>
+                <div class="assess-card">
+                    <div class="assess-num">CORE 06</div>
+                    <h4>リネージ</h4>
+                    <span class="assess-en">Lineage</span>
+                    <p>テーブル、ビュー、ボリューム、モデルのリネージを自動生成。データの出所と変換履歴を追跡可能にする。</p>
+                </div>
+            </div>
+
+            <h3>高度なガバナンス機能（3つ）</h3>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">A1</div>
+                    <div class="char3-label">Advanced</div>
+                    <h4>行レベルフィルタリング & 列レベルマスキング</h4>
+                    <p><span class="en-term">Row-level filtering</span>と<span class="en-term">Column-level masking（CLM）</span>により、機密データへのアクセスを細粒度で制御。同一テーブルに対して、ユーザーの権限に応じて異なるデータビューを提供できる。</p>
+                    <div class="char3-impact">→ 機密データのきめ細かな保護</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">A2</div>
+                    <div class="char3-label">Advanced</div>
+                    <h4>属性ベースアクセス制御（ABAC）</h4>
+                    <p><span class="en-term">Attribute-Based Access Control</span>: アイデンティティ属性、リソース属性、リクエスト属性に基づく条件付きアクセス制御。従来のRBAC（ロールベース）を超えた柔軟なポリシー定義が可能。</p>
+                    <div class="char3-impact">→ 動的な条件に基づくアクセス制御</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">A3</div>
+                    <div class="char3-label">Advanced</div>
+                    <h4>データモニタリング</h4>
+                    <p>テーブルレベルでの統計的特性とデータ品質の<strong>自動モニタリング</strong>。データドリフト、異常値、品質劣化を自動的に検出し、プロアクティブなデータ管理を実現する。</p>
+                    <div class="char3-impact">→ テーブルレベルの自動品質監視</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 08: Databricksプラットフォームアーキテクチャ -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-architecture">
+            <div class="section-header">
+                <div class="section-number">08</div>
+                <div>
+                    <span class="chapter-tag">Platform Architecture</span>
+                    <h2>Databricksプラットフォームアーキテクチャ</h2>
+                </div>
+            </div>
+
+            <p>Databricksプラットフォームは4つの主要コンポーネントから構成される（Figure 1-10）。</p>
+
+            <div class="diagram-wrap">
+                <div class="diagram-inner">
+                    <div class="diagram-title">// Databricks プラットフォーム 4コンポーネント</div>
+                    <ul class="phase-list">
+                        <li class="phase-item">
+                            <div class="phase-dot">01</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Component 1 — Users & Applications</div>
+                                <h4>ユーザーとアプリケーション</h4>
+                                <p>プラットフォームにアクセスするエンドユーザー、サービスプリンシパル、外部アプリケーション。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">02</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Component 2 — Control Plane（Databricks管理）</div>
+                                <h4>コントロールプレーン</h4>
+                                <p>Databricksが管理するサービス群：Web UI、クラスター管理、ワークフロー管理、<strong>Unity Catalogサービス</strong>、ノートブックサーバー。ユーザーから直接アクセスされることはない。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">03</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Component 3 — Compute Plane</div>
+                                <h4>コンピュートプレーン</h4>
+                                <p>実際のデータ処理が行われる場所。<strong>サーバーレス</strong>（Databricks管理）と<strong>クラシック</strong>（顧客管理）の2つのデプロイメントモデル。<span class="en-term">Databricks Runtime（DBR）</span>が最適化されたApache Sparkと追加ライブラリ/統合機能を提供。</p>
+                            </div>
+                        </li>
+                        <li class="phase-item">
+                            <div class="phase-dot">04</div>
+                            <div class="phase-content">
+                                <div class="phase-timing">Component 4 — Storage</div>
+                                <h4>ストレージ</h4>
+                                <p>すべてのデータおよびAIアセットが永続化される場所。クラウドオブジェクトストレージ（S3、ADLS、GCS）を使用。</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// Databricks Runtime（DBR）について</div>
+                <p><span class="en-term">DBR</span>は最適化されたApache Sparkに追加のライブラリと統合機能を組み合わせたランタイム環境だ。Unity Catalogとの連携には<strong>DBR 11.3以上</strong>が必要で、最新のLTS（Long-Term Support）バージョンの使用が推奨される。</p>
+                <p>注意：Databricks SQL Serverlessなど、一部の機能はSparkを直接使用しない。</p>
+            </div>
+
+            <h3>Unity Catalogの3コンポーネント</h3>
+
+            <div class="char3-grid">
+                <div class="char3-card">
+                    <div class="char3-num">UI</div>
+                    <div class="char3-label">UC Component</div>
+                    <h4>Unity Catalog UI</h4>
+                    <p>Databricks UIに埋め込まれたインターフェース。カタログの閲覧、アクセス権の管理、リネージの可視化、データプロファイリングなどをグラフィカルに操作できる。</p>
+                    <div class="char3-impact">→ Databricks UIに統合</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">SV</div>
+                    <div class="char3-label">UC Component</div>
+                    <h4>Unity Catalog Service</h4>
+                    <p>コントロールプレーン上で稼働し、ガバナンス機能（アクセス制御、監査、リネージ）を実行するバックエンドサービス。REST APIを通じてプログラマティックなアクセスも提供。</p>
+                    <div class="char3-impact">→ コントロールプレーンで稼働</div>
+                </div>
+                <div class="char3-card">
+                    <div class="char3-num">RT</div>
+                    <div class="char3-label">UC Component</div>
+                    <h4>Databricks Runtime（DBR）統合</h4>
+                    <p>DBRがUnity Catalogと統合され、セキュアなデータアクセスを実現。クエリ実行時にUCサービスと連携し、アクセス権限の確認・監査ログの記録を自動的に行う。</p>
+                    <div class="char3-impact">→ DBR 11.3+ 必須、最新LTS推奨</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 09: データ共有とコラボレーション -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-sharing">
+            <div class="section-header">
+                <div class="section-number">09</div>
+                <div>
+                    <span class="chapter-tag">Data Sharing & Collaboration</span>
+                    <h2>データ共有とコラボレーション</h2>
+                </div>
+            </div>
+
+            <p>データの価値はその共有によって倍増する。Unity Catalogは<span class="en-term">Delta Sharing</span>プロトコルを通じて、組織内外でのセキュアなデータ共有を実現する。</p>
+
+            <div class="alert alert-sky">
+                <div class="alert-title">// Delta Sharing</div>
+                <p><strong>Delta Sharing</strong>は、セキュアなデータ共有のための<span class="highlight">オープンプロトコル</span>だ。オープンソースであり、スタンドアロンでの使用も可能。Databricks上では最小限の設定で利用できるマネージドソリューションとして提供される。</p>
+                <p>プロトコルはデータプロバイダーとレシピエント（受信者）の間に信頼関係を確立し、Unity Catalogがアクセス制御とガバナンスを適用した上でデータ共有を可能にする。</p>
+            </div>
+
+            <h3>Delta Sharingの上に構築されたサービス</h3>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>Databricks Marketplace</h4>
+                    <p>データプロダクトの公開・消費のための<strong>オープンフォーラム</strong>。組織はデータセット、ノートブック、MLモデルなどを安全に公開・発見・取得できる。外部パートナーとのデータエコシステムを構築。</p>
+                </div>
+                <div class="card">
+                    <h4>Databricks Clean Rooms</h4>
+                    <p>機密データを共有するための<strong>プライバシー保護環境</strong>。複数の組織が互いの生データを公開することなく、共同分析を実行できる。広告・マーケティング分析、医療研究等のユースケースに対応。</p>
+                </div>
+            </div>
+
+            <p>データ共有とコラボレーションの詳細は本書の第8章で深く掘り下げられる。</p>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 10: まとめ -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sec-summary">
+            <div class="section-header">
+                <div class="section-number">10</div>
+                <div>
+                    <span class="chapter-tag">Chapter 1 Summary</span>
+                    <h2>まとめ — Ch.1の要点</h2>
+                </div>
+            </div>
+
+            <p>第1章「The Modern Governance Stack」を通じて明らかになった核心的な洞察を整理する。</p>
+
+            <ul class="takeaway-list">
+                <li class="takeaway-item">
+                    <div class="takeaway-num">01</div>
+                    <div class="takeaway-body">
+                        <strong>ガバナンスはデータの量と多様性の増大に比例して重要になる</strong>
+                        <p>Securitas、Capital Oneのインシデントが示すように、クラウドの設定ミスや人的エラーが大規模なデータ漏洩につながる。82%のセキュリティ侵害に人的要素が関与しているという事実は、技術的対策だけでなく<span class="en-term">human-centric</span>なガバナンスの必要性を示している。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">02</div>
+                    <div class="takeaway-body">
+                        <strong>データには明確なライフサイクルがあり、各段階でガバナンスが必要</strong>
+                        <p>作成・取得 → 処理 → 利用 → 退役の4段階それぞれで、アクセス制御、品質管理、コンプライアンス遵守が求められる。PII/PHIの匿名化、エンティティ解決、データ調和はすべて処理段階のガバナンス活動だ。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">03</div>
+                    <div class="takeaway-body">
+                        <strong>非構造化データとAIアセットがガバナンスの新たなフロンティア</strong>
+                        <p>組織データの80%以上が非構造化であり、AIの台頭によりMLモデル等のAIアセットもガバナンス対象となった。従来のガバナンスソリューションの多くはこの拡大した範囲に対応できていない。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">04</div>
+                    <div class="takeaway-body">
+                        <strong>2つの分離されたスタックは分断されたガバナンスを生む</strong>
+                        <p>データウェアハウスとデータレイクの並行運用はデータサイロを形成し、一貫したガバナンスを不可能にする。Hadoopの「偽りの夜明け」から学んだ教訓は、統合されたアーキテクチャの必要性だ。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">05</div>
+                    <div class="takeaway-body">
+                        <strong>レイクハウスパラダイムが統合データ管理の解答</strong>
+                        <p>レイクハウスはデータレイクの柔軟性とデータウェアハウスのACIDトランザクション・パフォーマンスを統合する。メダリオンアーキテクチャ（Bronze → Silver → Gold）により、データ品質が段階的に向上する。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">06</div>
+                    <div class="takeaway-body">
+                        <strong>Unity Catalogはレイクハウスの統合ガバナンスレイヤー</strong>
+                        <p>運用的・統合的・オープンなカタログとして、すべてのデータとAIアセットに対して単一のガバナンスモデルを提供する。ID管理、アクセス制御、監査、リネージ、検索・発見の6つのコア機能と、行/列レベルの保護、ABAC、データモニタリングの3つの高度な機能を持つ。</p>
+                    </div>
+                </li>
+                <li class="takeaway-item">
+                    <div class="takeaway-num">07</div>
+                    <div class="takeaway-body">
+                        <strong>Delta Sharingがセキュアなデータコラボレーションを実現</strong>
+                        <p>オープンプロトコルとしてのDelta Sharingにより、Marketplace（データプロダクトの公開・消費）とClean Rooms（プライバシー保護環境での共同分析）が構築されている。データの価値は共有によって倍増する。</p>
+                    </div>
+                </li>
+            </ul>
+
+            <!-- Central Message Callout -->
+            <div class="alert alert-sky" style="margin-top: 3rem; border-left-width: 6px;">
+                <div class="alert-title" style="font-size:1rem;">// Ch.1 の本質的なメッセージ</div>
+                <p style="font-size:1rem; line-height:1.9;">データガバナンスは単なるセキュリティ対策ではなく、組織の<strong>データ資産から価値を引き出す能力そのもの</strong>を決定する。レイクハウスパラダイムはデータの格納・処理の統合を実現し、Unity Catalogはその上で統合ガバナンスを適用する。</p>
+                <p style="font-size:1rem; font-weight:600; color:var(--accent-light);">データの量・多様性の増大、AIアセットの出現、規制の拡大——これらすべてに対応するには、統合的なガバナンスが不可欠だ。</p>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- Section 11: 参考文献 -->
+        <!-- ═══════════════════════════════════════════════════════════ -->
+        <section id="sources">
+            <div class="section-header">
+                <div class="section-number">11</div>
+                <div>
+                    <span class="chapter-tag">References</span>
+                    <h2>参考文献</h2>
+                </div>
+            </div>
+
+            <ul class="sources-list">
+                <li>
+                    <span class="source-num">[1]</span>
+                    <div class="source-text">
+                        Kiran Sreekumar, Karthik Subbarao, <em>Data Governance with Unity Catalog on Databricks: Implement Data and AI Governance with Databricks Data Intelligence Platform</em>, O'Reilly Media, Sep 2025. ISBN: 9781098179625<br>
+                        <a href="https://learning.oreilly.com/library/view/data-governance-with/9781098179625/">https://learning.oreilly.com/library/view/data-governance-with/9781098179625/</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[2]</span>
+                    <div class="source-text">
+                        Verizon, <em>2022 Data Breach Investigations Report (DBIR)</em> — 82% of breaches involved a human element.<br>
+                        <a href="https://www.verizon.com/business/resources/reports/dbir/">https://www.verizon.com/business/resources/reports/dbir/</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[3]</span>
+                    <div class="source-text">
+                        Clive Humby — "Data is the new oil" (2006). Widely cited analogy for data's value in the modern economy.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[4]</span>
+                    <div class="source-text">
+                        Doug Laney, "3D Data Management: Controlling Data Volume, Velocity and Variety," Gartner, 2001 — Origin of the 3Vs of Big Data.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[5]</span>
+                    <div class="source-text">
+                        James Dixon (former CTO of Pentaho) — Data lake vs data mart water analogy.
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[6]</span>
+                    <div class="source-text">
+                        Databricks — Unity Catalog documentation and Delta Sharing protocol.<br>
+                        <a href="https://docs.databricks.com/en/data-governance/unity-catalog/index.html">https://docs.databricks.com/en/data-governance/unity-catalog/index.html</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[7]</span>
+                    <div class="source-text">
+                        European Union — EU AI Act (published July 2024).<br>
+                        <a href="https://artificialintelligenceact.eu/">https://artificialintelligenceact.eu/</a>
+                    </div>
+                </li>
+                <li>
+                    <span class="source-num">[8]</span>
+                    <div class="source-text">
+                        Apache Spark, Delta Lake, Apache Hudi, Apache Iceberg — Open source projects for lakehouse architecture.<br>
+                        <a href="https://spark.apache.org/">https://spark.apache.org/</a>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- ─── Chapter Series Banner (Bottom) ─── -->
+    <div style="max-width:1200px; margin:0 auto; padding:0 2rem;">
+        <div class="part-link-banner">
+            <div class="part-info">
+                <strong>シリーズ：</strong> Unity Catalog ガバナンス 学習ノート（全12章）
+            </div>
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                <span class="part-link-btn part-link-btn-current">Ch.1 — モダンガバナンススタック ◀</span>
+                <span class="part-link-btn part-link-btn-disabled">Ch.2 — Under The Hood（Coming Soon）</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Footer ─── -->
+    <footer>
+        <div class="footer-source">
+            Kiran Sreekumar & Karthik Subbarao — Data Governance with Unity Catalog (O'Reilly, 2025) Ch.1 学習ノート
+        </div>
+        <p>
+            <a href="../index.html" style="color:var(--accent-light); font-family:'JetBrains Mono',monospace; font-size:0.85rem;">← トップに戻る</a>
+        </p>
+        <p class="footer-disclaimer">
+            本記事は Kiran Sreekumar & Karthik Subbarao 著『Data Governance with Unity Catalog on Databricks』（O'Reilly Media, 2025）の個人学習ノートです。書籍の内容を要約・解説したものであり、著作権は原著者および O'Reilly Media に帰属します。
+        </p>
+    </footer>
+
+    <script>
+        // ─── Smooth scroll for TOC ───
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // ─── Active nav link highlighting ───
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-links a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.style.color = '';
+                        if (link.getAttribute('href') === '#' + entry.target.id) {
+                            link.style.color = 'var(--accent)';
+                        }
+                    });
+                }
+            });
+        }, { rootMargin: '-20% 0px -60% 0px' });
+
+        sections.forEach(section => observer.observe(section));
+
+        // ─── Subtle card entrance animation ───
+        const cards = document.querySelectorAll('.char3-card, .assess-card, .card');
+        const cardObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        cards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(16px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            cardObserver.observe(card);
+        });
+    </script>
+
+</body>
+</html>
